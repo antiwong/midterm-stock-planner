@@ -120,12 +120,13 @@ def inject_custom_css():
     
     [data-testid="stSidebar"] button {{
         color: {COLORS['light']} !important;
-        border-color: rgba(255, 255, 255, 0.2) !important;
+        background-color: rgba(30, 41, 59, 0.8) !important;
+        border: 1px solid rgba(255, 255, 255, 0.2) !important;
     }}
     
     [data-testid="stSidebar"] button:hover {{
-        background: rgba(255, 255, 255, 0.1) !important;
-        border-color: rgba(255, 255, 255, 0.3) !important;
+        background-color: rgba(30, 41, 59, 1) !important;
+        border-color: rgba(99, 102, 241, 0.5) !important;
     }}
     
     /* Radio button specific styling */
@@ -405,6 +406,29 @@ def inject_custom_css():
         background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
     }}
     
+    /* Sidebar buttons - darker background for visibility */
+    [data-testid="stSidebar"] .stButton > button {{
+        background-color: rgba(30, 41, 59, 0.8) !important;
+        color: white !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }}
+    
+    [data-testid="stSidebar"] .stButton > button:hover {{
+        background-color: rgba(30, 41, 59, 1) !important;
+        border-color: rgba(99, 102, 241, 0.5) !important;
+    }}
+    
+    [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
+        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%) !important;
+        color: white !important;
+        border: 1px solid {COLORS['primary']} !important;
+    }}
+    
+    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
+        background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+    }}
+    
     /* Expanders */
     .streamlit-expanderHeader {{
         font-weight: 600;
@@ -525,18 +549,31 @@ def inject_custom_css():
 """, unsafe_allow_html=True)
 
 
-# Navigation pages
-PAGES = [
+# Navigation pages - organized by workflow groups
+# Main workflow (sequential)
+MAIN_WORKFLOW = [
     ("🏠 Overview", "overview"),
     ("🎮 Run Analysis", "run_analysis"),
-    ("📋 Watchlist Manager", "watchlist_manager"),
     ("🎯 Portfolio Builder", "portfolio_builder"),
     ("📄 Reports", "reports"),
     ("💼 Portfolio Analysis", "portfolio_analysis"),
     ("🔍 Purchase Triggers", "purchase_triggers"),
     ("📊 Analysis Runs", "analysis_runs"),
-    ("🔎 Stock Explorer", "stock_explorer"),
     ("🤖 AI Insights", "ai_insights"),
+]
+
+# Standalone tools
+STANDALONE_TOOLS = [
+    ("📋 Watchlist Manager", "watchlist_manager"),
+    ("🔎 Stock Explorer", "stock_explorer"),
     ("📈 Compare Runs", "compare_runs"),
+]
+
+# Utilities
+UTILITIES = [
+    ("📚 Documentation", "documentation"),
     ("⚙️ Settings", "settings"),
 ]
+
+# Combined list for backward compatibility
+PAGES = MAIN_WORKFLOW + STANDALONE_TOOLS + UTILITIES

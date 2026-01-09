@@ -1,0 +1,195 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "K",
+          "weight": 25,
+          "rationale": "Consumer Defensive sector, lowest volatility in the entire candidate list at 0.5%, high value score"
+        },
+        {
+          "ticker": "PG",
+          "weight": 20,
+          "rationale": "Consumer Defensive sector, low volatility at 1.2%, high value score, established company."
+        },
+        {
+          "ticker": "HD",
+          "weight": 15,
+          "rationale": "Consumer Cyclical sector with relatively low volatility at 1.5%, high value & quality score."
+        },
+        {
+          "ticker": "BAC",
+          "weight": 15,
+          "rationale": "Financial Services, very low vol at 1.7%, good quality"
+        },
+        {
+          "ticker": "EQIX",
+          "weight": 10,
+          "rationale": "Real Estate sector, low volatility at 1.7%, provides diversification."
+        },
+        {
+          "ticker": "DIS",
+          "weight": 15,
+          "rationale": "Communication Services sector, low volatility at 1.9%, good value score"
+        }
+      ],
+      "expected_return": {
+        "low": 5,
+        "mid": 8,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "5-8%",
+        "max_drawdown": "5-10%",
+        "key_risks": [
+          "Interest rate risk (impact on real estate and consumer spending), economic slowdown impacting consumer spending, company-specific risks."
+        ]
+      },
+      "rebalance_frequency": "Semi-Annually"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "18-22%",
+      "holdings": [
+        {
+          "ticker": "HD",
+          "weight": 15,
+          "rationale": "Consumer Cyclical sector with moderate volatility, provides stable growth and high quality."
+        },
+        {
+          "ticker": "INTC",
+          "weight": 15,
+          "rationale": "Technology sector, moderate volatility (4%), offers exposure to growth potential in the technology sector."
+        },
+        {
+          "ticker": "NUE",
+          "weight": 10,
+          "rationale": "Basic Materials sector, moderate volatility (2.3%), provides diversification and potential for capital appreciation."
+        },
+        {
+          "ticker": "MRNA",
+          "weight": 10,
+          "rationale": "Healthcare sector, some risk with volatility at 4.3%, but potential for growth."
+        },
+        {
+          "ticker": "UPS",
+          "weight": 10,
+          "rationale": "Industrials sector, decent domain score, established company."
+        },
+        {
+          "ticker": "SMCI",
+          "weight": 10,
+          "rationale": "Technology sector, higher growth potential than INTC"
+        },
+        {
+          "ticker": "BTG",
+          "weight": 10,
+          "rationale": "Basic Materials, offers exposure to commodity prices."
+        },
+        {
+          "ticker": "JD",
+          "weight": 10,
+          "rationale": "Consumer Cyclical sector, exposure to international markets, higher growth potential."
+        },
+        {
+          "ticker": "HAL",
+          "weight": 5,
+          "rationale": "Energy sector, diversify holdings across different sector."
+        },
+        {
+          "ticker": "DIS",
+          "weight": 5,
+          "rationale": "Communication Services sector, moderate volatility"
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 18
+      },
+      "risk_assessment": {
+        "volatility": "15-20%",
+        "max_drawdown": "15-25%",
+        "key_risks": [
+          "Economic cycles impacting cyclical sectors, technology disruption, healthcare regulation, supply chain disruptions."
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "25-35%",
+      "holdings": [
+        {
+          "ticker": "PLUG",
+          "weight": 20,
+          "rationale": "Industrials sector, highest domain score, potential for high growth but also high volatility (7.2%)."
+        },
+        {
+          "ticker": "SMCI",
+          "weight": 15,
+          "rationale": "Technology sector, decent domain score, potential for high growth and high volatility."
+        },
+        {
+          "ticker": "RUN",
+          "weight": 15,
+          "rationale": "Technology sector, some risk with volatility at 7.1%, but potential for growth."
+        },
+        {
+          "ticker": "SEDG",
+          "weight": 10,
+          "rationale": "Technology sector, some risk with volatility at 6.8%, but potential for growth."
+        },
+        {
+          "ticker": "XPEV",
+          "weight": 10,
+          "rationale": "Consumer Cyclical sector, exposure to EV market. Volatility at 4.2%"
+        },
+        {
+          "ticker": "LEU",
+          "weight": 10,
+          "rationale": "Energy sector, some risk with volatility at 6%, but potential for growth."
+        },
+        {
+          "ticker": "CHPT",
+          "weight": 10,
+          "rationale": "Consumer Cyclical sector, EV infrastructure play. Volatility at 5%."
+        },
+        {
+          "ticker": "MRNA",
+          "weight": 5,
+          "rationale": "Healthcare sector, MRNA's volatile but could be a huge win."
+        },
+        {
+          "ticker": "NVDA",
+          "weight": 5,
+          "rationale": "Technology sector, NVDA's volatile but could be a huge win."
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 20,
+        "high": 30
+      },
+      "risk_assessment": {
+        "volatility": "25-35%",
+        "max_drawdown": "30-45%",
+        "key_risks": [
+          "High growth stocks are sensitive to economic slowdowns, competition, regulatory changes, and technological obsolescence."
+        ]
+      },
+      "rebalance_frequency": "Monthly"
+    },
+    "overall_assessment": "The portfolio recommendations are based on the provided quantitative data. It's crucial to remember that past performance isn't indicative of future results. These are model portfolios and should be considered alongside individual investor circumstances and risk tolerance. The horizontal analysis data being empty and backtest limited makes it difficult to provide accurate estimates. It is recommended to consult with a financial advisor before making any investment decisions."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"K\", \"weight\": 25, \"rationale\": \"Consumer Defensive sector, lowest volatility in the entire candidate list at 0.5%, high value score\"},\n      {\"ticker\": \"PG\", \"weight\": 20, \"rationale\": \"Consumer Defensive sector, low volatility at 1.2%, high value score, established company.\"},\n      {\"ticker\": \"HD\", \"weight\": 15, \"rationale\": \"Consumer Cyclical sector with relatively low volatility at 1.5%, high value & quality score.\"},\n      {\"ticker\": \"BAC\", \"weight\": 15, \"rationale\": \"Financial Services, very low vol at 1.7%, good quality\"},\n      {\"ticker\": \"EQIX\", \"weight\": 10, \"rationale\": \"Real Estate sector, low volatility at 1.7%, provides diversification.\"},\n      {\"ticker\": \"DIS\", \"weight\": 15, \"rationale\": \"Communication Services sector, low volatility at 1.9%, good value score\"}\n    ],\n    \"expected_return\": {\n      \"low\": 5,\n      \"mid\": 8,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"5-8%\",\n      \"max_drawdown\": \"5-10%\",\n      \"key_risks\": [\"Interest rate risk (impact on real estate and consumer spending), economic slowdown impacting consumer spending, company-specific risks.\"]\n    },\n    \"rebalance_frequency\": \"Semi-Annually\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"18-22%\",\n    \"holdings\": [\n      {\"ticker\": \"HD\", \"weight\": 15, \"rationale\": \"Consumer Cyclical sector with moderate volatility, provides stable growth and high quality.\"},\n      {\"ticker\": \"INTC\", \"weight\": 15, \"rationale\": \"Technology sector, moderate volatility (4%), offers exposure to growth potential in the technology sector.\"},\n      {\"ticker\": \"NUE\", \"weight\": 10, \"rationale\": \"Basic Materials sector, moderate volatility (2.3%), provides diversification and potential for capital appreciation.\"},\n      {\"ticker\": \"MRNA\", \"weight\": 10, \"rationale\": \"Healthcare sector, some risk with volatility at 4.3%, but potential for growth.\"},\n      {\"ticker\": \"UPS\", \"weight\": 10, \"rationale\": \"Industrials sector, decent domain score, established company.\"},\n      {\"ticker\": \"SMCI\", \"weight\": 10, \"rationale\": \"Technology sector, higher growth potential than INTC\"},\n      {\"ticker\": \"BTG\", \"weight\": 10, \"rationale\": \"Basic Materials, offers exposure to commodity prices.\"},\n      {\"ticker\": \"JD\", \"weight\": 10, \"rationale\": \"Consumer Cyclical sector, exposure to international markets, higher growth potential.\"},\n      {\"ticker\": \"HAL\", \"weight\": 5, \"rationale\": \"Energy sector, diversify holdings across different sector.\" },\n      {\"ticker\": \"DIS\", \"weight\": 5, \"rationale\": \"Communication Services sector, moderate volatility\"}\n\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 18\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"15-20%\",\n      \"max_drawdown\": \"15-25%\",\n      \"key_risks\": [\"Economic cycles impacting cyclical sectors, technology disruption, healthcare regulation, supply chain disruptions.\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"25-35%\",\n    \"holdings\": [\n      {\"ticker\": \"PLUG\", \"weight\": 20, \"rationale\": \"Industrials sector, highest domain score, potential for high growth but also high volatility (7.2%).\"},\n      {\"ticker\": \"SMCI\", \"weight\": 15, \"rationale\": \"Technology sector, decent domain score, potential for high growth and high volatility.\"},\n      {\"ticker\": \"RUN\", \"weight\": 15, \"rationale\": \"Technology sector, some risk with volatility at 7.1%, but potential for growth.\"},\n      {\"ticker\": \"SEDG\", \"weight\": 10, \"rationale\": \"Technology sector, some risk with volatility at 6.8%, but potential for growth.\"},\n      {\"ticker\": \"XPEV\", \"weight\": 10, \"rationale\": \"Consumer Cyclical sector, exposure to EV market. Volatility at 4.2%\"},\n      {\"ticker\": \"LEU\", \"weight\": 10, \"rationale\": \"Energy sector, some risk with volatility at 6%, but potential for growth.\"},\n      {\"ticker\": \"CHPT\", \"weight\": 10, \"rationale\": \"Consumer Cyclical sector, EV infrastructure play. Volatility at 5%.\"},\n      {\"ticker\": \"MRNA\", \"weight\": 5, \"rationale\": \"Healthcare sector, MRNA's volatile but could be a huge win.\"},\n      {\"ticker\": \"NVDA\", \"weight\": 5, \"rationale\": \"Technology sector, NVDA's volatile but could be a huge win.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 20,\n      \"high\": 30\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"25-35%\",\n      \"max_drawdown\": \"30-45%\",\n      \"key_risks\": [\"High growth stocks are sensitive to economic slowdowns, competition, regulatory changes, and technological obsolescence.\"]\n    },\n    \"rebalance_frequency\": \"Monthly\"\n  },\n  \"overall_assessment\": \"The portfolio recommendations are based on the provided quantitative data. It's crucial to remember that past performance isn't indicative of future results. These are model portfolios and should be considered alongside individual investor circumstances and risk tolerance. The horizontal analysis data being empty and backtest limited makes it difficult to provide accurate estimates. It is recommended to consult with a financial advisor before making any investment decisions.\"\n}\n```",
+  "generated_at": "2026-01-09T14:55:14.311054"
+}

@@ -173,16 +173,39 @@ class AIInsightsGenerator:
             )
         ])
         
-        # Format metrics
+        # Format metrics (excluding data quality fields)
         metrics_str = "\n".join([
             f"  {k}: {v:.4f}" if isinstance(v, float) else f"  {k}: {v}"
             for k, v in model_metrics.items()
+            if k not in ['data_quality', 'data_errors', 'data_warnings']
         ])
+        
+        # Initialize data quality note
+        data_quality_note = ""
+        
+        # Check for identical sector scores (data quality issue)
+        if sector_breakdown:
+            sector_scores = [data.get('score', 0) for data in sector_breakdown.values()]
+            if len(set(sector_scores)) == 1 and sector_scores[0] == 0.0:
+                data_quality_note += "\n\n🚨 CRITICAL: All sectors have identical scores (0.000). This indicates a severe data normalization or calculation issue. DO NOT provide sector allocation recommendations."
+        
+        # Add data quality warnings if present
+        if model_metrics.get('data_quality') == 'ERRORS_DETECTED':
+            errors = model_metrics.get('data_errors', [])
+            data_quality_note = f"\n\n🚨 CRITICAL DATA QUALITY ERRORS DETECTED:\n" + "\n".join([f"  - {e}" for e in errors[:5]])
+            data_quality_note += "\n\n⚠️ DO NOT PROVIDE INVESTMENT RECOMMENDATIONS. The data is unreliable and any analysis based on this data would be misleading."
+            data_quality_note += "\n\nREQUIRED ACTIONS:\n  1. Fix the data quality issues identified above\n  2. Re-run the analysis with corrected data\n  3. Only then provide investment recommendations"
+            data_quality_note += "\n\nIf you must provide any guidance, focus ONLY on:\n  - Identifying what data issues need to be fixed\n  - Explaining why recommendations cannot be made\n  - Suggesting diagnostic steps to resolve the issues"
+        elif model_metrics.get('data_quality') == 'WARNINGS':
+            warnings = model_metrics.get('data_warnings', [])
+            data_quality_note = f"\n\n⚠️ DATA QUALITY WARNINGS:\n" + "\n".join([f"  - {w}" for w in warnings[:5]])
+            data_quality_note += "\n\nPlease interpret the analysis below with EXTREME CAUTION. If sector scores are identical or data shows poor differentiation, DO NOT provide specific allocation recommendations."
         
         context = f"""
 STOCK ANALYSIS RESULTS
 ======================
 Analysis Date: {datetime.now().strftime('%Y-%m-%d')}
+{data_quality_note}
 
 MODEL PERFORMANCE:
 {metrics_str}
@@ -235,7 +258,9 @@ Based on the sector breakdown in the analysis results below:
 3. Sector rotation recommendations
 4. Cross-sector correlation observations
 
-Provide actionable sector allocation guidance.
+CRITICAL: If you see data quality warnings/errors in the context, or if all sectors have identical scores (especially 0.000), DO NOT provide sector allocation guidance. Instead, clearly state that the data is unreliable and recommend fixing the data quality issues before making any investment decisions.
+
+Provide actionable sector allocation guidance ONLY if the data appears valid and sectors show meaningful differentiation.
 """,
             "risk_assessment": """
 Based on the analysis results below, provide a comprehensive risk assessment:
@@ -258,6 +283,12 @@ Based on all the analysis results below, provide specific actionable recommendat
 6. Time horizon and review schedule
 
 Be specific with entry points, stop-loss levels where applicable.
+
+CRITICAL DATA QUALITY CHECK:
+- If you see data quality warnings/errors in the context above, DO NOT provide specific investment recommendations.
+- If all sectors have identical scores (especially 0.000), this indicates a data normalization issue - DO NOT provide sector allocation guidance.
+- Instead, clearly state: "Data quality issues detected. Recommendations cannot be provided until data issues are resolved. Please investigate and fix the data quality problems before making investment decisions."
+- Only provide recommendations if the data appears valid, sectors show meaningful differentiation, and stock scores are properly distributed.
 """
         }
         
@@ -398,6 +429,7 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
     def generate_executive_summary(
         self,
         scores: List[Dict[str, Any]],
+        validation_context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate an executive summary from stock scores.
@@ -433,12 +465,22 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
             sector_breakdown[sector]['avg_score'] = sum(scores_list) / len(scores_list) if scores_list else 0
             del sector_breakdown[sector]['scores']
         
+        # Add validation warnings to context if present
+        model_metrics = {'total_stocks': len(scores)}
+        if validation_context:
+            if validation_context.get('has_errors'):
+                model_metrics['data_quality'] = 'ERRORS_DETECTED'
+                model_metrics['data_errors'] = validation_context.get('errors', [])
+            if validation_context.get('warnings'):
+                model_metrics['data_quality'] = 'WARNINGS'
+                model_metrics['data_warnings'] = validation_context.get('warnings', [])
+        
         # Generate insights
         insights = self.generate_portfolio_insights(
             top_stocks=top_stocks,
             bottom_stocks=bottom_stocks,
             sector_breakdown=sector_breakdown,
-            model_metrics={'total_stocks': len(scores)},
+            model_metrics=model_metrics,
             run_name="Portfolio Analysis"
         )
         
@@ -447,6 +489,7 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
     def generate_sector_analysis(
         self,
         scores: List[Dict[str, Any]],
+        validation_context: Optional[Dict[str, Any]] = None,
     ) -> str:
         """
         Generate sector analysis from stock scores.
@@ -479,12 +522,22 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
             sector_breakdown[sector]['avg_score'] = sum(scores_list) / len(scores_list) if scores_list else 0
             del sector_breakdown[sector]['scores']
         
+        # Add validation warnings to context if present
+        model_metrics = {'total_stocks': len(scores)}
+        if validation_context:
+            if validation_context.get('has_errors'):
+                model_metrics['data_quality'] = 'ERRORS_DETECTED'
+                model_metrics['data_errors'] = validation_context.get('errors', [])
+            if validation_context.get('warnings'):
+                model_metrics['data_quality'] = 'WARNINGS'
+                model_metrics['data_warnings'] = validation_context.get('warnings', [])
+        
         # Generate insights
         insights = self.generate_portfolio_insights(
             top_stocks=top_stocks,
             bottom_stocks=bottom_stocks,
             sector_breakdown=sector_breakdown,
-            model_metrics={'total_stocks': len(scores)},
+            model_metrics=model_metrics,
             run_name="Portfolio Analysis"
         )
         

@@ -27,6 +27,7 @@
 | [dashboard.md](dashboard.md) | Streamlit web dashboard for browsing results |
 | [analytics-database.md](analytics-database.md) | SQLite database schema and management |
 | [api-configuration.md](api-configuration.md) | API key setup and configuration |
+| [data-validation.md](data-validation.md) | Data quality validation for AI insights |
 
 ---
 

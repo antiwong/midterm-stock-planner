@@ -16,6 +16,8 @@ The AI Insights module uses Google's Gemini LLM to:
 
 **Important:** AI insights are supplementary to numeric analysis. The primary source of truth is always the deterministic data pipeline. AI does NOT change tickers, weights, or make trading decisions.
 
+**Data Quality Validation:** Before generating insights, the system automatically validates data quality. If critical issues are detected (e.g., all sectors have identical scores), the AI will refuse to provide recommendations and instead guide you to fix the data issues first.
+
 ## Module Location
 
 ```

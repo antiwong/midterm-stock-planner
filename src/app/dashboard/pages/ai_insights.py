@@ -258,7 +258,7 @@ def _render_generate_tab(run_id: str):
 
 
 def _generate_new_insights(run_id: str, gen_commentary: bool, gen_recommendations: bool, risk_profile: str):
-    """Generate new AI insights for a run."""
+    """Generate new AI insights for a run and save them to files."""
     try:
         scores = load_run_scores(run_id)
         
@@ -268,22 +268,81 @@ def _generate_new_insights(run_id: str, gen_commentary: bool, gen_recommendation
         
         scores_df = pd.DataFrame(scores)
         
+        # Validate data quality before generating insights
+        from src.analytics.data_validation import InsightsDataValidator
         from src.analytics.ai_insights import AIInsightsGenerator
+        from datetime import datetime
+        import json
+        
+        validator = InsightsDataValidator()
+        is_valid, validation_report = validator.validate(scores_df)
+        
+        # Display validation results
+        st.markdown("### Data Quality Validation")
+        
+        if validation_report['is_valid']:
+            if validation_report['has_warnings']:
+                st.warning(validation_report['summary'])
+                with st.expander("View Validation Details", expanded=False):
+                    st.markdown(validator.get_validation_message(validation_report))
+            else:
+                st.success(validation_report['summary'])
+        else:
+            st.error(validation_report['summary'])
+            with st.expander("View Validation Errors", expanded=True):
+                st.markdown(validator.get_validation_message(validation_report))
+            
+            # Ask user if they want to proceed despite errors
+            if not st.checkbox("⚠️ Proceed with AI insights generation despite errors (not recommended)", value=False):
+                st.stop()
+        
         generator = AIInsightsGenerator()
+        
+        # Get run folder for saving files
+        run_folder = get_run_folder(run_id)
+        run_folder.mkdir(parents=True, exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        saved_files = []
         
         if gen_commentary:
             st.markdown("### Portfolio Commentary")
             
+            # Add validation context to data for AI
+            scores_data = scores_df.to_dict('records')
+            validation_context = None
+            if validation_report['has_warnings'] or not validation_report['is_valid']:
+                validation_context = {
+                    'has_errors': not validation_report['is_valid'],
+                    'warnings': validation_report['warnings'],
+                    'errors': validation_report['errors']
+                }
+            
             # Generate summary
-            summary = generator.generate_executive_summary(scores_df.to_dict('records'))
+            summary = generator.generate_executive_summary(scores_data, validation_context=validation_context)
+            sector_analysis = generator.generate_sector_analysis(scores_data, validation_context=validation_context)
+            
+            # Combine into full commentary
+            commentary_parts = []
             if summary:
+                commentary_parts.append(f"# Executive Summary\n\n{summary}\n")
                 st.markdown(summary)
             
-            # Sector analysis
-            sector_analysis = generator.generate_sector_analysis(scores_df.to_dict('records'))
             if sector_analysis:
+                commentary_parts.append(f"# Sector Analysis\n\n{sector_analysis}\n")
                 st.markdown("### Sector Analysis")
                 st.markdown(sector_analysis)
+            
+            # Save commentary to file
+            if commentary_parts:
+                commentary_text = "\n".join(commentary_parts)
+                commentary_text += f"\n\n---\n*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n"
+                
+                commentary_file = run_folder / f"ai_commentary_{run_id[:8]}_{timestamp}.md"
+                with open(commentary_file, 'w') as f:
+                    f.write(commentary_text)
+                saved_files.append(commentary_file.name)
+                st.success(f"✅ Commentary saved to: `{commentary_file.name}`")
         
         if gen_recommendations:
             st.markdown("### Investment Recommendations")
@@ -292,10 +351,47 @@ def _generate_new_insights(run_id: str, gen_commentary: bool, gen_recommendation
                 scores_df.to_dict('records'),
                 risk_profile=risk_profile.lower()
             )
+            
             if recommendations:
                 st.markdown(recommendations)
+                
+                # Save recommendations to both JSON and Markdown
+                # JSON format (structured)
+                recommendations_json = {
+                    'run_id': run_id,
+                    'risk_profile': risk_profile.lower(),
+                    'generated_at': datetime.now().isoformat(),
+                    'recommendations': recommendations,
+                    'summary': recommendations  # Store full text in summary field
+                }
+                
+                json_file = run_folder / f"recommendations_{run_id[:8]}_{timestamp}.json"
+                with open(json_file, 'w') as f:
+                    json.dump(recommendations_json, f, indent=2)
+                saved_files.append(json_file.name)
+                
+                # Markdown format (readable)
+                md_file = run_folder / f"recommendations_{run_id[:8]}_{timestamp}.md"
+                with open(md_file, 'w') as f:
+                    f.write(f"# Investment Recommendations\n\n")
+                    f.write(f"**Risk Profile:** {risk_profile}\n\n")
+                    f.write(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                    f.write("---\n\n")
+                    f.write(recommendations)
+                    f.write(f"\n\n---\n*Generated on {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*\n")
+                saved_files.append(md_file.name)
+                
+                st.success(f"✅ Recommendations saved to: `{json_file.name}` and `{md_file.name}`")
         
-        st.success("AI insights generated successfully!")
+        if saved_files:
+            st.success(f"🎉 AI insights generated and saved successfully!")
+            st.info(f"📁 Files saved in: `{run_folder.relative_to(run_folder.parent.parent.parent)}`")
+            # Clear cache so new files are visible
+            st.cache_data.clear()
+        else:
+            st.warning("⚠️ No insights were generated. Check API configuration.")
         
     except Exception as e:
         st.error(f"Error generating insights: {e}")
+        import traceback
+        st.code(traceback.format_exc())

@@ -1,0 +1,64 @@
+{
+  "analysis": {
+    "factors": {
+      "value_score": {
+        "count": 319,
+        "mean": 51.189794455966755,
+        "std": 7.328316775446016,
+        "var": 53.704226761283486,
+        "min": 50.0,
+        "max": 100.0,
+        "range": 50.0,
+        "cv": 0.14315972262302798
+      },
+      "quality_score": {
+        "count": 319,
+        "mean": 49.7764263322884,
+        "std": 2.9241905432773154,
+        "var": 8.550890333392482,
+        "min": 21.799999999999997,
+        "max": 69.805,
+        "range": 48.00500000000001,
+        "cv": 0.05874649424923631
+      },
+      "tech_score": {
+        "count": 319,
+        "mean": 100.0,
+        "std": 0.0,
+        "var": 0.0,
+        "min": 100.0,
+        "max": 100.0,
+        "range": 0.0,
+        "cv": 0.0
+      }
+    },
+    "variance_contributions": {
+      "value_score": {
+        "variance": 53.704226761283486,
+        "contribution_pct": 86.264759055246,
+        "is_dominant": true
+      },
+      "quality_score": {
+        "variance": 8.550890333392482,
+        "contribution_pct": 13.735240944754004,
+        "is_dominant": false
+      },
+      "tech_score": {
+        "variance": 0.0,
+        "contribution_pct": 0.0,
+        "is_dominant": false
+      }
+    },
+    "recommendations": {}
+  },
+  "current_weights": {
+    "model_score": 0.4,
+    "value_score": 0.35,
+    "quality_score": 0.25
+  },
+  "suggested_weights": {
+    "model_score": 0.49310213976812456,
+    "value_score": 0.19676009976294476,
+    "quality_score": 0.3101377604689307
+  }
+}

@@ -12,7 +12,10 @@ Access at: http://localhost:8501
 
 ## Navigation
 
-The sidebar provides navigation to all pages:
+The sidebar provides navigation organized into logical groups with visual section headers:
+
+### Main Workflow (Sequential)
+These pages follow the typical analysis workflow, displayed in order:
 
 | Page | Description |
 |------|-------------|
@@ -21,11 +24,34 @@ The sidebar provides navigation to all pages:
 | 🎯 **Portfolio Builder** | Personalized portfolio construction |
 | 📄 **Reports** | Browse generated reports |
 | 💼 **Portfolio Analysis** | Detailed portfolio view |
+| 🔍 **Purchase Triggers** | Purchase triggers and selection logic |
 | 📊 **Analysis Runs** | Filter and explore runs |
-| 🔍 **Stock Explorer** | Individual stock analysis |
 | 🤖 **AI Insights** | Generate AI commentary |
-| 📈 **Compare Runs** | Side-by-side comparison |
+
+### Tools (Standalone)
+Independent tools for specific tasks:
+
+| Page | Description |
+|------|-------------|
+| 📋 **Watchlist Manager** | Create and manage watchlists |
+| 🔎 **Stock Explorer** | Individual stock analysis |
+| 📈 **Compare Runs** | Side-by-side comparison of two runs |
+
+### Utilities
+System utilities and configuration:
+
+| Page | Description |
+|------|-------------|
+| 📚 **Documentation** | Browse project documentation |
 | ⚙️ **Settings** | Configuration options |
+
+**Navigation Features:**
+- Visual section headers for each group
+- Horizontal dividers between sections
+- Button-based navigation with clear selection state
+- Only one item can be selected at a time across all groups
+- Selected items highlighted with primary button style
+- Dark button backgrounds for better text visibility
 
 ## Pages
 
@@ -190,12 +216,38 @@ Analyze individual stocks:
 
 ### 🤖 AI Insights
 
-Generate AI-powered analysis:
+Generate AI-powered analysis with automatic data quality validation:
 
-- **Executive Summary**: Overall portfolio overview
-- **Top Picks**: Detailed stock analysis
-- **Sector Analysis**: Sector commentary
-- **Risk Assessment**: Warnings and recommendations
+- **Data Validation**: Automatic checks before generating insights
+  - Validates data completeness, score distribution, sector differentiation
+  - Blocks generation if critical errors detected (with override option)
+  - Shows warnings for data quality concerns
+  
+- **Generated Content**:
+  - **Executive Summary**: Overall portfolio overview
+  - **Top Picks**: Detailed stock analysis
+  - **Sector Analysis**: Sector commentary (only if data is valid)
+  - **Risk Assessment**: Warnings and recommendations
+  
+- **Data Quality Protection**: AI refuses to provide recommendations when data quality issues are detected (e.g., all sectors have 0.000 scores)
+
+See [AI Insights Documentation](ai-insights.md) and [Data Validation Guide](data-validation.md) for details.
+
+### 📚 Documentation
+
+Browse and view all project documentation directly in the GUI:
+
+- **Document Browser**: View all markdown files from the `docs/` folder
+- **Category Navigation**: Documents organized by category (Getting Started, Configuration, Analysis, etc.)
+- **Interactive Links**: Relative markdown links (e.g., `[design.md](design.md)`) are converted to clickable navigation
+- **Document Selector**: Dropdown to quickly find and switch between documents
+- **Download**: Download any document as a markdown file
+
+Features:
+- Automatic title extraction from markdown files
+- Category-based organization
+- Clickable document links within the GUI
+- Full markdown rendering support
 
 ### 📈 Compare Runs
 

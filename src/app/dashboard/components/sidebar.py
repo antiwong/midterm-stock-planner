@@ -7,7 +7,7 @@ Navigation sidebar with quick stats.
 import streamlit as st
 from typing import Optional
 
-from ..config import PAGES, COLORS
+from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, UTILITIES, COLORS
 from ..data import load_runs, get_available_run_folders
 from ..utils import get_project_root
 
@@ -33,20 +33,91 @@ def render_sidebar() -> str:
     
     st.sidebar.markdown("---")
     
-    # Navigation
-    page_labels = [p[0] for p in PAGES]
-    selected_label = st.sidebar.radio(
-        "Navigation",
-        page_labels,
-        label_visibility="collapsed"
-    )
+    # Initialize session state for navigation
+    if 'selected_nav_item' not in st.session_state:
+        st.session_state.selected_nav_item = MAIN_WORKFLOW[0][0]
     
-    # Get page identifier
-    selected_page = None
-    for label, identifier in PAGES:
-        if label == selected_label:
-            selected_page = identifier
-            break
+    # Track all pages for lookup
+    all_pages = MAIN_WORKFLOW + STANDALONE_TOOLS + UTILITIES
+    
+    # Find current selection across all groups
+    current_selection = st.session_state.selected_nav_item
+    
+    # Determine which group the current selection belongs to
+    current_group = None
+    if current_selection in [p[0] for p in MAIN_WORKFLOW]:
+        current_group = 'main'
+    elif current_selection in [p[0] for p in STANDALONE_TOOLS]:
+        current_group = 'tools'
+    elif current_selection in [p[0] for p in UTILITIES]:
+        current_group = 'utils'
+    else:
+        current_group = 'main'  # Default
+    
+    # Main Workflow Section
+    st.sidebar.markdown("""
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+        Main Workflow
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Main Workflow Section - Use buttons for better control
+    for label, identifier in MAIN_WORKFLOW:
+        is_selected = (label == current_selection)
+        button_type = "primary" if is_selected else "secondary"
+        if st.sidebar.button(
+            label,
+            key=f"nav_btn_{identifier}",
+            use_container_width=True,
+            type=button_type
+        ):
+            st.session_state.selected_nav_item = label
+            st.rerun()
+    
+    # Standalone Tools Section
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+        Tools
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Tools Section - Use buttons
+    for label, identifier in STANDALONE_TOOLS:
+        is_selected = (label == current_selection)
+        button_type = "primary" if is_selected else "secondary"
+        if st.sidebar.button(
+            label,
+            key=f"nav_btn_{identifier}",
+            use_container_width=True,
+            type=button_type
+        ):
+            st.session_state.selected_nav_item = label
+            st.rerun()
+    
+    # Utilities Section
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+        Utilities
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Utilities Section - Use buttons
+    for label, identifier in UTILITIES:
+        is_selected = (label == current_selection)
+        button_type = "primary" if is_selected else "secondary"
+        if st.sidebar.button(
+            label,
+            key=f"nav_btn_{identifier}",
+            use_container_width=True,
+            type=button_type
+        ):
+            st.session_state.selected_nav_item = label
+            st.rerun()
+    
+    # Get the final selected label (this is what app.py expects)
+    selected_label = st.session_state.selected_nav_item
     
     st.sidebar.markdown("---")
     

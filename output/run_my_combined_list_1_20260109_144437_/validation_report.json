@@ -1,0 +1,143 @@
+{
+  "run_id": "run_my_combined_list_1_20260109_144437_",
+  "passed": true,
+  "checks": [
+    {
+      "check": "weights_sum_to_one",
+      "passed": true,
+      "message": "All 59 dates have weights summing to 1.0",
+      "severity": "error",
+      "details": {
+        "dates_checked": 59
+      }
+    },
+    {
+      "check": "no_negative_weights",
+      "passed": true,
+      "message": "All weights are non-negative (long-only)",
+      "severity": "error",
+      "details": {}
+    },
+    {
+      "check": "no_excessive_position",
+      "passed": true,
+      "message": "No single position exceeds 50%",
+      "severity": "error",
+      "details": {
+        "limit": 0.5
+      }
+    },
+    {
+      "check": "return_sanity",
+      "passed": true,
+      "message": "Returns within sane bounds (Total: 414.0%, Ann: 42.8%)",
+      "severity": "error",
+      "details": {
+        "total_return": 4.139748714962895,
+        "annualized_return": 0.4279491496737786
+      }
+    },
+    {
+      "check": "position_count",
+      "passed": true,
+      "message": "All 59 dates have exactly 10 positions",
+      "severity": "error",
+      "details": {
+        "expected": 10,
+        "dates_checked": 59
+      }
+    },
+    {
+      "check": "volatility_bounds",
+      "passed": true,
+      "message": "Volatility 49.2% within moderate limit (50%)",
+      "severity": "error",
+      "details": {
+        "actual": 0.4919355232012081,
+        "limit": 0.5,
+        "profile": "moderate"
+      }
+    },
+    {
+      "check": "drawdown_bounds",
+      "passed": false,
+      "message": "Max drawdown -57.7% exceeds moderate limit (-40%)",
+      "severity": "warning",
+      "details": {
+        "actual": -0.5771067634575533,
+        "limit": -0.4,
+        "profile": "moderate"
+      }
+    },
+    {
+      "check": "sector_concentration",
+      "passed": false,
+      "message": "9 sector concentration violations",
+      "severity": "warning",
+      "details": {
+        "limit": 0.5,
+        "violations": [
+          {
+            "date": "2020-04-01",
+            "sector": "Energy",
+            "weight": 0.7000000000000001
+          },
+          {
+            "date": "2020-05-01",
+            "sector": "Energy",
+            "weight": 0.6000000000000001
+          },
+          {
+            "date": "2020-07-01",
+            "sector": "Energy",
+            "weight": 0.6000000000000001
+          },
+          {
+            "date": "2020-09-01",
+            "sector": "Energy",
+            "weight": 0.6000000000000001
+          },
+          {
+            "date": "2020-11-01",
+            "sector": "Energy",
+            "weight": 0.6000000000000001
+          },
+          {
+            "date": "2020-12-01",
+            "sector": "Energy",
+            "weight": 0.7000000000000001
+          },
+          {
+            "date": "2021-01-01",
+            "sector": "Energy",
+            "weight": 0.7000000000000001
+          },
+          {
+            "date": "2023-06-01",
+            "sector": "Technology",
+            "weight": 0.8
+          },
+          {
+            "date": "2024-04-01",
+            "sector": "Technology",
+            "weight": 0.6000000000000001
+          }
+        ]
+      }
+    },
+    {
+      "check": "factor_concentration",
+      "passed": false,
+      "message": "Factor 'value_score' contributes 86.3% (limit: 50%)",
+      "severity": "warning",
+      "details": {
+        "factor_contributions": {
+          "value_score": 0.86264759055246,
+          "quality_score": 0.13735240944754004
+        },
+        "max_factor": "value_score",
+        "max_pct": 0.86264759055246
+      }
+    }
+  ]
+}

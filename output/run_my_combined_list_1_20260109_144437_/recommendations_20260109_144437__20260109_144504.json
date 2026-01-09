@@ -1,0 +1,175 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "K",
+          "weight": 20,
+          "rationale": "Consumer Defensive sector, highest domain score, low volatility (0.5%) provides stability."
+        },
+        {
+          "ticker": "PG",
+          "weight": 20,
+          "rationale": "Consumer Defensive. High value score protects downside."
+        },
+        {
+          "ticker": "HD",
+          "weight": 15,
+          "rationale": "Consumer Cyclical, High value score, relatively low volatility (1.5%) for sector, good quality score."
+        },
+        {
+          "ticker": "EQIX",
+          "weight": 15,
+          "rationale": "Real Estate sector, low volatility (1.7%), provides diversification and stability."
+        },
+        {
+          "ticker": "DIS",
+          "weight": 15,
+          "rationale": "Communication Services, Relatively low volatility (1.9%), provides diversification."
+        },
+        {
+          "ticker": "BAC",
+          "weight": 15,
+          "rationale": "Financial Services, Relatively low volatility (1.7%), high value score"
+        }
+      ],
+      "expected_return": {
+        "low": 5,
+        "mid": 8,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "~12%",
+        "max_drawdown": "10-15%",
+        "key_risks": [
+          "Interest rate risk (Real Estate, Financials), Consumer spending slowdown (Defensive & Cyclical)"
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "18-22%",
+      "holdings": [
+        {
+          "ticker": "SMCI",
+          "weight": 15,
+          "rationale": "Technology sector, highest domain score, higher growth potential."
+        },
+        {
+          "ticker": "K",
+          "weight": 15,
+          "rationale": "Consumer Defensive sector, provides stability."
+        },
+        {
+          "ticker": "PLUG",
+          "weight": 15,
+          "rationale": "Industrials, high domain score, good growth potential in renewable energy."
+        },
+        {
+          "ticker": "BTG",
+          "weight": 10,
+          "rationale": "Basic Materials, gold exposure can act as a hedge."
+        },
+        {
+          "ticker": "HD",
+          "weight": 10,
+          "rationale": "Consumer Cyclical, solid quality and value scores."
+        },
+        {
+          "ticker": "INTC",
+          "weight": 10,
+          "rationale": "Technology sector, established company, moderate volatility."
+        },
+        {
+          "ticker": "HAL",
+          "weight": 10,
+          "rationale": "Energy sector, diversification, potential upside from energy market."
+        },
+        {
+          "ticker": "DIS",
+          "weight": 15,
+          "rationale": "Communication Services, blend of value and growth."
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 18
+      },
+      "risk_assessment": {
+        "volatility": "18-22%",
+        "max_drawdown": "20-25%",
+        "key_risks": [
+          "Technology sector volatility, energy market fluctuations, economic slowdown impacting cyclicals."
+        ]
+      },
+      "rebalance_frequency": "Semi-Annually"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "30+%",
+      "holdings": [
+        {
+          "ticker": "PLUG",
+          "weight": 20,
+          "rationale": "Industrials sector, high growth potential, higher volatility."
+        },
+        {
+          "ticker": "SMCI",
+          "weight": 20,
+          "rationale": "Technology sector, high growth potential, high volatility."
+        },
+        {
+          "ticker": "RUN",
+          "weight": 15,
+          "rationale": "Technology sector, focus on renewable energy, high growth potential."
+        },
+        {
+          "ticker": "SEDG",
+          "weight": 15,
+          "rationale": "Technology sector, focus on renewable energy, high growth potential."
+        },
+        {
+          "ticker": "XPEV",
+          "weight": 10,
+          "rationale": "Consumer Cyclical (EV), potential for high growth but also high risk."
+        },
+        {
+          "ticker": "LEU",
+          "weight": 10,
+          "rationale": "Energy sector (Uranium), speculative but high potential reward."
+        },
+        {
+          "ticker": "DNN",
+          "weight": 10,
+          "rationale": "Energy sector (Uranium), speculative but high potential reward."
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 20,
+        "high": 30
+      },
+      "risk_assessment": {
+        "volatility": "30+%",
+        "max_drawdown": "40-50%",
+        "key_risks": [
+          "High sector concentration (Technology, Renewables), market corrections, company-specific risks, regulatory changes (Energy)."
+        ]
+      },
+      "rebalance_frequency": "Annually"
+    },
+    "overall_assessment": "These portfolio recommendations are based solely on the provided data. The historical backtest performance shows a high total return and a significant max drawdown. Before investing, further due diligence is recommended to assess individual stock risks and correlations."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"K\", \"weight\": 20, \"rationale\": \"Consumer Defensive sector, highest domain score, low volatility (0.5%) provides stability.\"},\n      {\"ticker\": \"PG\", \"weight\": 20, \"rationale\": \"Consumer Defensive. High value score protects downside.\"},\n      {\"ticker\": \"HD\", \"weight\": 15, \"rationale\": \"Consumer Cyclical, High value score, relatively low volatility (1.5%) for sector, good quality score.\"},\n      {\"ticker\": \"EQIX\", \"weight\": 15, \"rationale\": \"Real Estate sector, low volatility (1.7%), provides diversification and stability.\"},\n      {\"ticker\": \"DIS\", \"weight\": 15, \"rationale\": \"Communication Services, Relatively low volatility (1.9%), provides diversification.\"},\n      {\"ticker\": \"BAC\", \"weight\": 15, \"rationale\": \"Financial Services, Relatively low volatility (1.7%), high value score\"}\n    ],\n    \"expected_return\": {\n      \"low\": 5,\n      \"mid\": 8,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"~12%\",\n      \"max_drawdown\": \"10-15%\",\n      \"key_risks\": [\"Interest rate risk (Real Estate, Financials), Consumer spending slowdown (Defensive & Cyclical)\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"18-22%\",\n    \"holdings\": [\n      {\"ticker\": \"SMCI\", \"weight\": 15, \"rationale\": \"Technology sector, highest domain score, higher growth potential.\"},\n      {\"ticker\": \"K\", \"weight\": 15, \"rationale\": \"Consumer Defensive sector, provides stability.\"},\n      {\"ticker\": \"PLUG\", \"weight\": 15, \"rationale\": \"Industrials, high domain score, good growth potential in renewable energy.\"},\n      {\"ticker\": \"BTG\", \"weight\": 10, \"rationale\": \"Basic Materials, gold exposure can act as a hedge.\"},\n      {\"ticker\": \"HD\", \"weight\": 10, \"rationale\": \"Consumer Cyclical, solid quality and value scores.\"},\n      {\"ticker\": \"INTC\", \"weight\": 10, \"rationale\": \"Technology sector, established company, moderate volatility.\"},\n      {\"ticker\": \"HAL\", \"weight\": 10, \"rationale\": \"Energy sector, diversification, potential upside from energy market.\"},\n      {\"ticker\": \"DIS\", \"weight\": 15, \"rationale\": \"Communication Services, blend of value and growth.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 18\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"18-22%\",\n      \"max_drawdown\": \"20-25%\",\n      \"key_risks\": [\"Technology sector volatility, energy market fluctuations, economic slowdown impacting cyclicals.\"]\n    },\n    \"rebalance_frequency\": \"Semi-Annually\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"30+%\",\n    \"holdings\": [\n      {\"ticker\": \"PLUG\", \"weight\": 20, \"rationale\": \"Industrials sector, high growth potential, higher volatility.\"},\n      {\"ticker\": \"SMCI\", \"weight\": 20, \"rationale\": \"Technology sector, high growth potential, high volatility.\"},\n      {\"ticker\": \"RUN\", \"weight\": 15, \"rationale\": \"Technology sector, focus on renewable energy, high growth potential.\"},\n      {\"ticker\": \"SEDG\", \"weight\": 15, \"rationale\": \"Technology sector, focus on renewable energy, high growth potential.\"},\n      {\"ticker\": \"XPEV\", \"weight\": 10, \"rationale\": \"Consumer Cyclical (EV), potential for high growth but also high risk.\"},\n      {\"ticker\": \"LEU\", \"weight\": 10, \"rationale\": \"Energy sector (Uranium), speculative but high potential reward.\"},\n      {\"ticker\": \"DNN\", \"weight\": 10, \"rationale\": \"Energy sector (Uranium), speculative but high potential reward.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 20,\n      \"high\": 30\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"30+%\",\n      \"max_drawdown\": \"40-50%\",\n      \"key_risks\": [\"High sector concentration (Technology, Renewables), market corrections, company-specific risks, regulatory changes (Energy).\"]\n    },\n    \"rebalance_frequency\": \"Annually\"\n  },\n  \"overall_assessment\": \"These portfolio recommendations are based solely on the provided data. The historical backtest performance shows a high total return and a significant max drawdown. Before investing, further due diligence is recommended to assess individual stock risks and correlations.\"\n}\n```",
+  "generated_at": "2026-01-09T14:45:04.423490"
+}

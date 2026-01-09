@@ -39,6 +39,10 @@ Thumbs.db
 # Environment variables
 .env
 .env.local
+.env.production
+
+# Streamlit credentials (auto-generated, don't commit)
+.streamlit/credentials.toml
 
 # Database
 *.db-journal

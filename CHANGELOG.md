@@ -2,6 +2,64 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.5.0] - 2026-01-09
+
+### Added
+
+#### Data Validation for AI Insights
+- **Data Quality Validation** (`src/analytics/data_validation.py`)
+  - Comprehensive validation before generating AI insights
+  - Checks data completeness, score distribution, sector differentiation
+  - Detects identical scores, low variance, missing critical fields
+  - Provides detailed validation reports with errors and warnings
+  - Blocks AI generation when critical errors are detected (with user override option)
+
+- **Enhanced AI Prompts** (`src/analytics/ai_insights.py`)
+  - AI now refuses to provide recommendations when data quality issues detected
+  - Automatic detection of identical sector scores (0.000 issue)
+  - Stronger warnings in AI context about data reliability
+  - Prevents misleading investment recommendations from bad data
+
+#### Documentation Browser in GUI
+- **Documentation Page** (`src/app/dashboard/pages/documentation.py`)
+  - Browse and view all documentation files from the GUI
+  - Automatic categorization (Getting Started, Configuration, Analysis, etc.)
+  - Interactive markdown link conversion (relative .md links become clickable)
+  - Document selector with category navigation
+  - Download functionality for each document
+
+- **Documentation Guide** (`docs/data-validation.md`)
+  - Complete guide on data validation system
+  - Common issues and solutions
+  - Best practices for data quality
+
+#### Improved Dashboard Navigation
+- **Reorganized Sidebar** (`src/app/dashboard/components/sidebar.py`, `config.py`)
+  - Navigation items grouped into logical sections:
+    - **Main Workflow**: Sequential workflow items (Overview → Run Analysis → Portfolio Builder → Reports → Portfolio Analysis → Purchase Triggers → Analysis Runs → AI Insights)
+    - **Tools**: Standalone tools (Watchlist Manager, Stock Explorer, Compare Runs)
+    - **Utilities**: System utilities (Documentation, Settings)
+  - Visual section headers and dividers for better organization
+  - Button-based navigation with proper selection state management
+  - Dark background styling for better visibility of white text
+  - Fixed WebSocket errors from multiple reruns
+
+### Fixed
+- **Markdown Links**: Relative markdown links in documentation now work in GUI
+- **AI Recommendations**: AI no longer generates misleading recommendations when data quality is poor
+- **Sector Score Detection**: Automatic detection and warning for identical sector scores
+- **Sidebar Navigation**: Fixed issue where multiple items could be selected simultaneously
+- **Main Content Display**: Fixed issue where main content area wasn't showing
+- **Button Visibility**: Fixed white text on white background issue with darker button backgrounds
+
+### Changed
+- AI insights generation now includes data validation step
+- Documentation is now accessible directly from the dashboard
+- Enhanced error messages in AI insights when data quality issues are present
+- Sidebar navigation reorganized for better user experience and logical grouping
+
+---
+
 ## [3.4.0] - 2026-01-02
 
 ### Added

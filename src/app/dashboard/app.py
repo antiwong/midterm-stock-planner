@@ -36,6 +36,7 @@ from src.app.dashboard.pages import (
     render_stock_explorer,
     render_ai_insights,
     render_compare_runs,
+    render_documentation,
     render_settings,
 )
 
@@ -74,6 +75,7 @@ def main():
         "🔎 Stock Explorer": render_stock_explorer,
         "🤖 AI Insights": render_ai_insights,
         "📈 Compare Runs": render_compare_runs,
+        "📚 Documentation": render_documentation,
         "⚙️ Settings": render_settings,
     }
     

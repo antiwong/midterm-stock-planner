@@ -16,6 +16,7 @@ from .ai_insights import render_ai_insights
 from .compare_runs import render_compare_runs
 from .settings import render_settings
 from .watchlist_manager import render_watchlist_manager
+from .documentation import render_documentation
 
 __all__ = [
     'render_overview',
@@ -30,4 +31,5 @@ __all__ = [
     'render_compare_runs',
     'render_settings',
     'render_watchlist_manager',
+    'render_documentation',
 ]

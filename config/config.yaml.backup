@@ -67,12 +67,10 @@ cli:
   save_results: true
   results_path: null
 analysis:
-  # Composite domain score weights (must sum to 1.0)
-  # Optimized to balance factor variance contributions (reduces value_score dominance)
   weights:
-    model_score: 0.49   # LightGBM predicted excess return (increased from 0.40)
-    value_score: 0.20   # Valuation (PE rank, PB rank) (reduced from 0.35 to balance variance)
-    quality_score: 0.31 # Quality (ROE, margins) (increased from 0.25)
+    model_score: 0.49310213976812456
+    value_score: 0.19676009976294476
+    quality_score: 0.3101377604689307
   filters:
     min_roe: 0.03
     min_net_margin: 0.02
