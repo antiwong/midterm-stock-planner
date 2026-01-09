@@ -1,0 +1,853 @@
+# Stock Watchlists Configuration for Mid-term Stock Planner
+# Create custom watchlists to track groups of stocks for 3-month horizon analysis
+# 
+# Usage:
+#   - Edit this file to add/remove stocks from watchlists
+#   - Reference watchlist in config.yaml: universe_watchlist: "tech_giants"
+#   - Or use CLI: python -m src.app.cli score-latest --watchlist tech_giants
+
+watchlists:
+  # ============================================================================
+  # MAJOR INDEX WATCHLISTS
+  # ============================================================================
+  
+  # NASDAQ 100 - Top 100 non-financial companies on NASDAQ
+  nasdaq_100:
+    name: "NASDAQ 100"
+    description: "Top 100 non-financial companies listed on NASDAQ"
+    category: "index"
+    symbols:
+      # Technology - Hardware & Software
+      - AAPL    # Apple Inc
+      - MSFT    # Microsoft Corporation
+      - NVDA    # NVIDIA Corporation
+      - AVGO    # Broadcom Inc
+      - ADBE    # Adobe Inc
+      - CSCO    # Cisco Systems
+      - CRM     # Salesforce Inc
+      - AMD     # Advanced Micro Devices
+      - INTC    # Intel Corporation
+      - QCOM    # Qualcomm Inc
+      - TXN     # Texas Instruments
+      - AMAT    # Applied Materials
+      - MU      # Micron Technology
+      - LRCX    # Lam Research
+      - KLAC    # KLA Corporation
+      - MRVL    # Marvell Technology
+      - ADI     # Analog Devices
+      - SNPS    # Synopsys
+      - CDNS    # Cadence Design Systems
+      - FTNT    # Fortinet
+      - PANW    # Palo Alto Networks
+      - CRWD    # CrowdStrike Holdings
+      - TEAM    # Atlassian
+      - WDAY    # Workday
+      - ZS      # Zscaler
+      - DDOG    # Datadog
+      - SNOW    # Snowflake
+      - MDB     # MongoDB
+      - NET     # Cloudflare
+      - SPLK    # Splunk
+      # Internet & E-commerce
+      - GOOGL   # Alphabet Inc (Class A)
+      - GOOG    # Alphabet Inc (Class C)
+      - AMZN    # Amazon.com Inc
+      - META    # Meta Platforms
+      - NFLX    # Netflix Inc
+      - BKNG    # Booking Holdings
+      - ABNB    # Airbnb
+      - MELI    # MercadoLibre
+      - EBAY    # eBay Inc
+      - JD      # JD.com
+      - PDD     # PDD Holdings
+      - BIDU    # Baidu Inc
+      # Electric Vehicles & Automotive
+      - TSLA    # Tesla Inc
+      - RIVN    # Rivian Automotive
+      - LCID    # Lucid Group
+      # Communications & Media
+      - CMCSA   # Comcast Corporation
+      - TMUS    # T-Mobile US
+      - CHTR    # Charter Communications
+      - WBD     # Warner Bros Discovery
+      - EA      # Electronic Arts
+      - TTWO    # Take-Two Interactive
+      - ATVI    # Activision Blizzard
+      # Biotech & Pharmaceuticals
+      - AMGN    # Amgen Inc
+      - GILD    # Gilead Sciences
+      - VRTX    # Vertex Pharmaceuticals
+      - REGN    # Regeneron Pharmaceuticals
+      - MRNA    # Moderna Inc
+      - BIIB    # Biogen Inc
+      - ILMN    # Illumina Inc
+      - ISRG    # Intuitive Surgical
+      - DXCM    # DexCom Inc
+      - IDXX    # IDEXX Laboratories
+      - ALGN    # Align Technology
+      # Consumer & Retail
+      - COST    # Costco Wholesale
+      - PEP     # PepsiCo Inc
+      - MDLZ    # Mondelez International
+      - KDP     # Keurig Dr Pepper
+      - MNST    # Monster Beverage
+      - KHC     # Kraft Heinz
+      - SBUX    # Starbucks Corp
+      - MAR     # Marriott International
+      - ORLY    # O'Reilly Automotive
+      - ROST    # Ross Stores
+      - DLTR    # Dollar Tree
+      - LULU    # Lululemon Athletica
+      # Industrial & Transportation
+      - HON     # Honeywell International
+      - CSX     # CSX Corporation
+      - PCAR    # PACCAR Inc
+      - ODFL    # Old Dominion Freight
+      - FAST    # Fastenal Company
+      - PAYX    # Paychex Inc
+      - VRSK    # Verisk Analytics
+      - CPRT    # Copart Inc
+      # Utilities & Energy
+      - XEL     # Xcel Energy
+      - EXC     # Exelon Corporation
+      - AEP     # American Electric Power
+      # Other
+      - CTAS    # Cintas Corporation
+      - ANSS    # ANSYS Inc
+      - CDW     # CDW Corporation
+      - GEHC    # GE HealthCare
+      - ON      # ON Semiconductor
+      - GFS     # GlobalFoundries
+
+  # S&P 500 - Standard & Poor's 500 Index (Top Holdings)
+  sp500:
+    name: "S&P 500"
+    description: "Major components of the S&P 500 Index"
+    category: "index"
+    symbols:
+      # Technology
+      - AAPL    # Apple Inc
+      - MSFT    # Microsoft Corporation
+      - NVDA    # NVIDIA Corporation
+      - AVGO    # Broadcom Inc
+      - ORCL    # Oracle Corporation
+      - ADBE    # Adobe Inc
+      - CRM     # Salesforce Inc
+      - AMD     # Advanced Micro Devices
+      - CSCO    # Cisco Systems
+      - ACN     # Accenture
+      - IBM     # IBM Corporation
+      - INTC    # Intel Corporation
+      - QCOM    # Qualcomm Inc
+      - TXN     # Texas Instruments
+      - INTU    # Intuit Inc
+      - AMAT    # Applied Materials
+      - MU      # Micron Technology
+      - ADI     # Analog Devices
+      - LRCX    # Lam Research
+      - NOW     # ServiceNow
+      # Communication Services
+      - GOOGL   # Alphabet Inc (Class A)
+      - META    # Meta Platforms
+      - NFLX    # Netflix Inc
+      - DIS     # Walt Disney
+      - CMCSA   # Comcast Corporation
+      - VZ      # Verizon Communications
+      - T       # AT&T Inc
+      - TMUS    # T-Mobile US
+      - CHTR    # Charter Communications
+      - EA      # Electronic Arts
+      # Consumer Discretionary
+      - AMZN    # Amazon.com Inc
+      - TSLA    # Tesla Inc
+      - HD      # Home Depot
+      - MCD     # McDonald's Corp
+      - NKE     # Nike Inc
+      - LOW     # Lowe's Companies
+      - BKNG    # Booking Holdings
+      - SBUX    # Starbucks Corp
+      - TJX     # TJX Companies
+      - MAR     # Marriott International
+      - GM      # General Motors
+      - F       # Ford Motor
+      - ORLY    # O'Reilly Automotive
+      - AZO     # AutoZone Inc
+      - ROST    # Ross Stores
+      - CMG     # Chipotle Mexican Grill
+      - DHI     # D.R. Horton
+      - LEN     # Lennar Corporation
+      - YUM     # Yum! Brands
+      - EBAY    # eBay Inc
+      # Consumer Staples
+      - PG      # Procter & Gamble
+      - KO      # Coca-Cola Company
+      - PEP     # PepsiCo Inc
+      - COST    # Costco Wholesale
+      - WMT     # Walmart Inc
+      - PM      # Philip Morris
+      - MO      # Altria Group
+      - MDLZ    # Mondelez International
+      - CL      # Colgate-Palmolive
+      - KMB     # Kimberly-Clark
+      - GIS     # General Mills
+      - K       # Kellanova
+      - KHC     # Kraft Heinz
+      - HSY     # Hershey Company
+      - SYY     # Sysco Corporation
+      - KR      # Kroger Co
+      - STZ     # Constellation Brands
+      - TAP     # Molson Coors
+      # Energy
+      - XOM     # Exxon Mobil
+      - CVX     # Chevron Corporation
+      - COP     # ConocoPhillips
+      - EOG     # EOG Resources
+      - SLB     # Schlumberger
+      - MPC     # Marathon Petroleum
+      - PSX     # Phillips 66
+      - VLO     # Valero Energy
+      - OXY     # Occidental Petroleum
+      - PXD     # Pioneer Natural Resources
+      - DVN     # Devon Energy
+      - HAL     # Halliburton
+      - BKR     # Baker Hughes
+      - FANG    # Diamondback Energy
+      # Financials
+      - BRK.B   # Berkshire Hathaway
+      - JPM     # JPMorgan Chase
+      - V       # Visa Inc
+      - MA      # Mastercard Inc
+      - BAC     # Bank of America
+      - WFC     # Wells Fargo
+      - GS      # Goldman Sachs
+      - MS      # Morgan Stanley
+      - SPGI    # S&P Global
+      - BLK     # BlackRock Inc
+      - C       # Citigroup
+      - AXP     # American Express
+      - SCHW    # Charles Schwab
+      - CB      # Chubb Limited
+      - PGR     # Progressive Corp
+      - MMC     # Marsh & McLennan
+      - AON     # Aon plc
+      - ICE     # Intercontinental Exchange
+      - CME     # CME Group
+      - USB     # U.S. Bancorp
+      - PNC     # PNC Financial Services
+      - TFC     # Truist Financial
+      - COF     # Capital One
+      - AIG     # American International Group
+      - MET     # MetLife Inc
+      - PRU     # Prudential Financial
+      - ALL     # Allstate Corporation
+      - TRV     # Travelers Companies
+      # Healthcare
+      - UNH     # UnitedHealth Group
+      - JNJ     # Johnson & Johnson
+      - LLY     # Eli Lilly
+      - ABBV    # AbbVie Inc
+      - MRK     # Merck & Co
+      - PFE     # Pfizer Inc
+      - TMO     # Thermo Fisher Scientific
+      - ABT     # Abbott Laboratories
+      - DHR     # Danaher Corporation
+      - BMY     # Bristol-Myers Squibb
+      - AMGN    # Amgen Inc
+      - MDT     # Medtronic plc
+      - GILD    # Gilead Sciences
+      - ISRG    # Intuitive Surgical
+      - VRTX    # Vertex Pharmaceuticals
+      - REGN    # Regeneron Pharmaceuticals
+      - CVS     # CVS Health
+      - ELV     # Elevance Health
+      - CI      # Cigna Group
+      - HUM     # Humana Inc
+      - SYK     # Stryker Corporation
+      - BSX     # Boston Scientific
+      - BDX     # Becton Dickinson
+      - ZBH     # Zimmer Biomet
+      - EW      # Edwards Lifesciences
+      - DXCM    # DexCom Inc
+      - IDXX    # IDEXX Laboratories
+      - IQV     # IQVIA Holdings
+      - A       # Agilent Technologies
+      - ZTS     # Zoetis Inc
+      - BIIB    # Biogen Inc
+      # Industrials
+      - CAT     # Caterpillar Inc
+      - DE      # Deere & Company
+      - GE      # General Electric
+      - RTX     # RTX Corporation
+      - HON     # Honeywell International
+      - UNP     # Union Pacific
+      - UPS     # United Parcel Service
+      - BA      # Boeing Company
+      - LMT     # Lockheed Martin
+      - NOC     # Northrop Grumman
+      - GD      # General Dynamics
+      - MMM     # 3M Company
+      - EMR     # Emerson Electric
+      - ITW     # Illinois Tool Works
+      - ETN     # Eaton Corporation
+      - PH      # Parker Hannifin
+      - CTAS    # Cintas Corporation
+      - WM      # Waste Management
+      - RSG     # Republic Services
+      - FDX     # FedEx Corporation
+      - CSX     # CSX Corporation
+      - NSC     # Norfolk Southern
+      - PCAR    # PACCAR Inc
+      - ODFL    # Old Dominion Freight
+      - FAST    # Fastenal Company
+      - SWK     # Stanley Black & Decker
+      - IR      # Ingersoll Rand
+      - ROK     # Rockwell Automation
+      # Materials
+      - LIN     # Linde plc
+      - APD     # Air Products
+      - SHW     # Sherwin-Williams
+      - ECL     # Ecolab Inc
+      - FCX     # Freeport-McMoRan
+      - NEM     # Newmont Corporation
+      - NUE     # Nucor Corporation
+      - DOW     # Dow Inc
+      - DD      # DuPont de Nemours
+      - PPG     # PPG Industries
+      - VMC     # Vulcan Materials
+      - MLM     # Martin Marietta
+      # Real Estate
+      - AMT     # American Tower
+      - PLD     # Prologis Inc
+      - CCI     # Crown Castle
+      - EQIX    # Equinix Inc
+      - PSA     # Public Storage
+      - SPG     # Simon Property Group
+      - O       # Realty Income
+      - DLR     # Digital Realty
+      - WELL    # Welltower Inc
+      - AVB     # AvalonBay Communities
+      - EQR     # Equity Residential
+      # Utilities
+      - NEE     # NextEra Energy
+      - DUK     # Duke Energy
+      - SO      # Southern Company
+      - D       # Dominion Energy
+      - AEP     # American Electric Power
+      - EXC     # Exelon Corporation
+      - XEL     # Xcel Energy
+      - SRE     # Sempra Energy
+      - WEC     # WEC Energy Group
+      - ED      # Consolidated Edison
+      - ES      # Eversource Energy
+      - AEE     # Ameren Corporation
+      - PPL     # PPL Corporation
+      - CMS     # CMS Energy
+      - DTE     # DTE Energy
+
+  # Dow Jones Industrial Average - 30 Blue Chip Stocks
+  dow_jones:
+    name: "Dow Jones 30"
+    description: "The 30 stocks in the Dow Jones Industrial Average"
+    category: "index"
+    symbols:
+      - AAPL    # Apple Inc
+      - AMGN    # Amgen Inc
+      - AXP     # American Express
+      - BA      # Boeing Company
+      - CAT     # Caterpillar Inc
+      - CRM     # Salesforce Inc
+      - CSCO    # Cisco Systems
+      - CVX     # Chevron Corporation
+      - DIS     # Walt Disney
+      - DOW     # Dow Inc
+      - GS      # Goldman Sachs
+      - HD      # Home Depot
+      - HON     # Honeywell International
+      - IBM     # IBM Corporation
+      - INTC    # Intel Corporation
+      - JNJ     # Johnson & Johnson
+      - JPM     # JPMorgan Chase
+      - KO      # Coca-Cola Company
+      - MCD     # McDonald's Corp
+      - MMM     # 3M Company
+      - MRK     # Merck & Co
+      - MSFT    # Microsoft Corporation
+      - NKE     # Nike Inc
+      - PG      # Procter & Gamble
+      - TRV     # Travelers Companies
+      - UNH     # UnitedHealth Group
+      - V       # Visa Inc
+      - VZ      # Verizon Communications
+      - WBA     # Walgreens Boots Alliance
+      - WMT     # Walmart Inc
+
+  # Russell 2000 - Small Cap (Representative Sample)
+  russell_2000_sample:
+    name: "Russell 2000 Sample"
+    description: "Sample of Russell 2000 small-cap stocks"
+    category: "index"
+    symbols:
+      - AMC     # AMC Entertainment
+      - SIRI    # Sirius XM Holdings
+      - RKT     # Rocket Companies
+      - PLUG    # Plug Power
+      - SPCE    # Virgin Galactic
+      - BBBY    # Bed Bath & Beyond
+      - CLOV    # Clover Health
+      - SOFI    # SoFi Technologies
+      - OPEN    # Opendoor Technologies
+      - UPST    # Upstart Holdings
+      - AFRM    # Affirm Holdings
+      - PATH    # UiPath Inc
+      - DM      # Desktop Metal
+      - STEM    # Stem Inc
+      - QS      # QuantumScape
+      - CHPT    # ChargePoint Holdings
+      - BLNK    # Blink Charging
+      - EVGO    # EVgo Inc
+      - LAZR    # Luminar Technologies
+      - JOBY    # Joby Aviation
+
+  # ============================================================================
+  # SECTOR-BASED WATCHLISTS
+  # ============================================================================
+  
+  # Tech Giants - Major technology companies (FAANG+ and more)
+  tech_giants:
+    name: "Tech Giants"
+    description: "Major technology companies - FAANG+ and more"
+    category: "sector"
+    symbols:
+      - AAPL    # Apple Inc
+      - MSFT    # Microsoft Corporation
+      - GOOGL   # Alphabet Inc (Google)
+      - AMZN    # Amazon.com Inc
+      - META    # Meta Platforms (Facebook)
+      - NVDA    # NVIDIA Corporation
+      - TSLA    # Tesla Inc
+      - AMD     # Advanced Micro Devices
+      - INTC    # Intel Corporation
+      - ORCL    # Oracle Corporation
+      - CRM     # Salesforce Inc
+      - ADBE    # Adobe Inc
+      - NFLX    # Netflix Inc
+
+  # Semiconductor - Chip manufacturers and related companies
+  semiconductors:
+    name: "Semiconductors"
+    description: "Semiconductor and chip manufacturing companies"
+    category: "sector"
+    symbols:
+      - NVDA    # NVIDIA Corporation
+      - AMD     # Advanced Micro Devices
+      - INTC    # Intel Corporation
+      - TSM     # Taiwan Semiconductor
+      - ASML    # ASML Holding
+      - AVGO    # Broadcom Inc
+      - QCOM    # Qualcomm Inc
+      - MU      # Micron Technology
+      - LRCX    # Lam Research
+      - AMAT    # Applied Materials
+      - KLAC    # KLA Corporation
+      - MRVL    # Marvell Technology
+      - "ON"    # ON Semiconductor
+      - SMCI    # Super Micro Computer
+
+  # Financials - Banks and financial services
+  financials:
+    name: "Financials"
+    description: "Banks and financial services companies"
+    category: "sector"
+    symbols:
+      - JPM     # JPMorgan Chase
+      - BAC     # Bank of America
+      - WFC     # Wells Fargo
+      - C       # Citigroup
+      - GS      # Goldman Sachs
+      - MS      # Morgan Stanley
+      - V       # Visa Inc
+      - MA      # Mastercard Inc
+      - AXP     # American Express
+      - BLK     # BlackRock Inc
+
+  # Healthcare - Pharmaceutical and healthcare companies
+  healthcare:
+    name: "Healthcare"
+    description: "Pharmaceutical and healthcare companies"
+    category: "sector"
+    symbols:
+      - JNJ     # Johnson & Johnson
+      - UNH     # UnitedHealth Group
+      - PFE     # Pfizer Inc
+      - MRK     # Merck & Co
+      - ABBV    # AbbVie Inc
+      - LLY     # Eli Lilly
+      - BMY     # Bristol-Myers Squibb
+      - AMGN    # Amgen Inc
+      - GILD    # Gilead Sciences
+      - TMO     # Thermo Fisher Scientific
+
+  # Consumer - Consumer staples and discretionary
+  consumer:
+    name: "Consumer"
+    description: "Consumer staples and discretionary companies"
+    category: "sector"
+    symbols:
+      - PG      # Procter & Gamble
+      - KO      # Coca-Cola
+      - PEP     # PepsiCo
+      - COST    # Costco Wholesale
+      - WMT     # Walmart Inc
+      - HD      # Home Depot
+      - MCD     # McDonald's
+      - NKE     # Nike Inc
+      - SBUX    # Starbucks
+      - DIS     # Walt Disney
+
+  # Energy - Oil, gas, and energy companies
+  energy:
+    name: "Energy"
+    description: "Oil, gas, and energy companies"
+    category: "sector"
+    symbols:
+      - XOM     # Exxon Mobil
+      - CVX     # Chevron Corporation
+      - COP     # ConocoPhillips
+      - EOG     # EOG Resources
+      - SLB     # Schlumberger
+      - OXY     # Occidental Petroleum
+      - PSX     # Phillips 66
+      - VLO     # Valero Energy
+      - MPC     # Marathon Petroleum
+      - HAL     # Halliburton
+
+  # ============================================================================
+  # STRATEGY-BASED WATCHLISTS
+  # ============================================================================
+
+  # Growth Stocks - High growth potential companies
+  growth_stocks:
+    name: "Growth Stocks"
+    description: "High growth potential companies"
+    category: "strategy"
+    symbols:
+      - TSLA    # Tesla Inc
+      - NVDA    # NVIDIA Corporation
+      - AMD     # Advanced Micro Devices
+      - SNOW    # Snowflake Inc
+      - CRWD    # CrowdStrike Holdings
+      - NET     # Cloudflare Inc
+      - DDOG    # Datadog Inc
+      - ZS      # Zscaler Inc
+      - MDB     # MongoDB Inc
+      - PLTR    # Palantir Technologies
+      - SHOP    # Shopify Inc
+      - SQ      # Block Inc (Square)
+      - COIN    # Coinbase Global
+
+  # Value Stocks - Undervalued companies
+  value_stocks:
+    name: "Value Stocks"
+    description: "Potentially undervalued companies"
+    category: "strategy"
+    symbols:
+      - BRK.B   # Berkshire Hathaway
+      - JPM     # JPMorgan Chase
+      - BAC     # Bank of America
+      - WFC     # Wells Fargo
+      - C       # Citigroup
+      - XOM     # Exxon Mobil
+      - CVX     # Chevron Corporation
+      - JNJ     # Johnson & Johnson
+      - PG      # Procter & Gamble
+      - KO      # Coca-Cola
+
+  # Dividend Stocks - High dividend yield companies
+  dividend_stocks:
+    name: "Dividend Stocks"
+    description: "Companies with high dividend yields"
+    category: "strategy"
+    symbols:
+      - T       # AT&T Inc
+      - VZ      # Verizon Communications
+      - MO      # Altria Group
+      - PM      # Philip Morris
+      - XOM     # Exxon Mobil
+      - CVX     # Chevron Corporation
+      - JNJ     # Johnson & Johnson
+      - PG      # Procter & Gamble
+      - KO      # Coca-Cola
+      - PEP     # PepsiCo
+      - O       # Realty Income
+      - ABBV    # AbbVie Inc
+
+  # ============================================================================
+  # THEME-BASED WATCHLISTS
+  # ============================================================================
+
+  # AI & ML - Artificial Intelligence and Machine Learning companies
+  ai_ml:
+    name: "AI & Machine Learning"
+    description: "Companies focused on AI and ML technologies"
+    category: "theme"
+    symbols:
+      - NVDA    # NVIDIA - GPU leader for AI
+      - AMD     # AMD - AI accelerators
+      - GOOGL   # Google - AI research leader
+      - MSFT    # Microsoft - Azure AI, OpenAI
+      - META    # Meta - AI for social/metaverse
+      - PLTR    # Palantir - AI analytics
+      - AI      # C3.ai - Enterprise AI
+      - SNOW    # Snowflake - Data cloud for AI
+      - DDOG    # Datadog - ML observability
+      - CRWD    # CrowdStrike - AI security
+      - SMCI    # Super Micro - AI servers
+
+  # Cloud Computing - Cloud infrastructure and SaaS
+  cloud:
+    name: "Cloud Computing"
+    description: "Cloud infrastructure and SaaS companies"
+    category: "theme"
+    symbols:
+      - AMZN    # Amazon AWS
+      - MSFT    # Microsoft Azure
+      - GOOGL   # Google Cloud
+      - CRM     # Salesforce
+      - SNOW    # Snowflake
+      - DDOG    # Datadog
+      - NET     # Cloudflare
+      - MDB     # MongoDB
+      - NOW     # ServiceNow
+      - WDAY    # Workday
+
+  # Electric Vehicles - EV manufacturers and related
+  ev:
+    name: "Electric Vehicles"
+    description: "Electric vehicle and clean energy companies"
+    category: "theme"
+    symbols:
+      - TSLA    # Tesla
+      - RIVN    # Rivian
+      - LCID    # Lucid Motors
+      - NIO     # NIO Inc (China)
+      - LI      # Li Auto (China)
+      - XPEV    # XPeng (China)
+      - F       # Ford (EV push)
+      - GM      # General Motors (EV push)
+      - CHPT    # ChargePoint
+      - PLUG    # Plug Power
+
+  # ============================================================================
+  # MARKET CAP WATCHLISTS
+  # ============================================================================
+
+  # Mega Cap - $200B+ market cap
+  mega_cap:
+    name: "Mega Cap"
+    description: "Companies with $200B+ market cap"
+    category: "market_cap"
+    symbols:
+      - AAPL    # Apple
+      - MSFT    # Microsoft
+      - GOOGL   # Alphabet
+      - AMZN    # Amazon
+      - NVDA    # NVIDIA
+      - META    # Meta
+      - TSLA    # Tesla
+      - BRK.B   # Berkshire
+      - V       # Visa
+      - JPM     # JPMorgan
+      - UNH     # UnitedHealth
+      - LLY     # Eli Lilly
+
+  # Mid Cap Growth - Growing mid-cap companies
+  mid_cap_growth:
+    name: "Mid Cap Growth"
+    description: "Growing mid-cap companies ($10B-$50B)"
+    category: "market_cap"
+    symbols:
+      - CRWD    # CrowdStrike
+      - ZS      # Zscaler
+      - DDOG    # Datadog
+      - NET     # Cloudflare
+      - MDB     # MongoDB
+      - OKTA    # Okta
+      - HUBS    # HubSpot
+      - BILL    # Bill.com
+      - VEEV    # Veeva Systems
+      - TWLO    # Twilio
+
+  # ============================================================================
+  # CUSTOM WATCHLISTS
+  # ============================================================================
+
+  # Blue Chip - Traditional large-cap stable companies
+  blue_chip:
+    name: "Blue Chip Stocks"
+    description: "Traditional blue-chip dividend aristocrats and stable large-caps"
+    category: "strategy"
+    symbols:
+      - JNJ     # Johnson & Johnson - Healthcare
+      - PG      # Procter & Gamble - Consumer Staples
+      - KO      # Coca-Cola - Beverages
+      - PEP     # PepsiCo - Beverages
+      - WMT     # Walmart - Retail
+      - HD      # Home Depot - Home Improvement
+      - MCD     # McDonald's - Fast Food
+      - MMM     # 3M Company - Industrial
+      - CAT     # Caterpillar - Industrial
+      - DE      # John Deere - Agriculture/Industrial
+      - HON     # Honeywell - Industrial
+      - UNP     # Union Pacific - Railroad
+      - LMT     # Lockheed Martin - Defense
+      - RTX     # Raytheon - Defense/Aerospace
+      - BA      # Boeing - Aerospace
+      - GE      # General Electric - Industrial
+      - IBM     # IBM - Technology
+      - VZ      # Verizon - Telecom
+      - T       # AT&T - Telecom
+      - D       # Dominion Energy - Utilities
+      - DUK     # Duke Energy - Utilities
+      - SO      # Southern Company - Utilities
+      - NEE     # NextEra Energy - Utilities/Renewables
+
+  # Nuclear & Uranium - Nuclear energy related investments
+  nuclear_energy:
+    name: "Nuclear & Uranium"
+    description: "Nuclear energy ETFs, uranium miners, and nuclear utilities"
+    category: "theme"
+    symbols:
+      - NLR     # VanEck Uranium+Nuclear Energy ETF
+      - URA     # Global X Uranium ETF
+      - URNM    # Sprott Uranium Miners ETF
+      - CCJ     # Cameco Corporation - Uranium mining
+      - UEC     # Uranium Energy Corp
+      - DNN     # Denison Mines
+      - NXE     # NexGen Energy - Uranium
+      - LEU     # Centrus Energy - Uranium enrichment
+      - CEG     # Constellation Energy - Nuclear utility
+      - VST     # Vistra Corp - Nuclear/power
+      - SMR     # NuScale Power - Small modular reactors
+
+  # Precious Metals - Gold, Silver, and Precious Metals
+  precious_metals:
+    name: "Precious Metals"
+    description: "Gold, silver, and precious metals miners and ETFs"
+    category: "theme"
+    symbols:
+      # Gold ETFs
+      - GLD     # SPDR Gold Shares ETF
+      - IAU     # iShares Gold Trust
+      - GLDM    # SPDR Gold MiniShares Trust
+      - SGOL    # Aberdeen Standard Physical Gold Shares
+      # Silver ETFs
+      - SLV     # iShares Silver Trust
+      - SIVR    # Aberdeen Standard Physical Silver Shares
+      - PSLV    # Sprott Physical Silver Trust
+      # Mining ETFs
+      - GDX     # VanEck Gold Miners ETF
+      - GDXJ    # VanEck Junior Gold Miners ETF
+      - SIL     # Global X Silver Miners ETF
+      - SILJ    # ETFMG Prime Junior Silver Miners ETF
+      - RING    # iShares MSCI Global Gold Miners ETF
+      # Major Gold Miners
+      - NEM     # Newmont Corporation
+      - GOLD    # Barrick Gold Corporation
+      - FNV     # Franco-Nevada Corporation
+      - WPM     # Wheaton Precious Metals
+      - AEM     # Agnico Eagle Mines
+      - KGC     # Kinross Gold Corporation
+      - AU      # AngloGold Ashanti
+      - HMY     # Harmony Gold Mining
+      - EGO     # Eldorado Gold Corporation
+      - BTG     # B2Gold Corp
+      - AGI     # Alamos Gold Inc
+      - PAAS    # Pan American Silver Corp
+      - HL      # Hecla Mining Company
+      - CDE     # Coeur Mining Inc
+      - MAG     # MAG Silver Corp
+      - AG      # First Majestic Silver Corp
+      # Streaming & Royalty Companies
+      - RGLD    # Royal Gold Inc
+      - SAND    # Sandstorm Gold Ltd
+      - OR      # Osisko Gold Royalties
+
+  # Clean Energy - Renewable and clean energy companies
+  clean_energy:
+    name: "Clean Energy"
+    description: "Solar, wind, and clean energy companies and ETFs"
+    category: "theme"
+    symbols:
+      - ENPH    # Enphase Energy - Solar
+      - SEDG    # SolarEdge - Solar
+      - FSLR    # First Solar - Solar
+      - NEE     # NextEra Energy - Renewables
+      - BEP     # Brookfield Renewable
+      - ICLN    # iShares Global Clean Energy ETF
+      - TAN     # Invesco Solar ETF
+      - QCLN    # First Trust NASDAQ Clean Edge Green Energy
+      - RUN     # Sunrun - Solar
+      - PLUG    # Plug Power - Hydrogen
+
+  # ETFs - Popular sector and thematic ETFs
+  etfs:
+    name: "ETFs"
+    description: "Popular ETFs for sector and thematic exposure"
+    category: "theme"
+    symbols:
+      - SPY     # S&P 500
+      - QQQ     # Nasdaq 100
+      - DIA     # Dow Jones Industrial
+      - IWM     # Russell 2000 Small Cap
+      - XLK     # Technology Select Sector
+      - XLF     # Financial Select Sector
+      - XLE     # Energy Select Sector
+      - XLV     # Health Care Select Sector
+      - XLI     # Industrial Select Sector
+      - XLP     # Consumer Staples
+      - NLR     # VanEck Uranium+Nuclear Energy
+      - ARKK    # ARK Innovation ETF
+      - SMH     # VanEck Semiconductor ETF
+
+  # Custom Watchlist - Add your own stocks here
+  custom:
+    name: "My Watchlist"
+    description: "Custom watchlist - edit as needed"
+    category: "custom"
+    symbols:
+      - AAPL
+      - MSFT
+      - GOOGL
+      - AMD
+      - AMZN
+      - NVDA
+      - TSM
+      - NLR     # VanEck Uranium+Nuclear Energy ETF
+      - CCJ     # Cameco - Uranium
+      - JNJ     # Johnson & Johnson
+      - PG      # Procter & Gamble
+      - KO      # Coca-Cola
+      # Precious Metals
+      - GLD     # SPDR Gold Shares ETF
+      - SLV     # iShares Silver Trust ETF
+      - GDX     # VanEck Gold Miners ETF
+      - GDXJ    # VanEck Junior Gold Miners ETF
+      - NEM     # Newmont Corporation - Gold mining
+      - GOLD    # Barrick Gold Corporation
+      - FNV     # Franco-Nevada Corporation
+      - WPM     # Wheaton Precious Metals
+      - AEM     # Agnico Eagle Mines
+      - KGC     # Kinross Gold Corporation
+
+  # Earnings Watch - Upcoming earnings to monitor
+  earnings_watch:
+    name: "Earnings Watch"
+    description: "Stocks with upcoming earnings to monitor"
+    category: "custom"
+    symbols: []  # Add tickers here before earnings season
+
+# Default watchlist to use when none specified
+default_watchlist: "tech_giants"
+
+# Combined universe (all unique tickers from all watchlists)
+# This is auto-generated - see data/universe.txt for the flat file version

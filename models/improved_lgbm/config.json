@@ -1,0 +1,80 @@
+{
+  "feature_cols": [
+    "return_5d",
+    "return_10d",
+    "return_21d",
+    "return_63d",
+    "return_126d",
+    "vol_10d",
+    "vol_21d",
+    "vol_63d",
+    "rsi_14",
+    "macd_hist",
+    "macd_cross",
+    "bb_pct",
+    "bb_width",
+    "price_sma20_ratio",
+    "price_sma50_ratio",
+    "sma20_sma50_ratio",
+    "volume_ratio",
+    "atr_pct",
+    "momentum_10",
+    "momentum_21",
+    "pct_from_high",
+    "pct_from_low",
+    "zscore_20",
+    "zscore_50"
+  ],
+  "params": {
+    "objective": "regression",
+    "metric": "rmse",
+    "boosting_type": "gbdt",
+    "num_leaves": 31,
+    "learning_rate": 0.03,
+    "feature_fraction": 0.8,
+    "bagging_fraction": 0.8,
+    "bagging_freq": 5,
+    "min_child_samples": 20,
+    "lambda_l1": 0.1,
+    "lambda_l2": 0.1,
+    "verbose": -1,
+    "seed": 42
+  },
+  "cv_scores": [
+    {
+      "fold": 1,
+      "spearman": 0.22598151783551823,
+      "rmse": 0.10364938199558066,
+      "hit_rate": 0.6321184510250569
+    },
+    {
+      "fold": 2,
+      "spearman": 0.029955465090901974,
+      "rmse": 0.12567001460605962,
+      "hit_rate": 0.6452164009111617
+    },
+    {
+      "fold": 3,
+      "spearman": 0.13986366278191498,
+      "rmse": 0.12279816987012392,
+      "hit_rate": 0.5979498861047836
+    },
+    {
+      "fold": 4,
+      "spearman": 0.1956315615722171,
+      "rmse": 0.11456962992418496,
+      "hit_rate": 0.5916856492027335
+    },
+    {
+      "fold": 5,
+      "spearman": 0.29072577409477296,
+      "rmse": 0.10523419751991164,
+      "hit_rate": 0.592255125284738
+    }
+  ],
+  "avg_spearman": 0.17643159627506505,
+  "avg_hit_rate": 0.6118451025056947,
+  "training_date": "2025-12-30T23:27:29.999046",
+  "n_samples": 10538,
+  "n_stocks": 22
+}

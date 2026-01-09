@@ -1,0 +1,41 @@
+{
+  "model_id": "20251230_193401_13c1dd03",
+  "feature_names": [
+    "return_1m",
+    "return_3m",
+    "return_6m",
+    "return_12m",
+    "vol_20d",
+    "vol_60d",
+    "dollar_volume_20d",
+    "volume_ratio",
+    "turnover_20d",
+    "pe_ratio",
+    "pb_ratio",
+    "earnings_yield"
+  ],
+  "target_col": "target",
+  "training_date": "2025-12-30T19:34:01.351909",
+  "training_config": {
+    "target_col": "target",
+    "test_size": 0.2,
+    "random_state": 42,
+    "params": {
+      "n_estimators": 300,
+      "learning_rate": 0.05,
+      "max_depth": -1,
+      "num_leaves": 31
+    }
+  },
+  "performance_metrics": {
+    "mse": 0.009247067794421896,
+    "rmse": 0.09616167528918106,
+    "mae": 0.07441616870025428,
+    "n_train": 19872,
+    "n_valid": 4968
+  },
+  "data_info": {
+    "n_samples": 24840,
+    "date_range": "2020-2024"
+  }
+}

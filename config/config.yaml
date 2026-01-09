@@ -1,0 +1,108 @@
+# Mid-term Stock Planner Configuration
+
+model:
+  target_col: "target"
+  test_size: 0.2
+  random_state: 42
+  model_type: "lightgbm"
+  params:
+    n_estimators: 300
+    learning_rate: 0.05
+    max_depth: -1
+    num_leaves: 31
+
+backtest:
+  train_years: 5.0
+  test_years: 1.0
+  step_years: 1.0
+  rebalance_freq: "MS"
+  top_n: 10            # Fixed 10-stock portfolio (takes precedence over top_pct)
+  top_pct: 0.1         # Fallback: top 10% if top_n is null
+  min_stocks: 5
+  transaction_cost: 0.001
+  # Optional date range constraints (null = use all available data)
+  start_date: null     # Format: "YYYY-MM-DD" - filters data before this date
+  end_date: null       # Format: "YYYY-MM-DD" - filters data after this date
+
+data:
+  price_data_path: "data/prices.csv"
+  fundamental_data_path: "data/fundamentals.csv"
+  benchmark_data_path: "data/benchmark.csv"
+  universe_path: "data/universe.txt"
+  sentiment_news_path: "data/news.csv"  # Path to news data for sentiment
+  output_dir: "output"
+  models_dir: "models"
+
+features:
+  return_periods: [21, 63, 126, 252]
+  volatility_windows: [20, 60]
+  volume_window: 20
+  include_fundamentals: true
+  horizon_days: 63
+  # Sentiment feature settings
+  use_sentiment: false  # Set to true to enable sentiment features
+  sentiment_source: "news"
+  sentiment_lookbacks: [1, 7, 14]
+  sentiment_min_count: 1
+  sentiment_fillna: 0.0
+
+# Sentiment configuration (optional - only used if use_sentiment is true)
+sentiment:
+  news_data_path: null  # Path to news CSV/Parquet file
+  model_type: "lexicon"  # dummy, lexicon, or finbert
+  text_column: "headline"  # Column to use for sentiment analysis
+  market_close_hour: 16  # Hour at which market closes
+  timezone: null  # Timezone for news timestamps (e.g., "US/Eastern")
+  lookbacks: [1, 7, 14]  # Rolling window sizes for features
+  min_daily_count: 1  # Minimum articles per day
+  include_volume_features: true  # Include article count features
+  include_trend_features: true  # Include sentiment trend features
+  fillna_value: 0.0  # Value for missing sentiment (0 = neutral)
+
+cli:
+  output_format: "table"
+  verbose: true
+  save_results: true
+  results_path: null
+
+# Analysis configuration for vertical/horizontal portfolio construction
+analysis:
+  # Composite domain score weights (must sum to 1.0)
+  # Adjusted to reduce model dominance and increase value/quality influence
+  weights:
+    model_score: 0.40   # LightGBM predicted excess return (reduced from 0.5)
+    value_score: 0.35   # Valuation (PE rank, PB rank) (increased from 0.3)
+    quality_score: 0.25 # Quality (ROE, margins) (increased from 0.2)
+  
+  # Hard numeric filters for stock selection
+  filters:
+    # Balanced defaults: strict enough for quality, lenient enough for diversification
+    # Adjusted based on analysis: 8% pass rate was too strict, targeting ~20-30%
+    min_roe: 0.03             # Minimum ROE (3% = basic profitability, was 5%)
+    min_net_margin: 0.02      # Minimum net margin (2% = basic profitability, was 3%)
+    max_debt_to_equity: 1.8   # Maximum debt-to-equity ratio (was 1.5, allows more flexibility)
+    min_market_cap: null      # Minimum market cap (null = no filter)
+    min_avg_volume: null      # Minimum average volume (null = no filter)
+  
+  # Vertical analysis settings
+  vertical:
+    top_k_per_sector: 8       # Top K candidates per sector (increased from 5 for better diversification)
+    export_candidates: true   # Export vertical_candidates CSVs
+  
+  # Horizontal analysis settings  
+  horizontal:
+    portfolio_size: 10        # Final portfolio size
+    max_position_weight: 0.15 # Maximum single position weight
+    min_position_weight: 0.02 # Minimum position weight
+    max_sector_weight: 0.30   # Maximum sector weight (reduced from 0.35 to reduce concentration)
+    
+    # Optimization targets
+    target_max_drawdown: 0.20   # Max allowed drawdown
+    target_volatility: 0.25    # Max allowed annual volatility
+    min_diversification: 0.70  # Minimum diversification score
+    
+    # Selection method: 'heuristic' or 'optimize'
+    selection_method: 'heuristic'
+    
+    # If optimize, number of combinations to evaluate
+    max_combinations: 1000

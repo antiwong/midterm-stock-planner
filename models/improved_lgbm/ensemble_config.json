@@ -1,0 +1,36 @@
+{
+  "best_ensemble": "Equal Weight",
+  "weights": {
+    "lgbm": 0.3333333333333333,
+    "xgb": 0.3333333333333333,
+    "ridge": 0.3333333333333333
+  },
+  "spearman": 0.16269109795684714,
+  "hit_rate": 0.6165413533834586,
+  "individual_models": {
+    "lgbm": {
+      "spearman": 0.06164259382564101,
+      "hit_rate": 0.6077694235588973
+    },
+    "ridge": {
+      "spearman": 0.16127485471711808,
+      "hit_rate": 0.6146616541353384
+    }
+  },
+  "feature_cols": [
+    "return_5d",
+    "return_21d",
+    "return_63d",
+    "return_126d",
+    "vol_21d",
+    "vol_63d",
+    "rsi_14",
+    "macd_hist",
+    "bb_pct",
+    "price_sma50",
+    "volume_ratio",
+    "pct_from_high",
+    "pct_from_low",
+    "zscore_50"
+  ]
+}

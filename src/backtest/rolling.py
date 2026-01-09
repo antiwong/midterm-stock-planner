@@ -1,0 +1,545 @@
+"""Walk-forward backtesting module for mid-term stock planner.
+
+This module implements rolling window backtests with configurable
+training periods, test periods, and portfolio construction rules.
+"""
+
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Dict, List, Optional, Tuple, Any
+
+import pandas as pd
+import numpy as np
+
+from ..models.trainer import train_lgbm_regressor, ModelConfig
+
+
+@dataclass
+class BacktestConfig:
+    """Configuration for walk-forward backtest."""
+    train_years: float = 5.0
+    test_years: float = 1.0
+    step_years: float = 1.0  # How much to step forward each iteration
+    rebalance_freq: str = "MS"  # "MS" = month start, "M" = month end
+    top_n: Optional[int] = None  # If None, use top decile
+    top_pct: float = 0.1  # Top percentage if top_n is None
+    min_stocks: int = 5  # Minimum stocks required for portfolio
+    transaction_cost: float = 0.001  # 0.1% transaction cost per trade
+
+
+@dataclass
+class BacktestResults:
+    """Results from a backtest run."""
+    portfolio_returns: pd.Series
+    benchmark_returns: pd.Series
+    positions: pd.DataFrame  # date, ticker, weight
+    metrics: Dict[str, float]
+    window_results: List[Dict[str, Any]]
+    predictions: Optional[pd.DataFrame] = None  # date, ticker, prediction
+    final_scores: Optional[pd.DataFrame] = None  # Latest scores for each ticker
+
+
+def _get_rebalance_dates(
+    start_date: pd.Timestamp,
+    end_date: pd.Timestamp,
+    freq: str = "MS"
+) -> List[pd.Timestamp]:
+    """Get list of rebalance dates between start and end."""
+    dates = pd.date_range(start=start_date, end=end_date, freq=freq)
+    return dates.tolist()
+
+
+def _construct_portfolio(
+    predictions: pd.DataFrame,
+    date: pd.Timestamp,
+    top_n: Optional[int],
+    top_pct: float,
+    min_stocks: int
+) -> pd.DataFrame:
+    """
+    Construct equal-weight portfolio from predictions at a given date.
+    
+    Args:
+        predictions: DataFrame with columns ['date', 'ticker', 'prediction']
+        date: Date to construct portfolio for
+        top_n: Number of top stocks to select (if None, use top_pct)
+        top_pct: Top percentage of stocks to select
+        min_stocks: Minimum stocks required
+    
+    Returns:
+        DataFrame with columns ['ticker', 'weight']
+    """
+    # Find closest date in predictions
+    available_dates = predictions['date'].unique()
+    closest_date = min(available_dates, key=lambda d: abs((d - date).total_seconds()))
+    
+    date_predictions = predictions[predictions['date'] == closest_date].copy()
+    
+    if len(date_predictions) == 0:
+        return pd.DataFrame(columns=['ticker', 'weight'])
+    
+    # Sort by prediction (descending - higher is better)
+    date_predictions = date_predictions.sort_values('prediction', ascending=False)
+    
+    # Determine number of stocks to select
+    if top_n is not None:
+        n_stocks = min(top_n, len(date_predictions))
+    else:
+        n_stocks = max(min_stocks, int(len(date_predictions) * top_pct))
+    
+    n_stocks = max(n_stocks, 1)  # At least 1 stock
+    
+    # Select top stocks
+    selected = date_predictions.head(n_stocks)
+    
+    # Equal weight
+    weight = 1.0 / len(selected)
+    
+    portfolio = pd.DataFrame({
+        'ticker': selected['ticker'].values,
+        'weight': [weight] * len(selected)
+    })
+    
+    return portfolio
+
+
+def _calculate_metrics(
+    portfolio_returns: pd.Series,
+    benchmark_returns: pd.Series,
+    positions: pd.DataFrame,
+    trading_days_per_year: int = 252
+) -> Dict[str, float]:
+    """
+    Calculate performance metrics.
+    
+    Returns:
+        Dictionary with metrics: annualized_return, sharpe_ratio, max_drawdown,
+        turnover, hit_rate, excess_return, volatility
+    """
+    # Align returns
+    returns_df = pd.DataFrame({
+        'portfolio': portfolio_returns,
+        'benchmark': benchmark_returns
+    }).dropna()
+    
+    if len(returns_df) == 0:
+        return {
+            'annualized_return': 0.0,
+            'sharpe_ratio': 0.0,
+            'max_drawdown': 0.0,
+            'turnover': 0.0,
+            'hit_rate': 0.0,
+            'excess_return': 0.0,
+            'volatility': 0.0,
+            'total_return': 0.0,
+        }
+    
+    portfolio_ret = returns_df['portfolio']
+    benchmark_ret = returns_df['benchmark']
+    excess_ret = portfolio_ret - benchmark_ret
+    
+    # Total return
+    total_return = (1 + portfolio_ret).prod() - 1
+    
+    # Annualized return
+    n_periods = len(portfolio_ret)
+    if n_periods > 0:
+        annualized_return = (1 + total_return) ** (trading_days_per_year / n_periods) - 1
+    else:
+        annualized_return = 0.0
+    
+    # Volatility (annualized)
+    volatility = portfolio_ret.std() * np.sqrt(trading_days_per_year)
+    
+    # Sharpe ratio (annualized, assuming 0 risk-free rate)
+    if volatility > 0:
+        sharpe_ratio = annualized_return / volatility
+    else:
+        sharpe_ratio = 0.0
+    
+    # Max drawdown
+    cumulative = (1 + portfolio_ret).cumprod()
+    running_max = cumulative.expanding().max()
+    drawdown = (cumulative - running_max) / running_max
+    max_drawdown = drawdown.min()
+    
+    # Turnover (average absolute change in weights per rebalance)
+    if len(positions) > 0:
+        positions_pivot = positions.pivot_table(
+            index='date',
+            columns='ticker',
+            values='weight',
+            fill_value=0.0
+        )
+        if len(positions_pivot) > 1:
+            weight_changes = positions_pivot.diff().abs().sum(axis=1)
+            turnover = weight_changes.mean()
+        else:
+            turnover = 0.0
+    else:
+        turnover = 0.0
+    
+    # Hit rate (percentage of periods where portfolio beats benchmark)
+    if len(excess_ret) > 0:
+        hit_rate = (excess_ret > 0).mean()
+    else:
+        hit_rate = 0.0
+    
+    # Excess return (annualized)
+    total_excess = (1 + excess_ret).prod() - 1
+    if n_periods > 0:
+        excess_annualized = (1 + total_excess) ** (trading_days_per_year / n_periods) - 1
+    else:
+        excess_annualized = 0.0
+    
+    return {
+        'total_return': float(total_return),
+        'annualized_return': float(annualized_return),
+        'sharpe_ratio': float(sharpe_ratio),
+        'max_drawdown': float(max_drawdown),
+        'turnover': float(turnover),
+        'hit_rate': float(hit_rate),
+        'excess_return': float(excess_annualized),
+        'volatility': float(volatility),
+    }
+
+
+def run_walk_forward_backtest(
+    training_data: pd.DataFrame,
+    benchmark_data: pd.DataFrame,
+    price_data: pd.DataFrame,
+    feature_cols: List[str],
+    config: Optional[BacktestConfig] = None,
+    model_config: Optional[ModelConfig] = None,
+    verbose: bool = True,
+) -> BacktestResults:
+    """
+    Run a walk-forward backtest with rolling windows.
+    
+    Args:
+        training_data: Full training dataset with features and target
+                      (from make_training_dataset)
+        benchmark_data: Benchmark price data with 'date' and price column
+        price_data: Stock price data with 'date', 'ticker', 'close'
+        feature_cols: List of feature column names
+        config: Backtest configuration (uses defaults if None)
+        model_config: Model training configuration (uses defaults if None)
+        verbose: Whether to print progress messages
+    
+    Returns:
+        BacktestResults with portfolio returns, metrics, and positions
+    """
+    if config is None:
+        config = BacktestConfig()
+    if model_config is None:
+        model_config = ModelConfig()
+    
+    # Ensure dates are datetime
+    training_data = training_data.copy()
+    training_data['date'] = pd.to_datetime(training_data['date'])
+    price_data = price_data.copy()
+    price_data['date'] = pd.to_datetime(price_data['date'])
+    benchmark_data = benchmark_data.copy()
+    benchmark_data['date'] = pd.to_datetime(benchmark_data['date'])
+    
+    # Sort data
+    training_data = training_data.sort_values(['date', 'ticker'])
+    price_data = price_data.sort_values(['date', 'ticker'])
+    benchmark_data = benchmark_data.sort_values('date')
+    
+    # Get date range
+    min_date = training_data['date'].min()
+    max_date = training_data['date'].max()
+    
+    # Calculate window parameters (approximate days)
+    train_days = int(config.train_years * 365.25)
+    test_days = int(config.test_years * 365.25)
+    step_days = int(config.step_years * 365.25)
+    
+    # Initialize results storage
+    all_predictions = []
+    all_positions = []
+    window_results = []
+    skipped_windows = []
+    
+    # Identify benchmark price column
+    price_cols = ['close', 'price', 'value']
+    benchmark_price_col = None
+    for col in price_cols:
+        if col in benchmark_data.columns:
+            benchmark_price_col = col
+            break
+    
+    if benchmark_price_col is None:
+        raise ValueError(f"benchmark_data must have one of {price_cols}")
+    
+    # Walk-forward loop
+    train_start = min_date
+    test_start = train_start + pd.Timedelta(days=train_days)
+    test_end = test_start + pd.Timedelta(days=test_days)
+    
+    window_num = 0
+    while test_end <= max_date:
+        window_num += 1
+        
+        if verbose:
+            print(f"Window {window_num}: Train {train_start.date()} to {test_start.date()}, "
+                  f"Test {test_start.date()} to {test_end.date()}")
+        
+        # Extract training window
+        train_mask = (training_data['date'] >= train_start) & (training_data['date'] < test_start)
+        train_window = training_data[train_mask].copy()
+        
+        # Extract test window
+        test_mask = (training_data['date'] >= test_start) & (training_data['date'] < test_end)
+        test_window = training_data[test_mask].copy()
+        
+        if len(train_window) == 0 or len(test_window) == 0:
+            reason = f"Insufficient data (train={len(train_window)}, test={len(test_window)})"
+            if verbose:
+                print(f"  Skipping window: {reason}")
+            skipped_windows.append({'window': window_num, 'reason': reason})
+            train_start = train_start + pd.Timedelta(days=step_days)
+            test_start = train_start + pd.Timedelta(days=train_days)
+            test_end = test_start + pd.Timedelta(days=test_days)
+            continue
+        
+        # Train model
+        try:
+            model, X_train, X_valid, metrics = train_lgbm_regressor(
+                train_window,
+                feature_cols,
+                model_config
+            )
+            if verbose:
+                print(f"  Model trained: RMSE={metrics.get('rmse', 'N/A'):.4f}")
+        except Exception as e:
+            reason = f"Error training model: {e}"
+            if verbose:
+                print(f"  Skipping: {reason}")
+            skipped_windows.append({'window': window_num, 'reason': reason})
+            train_start = train_start + pd.Timedelta(days=step_days)
+            test_start = train_start + pd.Timedelta(days=train_days)
+            test_end = test_start + pd.Timedelta(days=test_days)
+            continue
+        
+        # Make predictions on test window
+        X_test = test_window[feature_cols].fillna(0)
+        predictions = model.predict(X_test)
+        
+        test_predictions = test_window[['date', 'ticker']].copy()
+        test_predictions['prediction'] = predictions
+        all_predictions.append(test_predictions)
+        
+        # Get rebalance dates in test window
+        rebalance_dates = _get_rebalance_dates(test_start, test_end, config.rebalance_freq)
+        
+        # Construct portfolios
+        for rebal_date in rebalance_dates:
+            if rebal_date >= test_end:
+                break
+            
+            # Construct portfolio
+            portfolio = _construct_portfolio(
+                test_predictions,
+                rebal_date,
+                config.top_n,
+                config.top_pct,
+                config.min_stocks
+            )
+            
+            if len(portfolio) > 0:
+                portfolio['date'] = rebal_date
+                all_positions.append(portfolio[['date', 'ticker', 'weight']])
+        
+        # Store window results
+        window_results.append({
+            'window': window_num,
+            'train_start': train_start,
+            'train_end': test_start,
+            'test_start': test_start,
+            'test_end': test_end,
+            'n_train_samples': len(train_window),
+            'n_test_samples': len(test_window),
+            'train_rmse': metrics.get('rmse'),
+        })
+        
+        # Move to next window
+        train_start = train_start + pd.Timedelta(days=step_days)
+        test_start = train_start + pd.Timedelta(days=train_days)
+        test_end = test_start + pd.Timedelta(days=test_days)
+    
+    # Check if we have any results
+    if not all_predictions:
+        error_msg = "No predictions generated. Check data availability and date ranges.\n\n"
+        error_msg += f"Data range: {min_date.date()} to {max_date.date()}\n"
+        error_msg += f"Training window: {train_days} days ({config.train_years} years)\n"
+        error_msg += f"Test window: {test_days} days ({config.test_years} years)\n"
+        error_msg += f"Step size: {step_days} days ({config.step_years} years)\n"
+        error_msg += f"Total windows attempted: {window_num}\n"
+        error_msg += f"Windows skipped: {len(skipped_windows)}\n"
+        
+        if skipped_windows:
+            error_msg += "\nSkipped windows:\n"
+            for skip in skipped_windows[:10]:  # Show first 10
+                error_msg += f"  Window {skip['window']}: {skip['reason']}\n"
+            if len(skipped_windows) > 10:
+                error_msg += f"  ... and {len(skipped_windows) - 10} more\n"
+        
+        error_msg += "\nPossible causes:\n"
+        error_msg += "  1. Date range too short for walk-forward windows\n"
+        error_msg += "  2. Training window too long relative to available data\n"
+        error_msg += "  3. All windows skipped due to insufficient data\n"
+        error_msg += "  4. Model training failures in all windows\n"
+        
+        raise ValueError(error_msg)
+    
+    if not all_positions:
+        raise ValueError("No positions generated. Check rebalance dates and portfolio construction.")
+    
+    # Combine results
+    all_predictions_df = pd.concat(all_predictions, ignore_index=True)
+    all_positions_df = pd.concat(all_positions, ignore_index=True)
+    
+    # Calculate portfolio returns
+    portfolio_returns, benchmark_returns_series = _calculate_portfolio_returns(
+        all_positions_df,
+        price_data,
+        benchmark_data,
+        benchmark_price_col
+    )
+    
+    # Calculate metrics
+    metrics = _calculate_metrics(
+        portfolio_returns,
+        benchmark_returns_series,
+        all_positions_df
+    )
+    
+    if verbose:
+        print(f"\nBacktest Results:")
+        print(f"  Total Return: {metrics['total_return']:.2%}")
+        print(f"  Annualized Return: {metrics['annualized_return']:.2%}")
+        print(f"  Sharpe Ratio: {metrics['sharpe_ratio']:.2f}")
+        print(f"  Max Drawdown: {metrics['max_drawdown']:.2%}")
+        print(f"  Excess Return: {metrics['excess_return']:.2%}")
+    
+    # Get final scores (latest prediction for each ticker) with feature values
+    all_predictions_df['date'] = pd.to_datetime(all_predictions_df['date'])
+    latest_date = all_predictions_df['date'].max()
+    final_scores_df = all_predictions_df[all_predictions_df['date'] == latest_date].copy()
+    
+    # Merge feature values from training_data
+    training_data['date'] = pd.to_datetime(training_data['date'])
+    latest_features = training_data[training_data['date'] == latest_date][['ticker'] + feature_cols].copy()
+    final_scores_df = final_scores_df.merge(latest_features, on='ticker', how='left')
+    
+    final_scores_df = final_scores_df.sort_values('prediction', ascending=False)
+    final_scores_df['rank'] = range(1, len(final_scores_df) + 1)
+    final_scores_df['percentile'] = (1 - final_scores_df['rank'] / len(final_scores_df)) * 100
+    
+    return BacktestResults(
+        portfolio_returns=portfolio_returns,
+        benchmark_returns=benchmark_returns_series,
+        positions=all_positions_df,
+        metrics=metrics,
+        window_results=window_results,
+        predictions=all_predictions_df,
+        final_scores=final_scores_df
+    )
+
+
+def _calculate_portfolio_returns(
+    positions: pd.DataFrame,
+    price_data: pd.DataFrame,
+    benchmark_data: pd.DataFrame,
+    benchmark_price_col: str
+) -> Tuple[pd.Series, pd.Series]:
+    """
+    Calculate daily portfolio and benchmark returns.
+    
+    Args:
+        positions: DataFrame with columns ['date', 'ticker', 'weight']
+        price_data: Stock price data with 'date', 'ticker', 'close'
+        benchmark_data: Benchmark data with 'date' and price column
+        benchmark_price_col: Name of the price column in benchmark_data
+    
+    Returns:
+        Tuple of (portfolio_returns, benchmark_returns) as pd.Series
+    """
+    # Get unique rebalance dates
+    rebalance_dates = sorted(positions['date'].unique())
+    
+    if len(rebalance_dates) < 2:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    
+    portfolio_returns_list = []
+    benchmark_returns_list = []
+    dates_list = []
+    
+    # Calculate returns for each period between rebalances
+    for i in range(len(rebalance_dates) - 1):
+        period_start = rebalance_dates[i]
+        period_end = rebalance_dates[i + 1]
+        
+        # Get positions at start of period
+        period_positions = positions[positions['date'] == period_start]
+        
+        if len(period_positions) == 0:
+            continue
+        
+        # Get daily prices for this period
+        period_prices = price_data[
+            (price_data['date'] > period_start) &
+            (price_data['date'] <= period_end)
+        ].copy()
+        
+        period_benchmark = benchmark_data[
+            (benchmark_data['date'] > period_start) &
+            (benchmark_data['date'] <= period_end)
+        ].copy()
+        
+        if len(period_prices) == 0:
+            continue
+        
+        # Calculate daily returns for each stock
+        period_prices = period_prices.sort_values(['ticker', 'date'])
+        period_prices['daily_return'] = period_prices.groupby('ticker')['close'].pct_change()
+        
+        # Calculate weighted portfolio return for each day
+        for date in period_prices['date'].unique():
+            day_prices = period_prices[period_prices['date'] == date]
+            
+            portfolio_return = 0.0
+            total_weight = 0.0
+            
+            for _, pos in period_positions.iterrows():
+                ticker = pos['ticker']
+                weight = pos['weight']
+                
+                ticker_return = day_prices[day_prices['ticker'] == ticker]['daily_return'].values
+                if len(ticker_return) > 0 and not np.isnan(ticker_return[0]):
+                    portfolio_return += weight * ticker_return[0]
+                    total_weight += weight
+            
+            # Get benchmark return
+            day_benchmark = period_benchmark[period_benchmark['date'] == date]
+            if len(day_benchmark) > 0:
+                benchmark_prev = benchmark_data[benchmark_data['date'] < date][benchmark_price_col].iloc[-1] if len(benchmark_data[benchmark_data['date'] < date]) > 0 else None
+                if benchmark_prev is not None:
+                    benchmark_return = (day_benchmark[benchmark_price_col].values[0] / benchmark_prev) - 1
+                else:
+                    benchmark_return = 0.0
+                
+                if total_weight > 0:
+                    dates_list.append(date)
+                    portfolio_returns_list.append(portfolio_return)
+                    benchmark_returns_list.append(benchmark_return)
+    
+    if len(dates_list) == 0:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+    
+    portfolio_returns = pd.Series(portfolio_returns_list, index=dates_list)
+    benchmark_returns = pd.Series(benchmark_returns_list, index=dates_list)
+    
+    return portfolio_returns, benchmark_returns

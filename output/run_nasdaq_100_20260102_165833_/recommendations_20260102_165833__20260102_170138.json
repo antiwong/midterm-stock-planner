@@ -1,0 +1,175 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "XEL",
+          "weight": 20,
+          "rationale": "Utilities sector provides stable returns and lower volatility. XEL has the highest domain score in the sector and the lowest volatility among all candidates."
+        },
+        {
+          "ticker": "CSCO",
+          "weight": 20,
+          "rationale": "Technology sector provides stable returns and lower volatility. CSCO has a slightly higher domain score than other options with comparable volatility."
+        },
+        {
+          "ticker": "GILD",
+          "weight": 15,
+          "rationale": "Healthcare sector offers some downside protection. GILD offers lower volatility."
+        },
+        {
+          "ticker": "DLTR",
+          "weight": 15,
+          "rationale": "Consumer Defensive sector, less sensitive to economic cycles. DLTR highest ranked for the sector with domain score."
+        },
+        {
+          "ticker": "FAST",
+          "weight": 15,
+          "rationale": "Industrials sector provides stability. FAST offers lowest volatility amongst other options with domain score."
+        },
+        {
+          "ticker": "MNST",
+          "weight": 15,
+          "rationale": "Consumer Defensive sector, less sensitive to economic cycles. Second highest domain score within the sector."
+        }
+      ],
+      "expected_return": {
+        "low": 5,
+        "mid": 8,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "12-15%",
+        "max_drawdown": "10-15%",
+        "key_risks": [
+          "Interest rate risk, Regulatory changes in utilities, Healthcare policy changes, Economic slowdown impacting consumer spending"
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "15-20%",
+      "holdings": [
+        {
+          "ticker": "MRVL",
+          "weight": 15,
+          "rationale": "Technology sector leader in domain score, offering growth potential."
+        },
+        {
+          "ticker": "ORLY",
+          "weight": 15,
+          "rationale": "Consumer Cyclical sector, offering stable return."
+        },
+        {
+          "ticker": "WBD",
+          "weight": 15,
+          "rationale": "Communication Services sector, domain score and volatility make it a strong candidate."
+        },
+        {
+          "ticker": "DXCM",
+          "weight": 15,
+          "rationale": "Healthcare sector, strong growth potential within the medical devices sub-sector."
+        },
+        {
+          "ticker": "FTNT",
+          "weight": 10,
+          "rationale": "Technology sector, cybersecurity focus offers growth and defensive qualities."
+        },
+        {
+          "ticker": "CSCO",
+          "weight": 10,
+          "rationale": "Technology sector, established player providing stability."
+        },
+        {
+          "ticker": "JD",
+          "weight": 10,
+          "rationale": "Consumer Cyclical sector, offers exposure to growth in the Chinese market."
+        },
+        {
+          "ticker": "XEL",
+          "weight": 10,
+          "rationale": "Utilities, providing stability and reducing overall portfolio volatility."
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 16
+      },
+      "risk_assessment": {
+        "volatility": "15-20%",
+        "max_drawdown": "15-25%",
+        "key_risks": [
+          "Economic slowdown, Technology sector competition, Consumer spending changes, Healthcare regulation, Geopolitical risks affecting international operations"
+        ]
+      },
+      "rebalance_frequency": "Semi-Annually"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "25-30%",
+      "holdings": [
+        {
+          "ticker": "MRVL",
+          "weight": 20,
+          "rationale": "Technology sector leader, highest domain score, high growth potential."
+        },
+        {
+          "ticker": "RIVN",
+          "weight": 20,
+          "rationale": "Consumer Cyclical sector, high growth potential in the EV market."
+        },
+        {
+          "ticker": "LCID",
+          "weight": 15,
+          "rationale": "Consumer Cyclical sector, another high-growth EV play."
+        },
+        {
+          "ticker": "NET",
+          "weight": 15,
+          "rationale": "Technology sector, cloud security and networking growth."
+        },
+        {
+          "ticker": "MU",
+          "weight": 10,
+          "rationale": "Technology sector, memory chip manufacturer with cyclical growth potential."
+        },
+        {
+          "ticker": "ILMN",
+          "weight": 10,
+          "rationale": "Healthcare sector, genomics leader with long-term growth potential."
+        },
+        {
+          "ticker": "JD",
+          "weight": 10,
+          "rationale": "Consumer Cyclical, exposure to fast-growing Chinese e-commerce market."
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 18,
+        "high": 25
+      },
+      "risk_assessment": {
+        "volatility": "25-30%",
+        "max_drawdown": "30-40%",
+        "key_risks": [
+          "Market corrections, Technology sector downturn, EV market competition, Interest rate hikes, Global economic recession"
+        ]
+      },
+      "rebalance_frequency": "Annually"
+    },
+    "overall_assessment": "The portfolios are constructed using a quantitative approach, prioritizing stocks with high domain scores within their respective sectors.  The conservative portfolio focuses on capital preservation using lower-volatility stocks from defensive sectors.  The balanced portfolio aims for moderate growth with a mix of sectors and risk levels.  The aggressive portfolio targets maximum growth with higher-risk stocks from growth-oriented sectors.  All portfolios should be monitored regularly and rebalanced as needed to maintain the desired risk profile."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"XEL\", \"weight\": 20, \"rationale\": \"Utilities sector provides stable returns and lower volatility. XEL has the highest domain score in the sector and the lowest volatility among all candidates.\"},\n      {\"ticker\": \"CSCO\", \"weight\": 20, \"rationale\": \"Technology sector provides stable returns and lower volatility. CSCO has a slightly higher domain score than other options with comparable volatility.\"},\n      {\"ticker\": \"GILD\", \"weight\": 15, \"rationale\": \"Healthcare sector offers some downside protection. GILD offers lower volatility.\"},\n      {\"ticker\": \"DLTR\", \"weight\": 15, \"rationale\": \"Consumer Defensive sector, less sensitive to economic cycles. DLTR highest ranked for the sector with domain score.\"},\n      {\"ticker\": \"FAST\", \"weight\": 15, \"rationale\": \"Industrials sector provides stability. FAST offers lowest volatility amongst other options with domain score.\"},\n      {\"ticker\": \"MNST\", \"weight\": 15, \"rationale\": \"Consumer Defensive sector, less sensitive to economic cycles. Second highest domain score within the sector.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 5,\n      \"mid\": 8,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"12-15%\",\n      \"max_drawdown\": \"10-15%\",\n      \"key_risks\": [\"Interest rate risk, Regulatory changes in utilities, Healthcare policy changes, Economic slowdown impacting consumer spending\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"15-20%\",\n    \"holdings\": [\n      {\"ticker\": \"MRVL\", \"weight\": 15, \"rationale\": \"Technology sector leader in domain score, offering growth potential.\"},\n      {\"ticker\": \"ORLY\", \"weight\": 15, \"rationale\": \"Consumer Cyclical sector, offering stable return.\"},\n      {\"ticker\": \"WBD\", \"weight\": 15, \"rationale\": \"Communication Services sector, domain score and volatility make it a strong candidate.\"},\n      {\"ticker\": \"DXCM\", \"weight\": 15, \"rationale\": \"Healthcare sector, strong growth potential within the medical devices sub-sector.\"},\n      {\"ticker\": \"FTNT\", \"weight\": 10, \"rationale\": \"Technology sector, cybersecurity focus offers growth and defensive qualities.\"},\n      {\"ticker\": \"CSCO\", \"weight\": 10, \"rationale\": \"Technology sector, established player providing stability.\"},\n      {\"ticker\": \"JD\", \"weight\": 10, \"rationale\": \"Consumer Cyclical sector, offers exposure to growth in the Chinese market.\"},\n      {\"ticker\": \"XEL\", \"weight\": 10, \"rationale\": \"Utilities, providing stability and reducing overall portfolio volatility.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 16\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"15-20%\",\n      \"max_drawdown\": \"15-25%\",\n      \"key_risks\": [\"Economic slowdown, Technology sector competition, Consumer spending changes, Healthcare regulation, Geopolitical risks affecting international operations\"]\n    },\n    \"rebalance_frequency\": \"Semi-Annually\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"25-30%\",\n    \"holdings\": [\n      {\"ticker\": \"MRVL\", \"weight\": 20, \"rationale\": \"Technology sector leader, highest domain score, high growth potential.\"},\n      {\"ticker\": \"RIVN\", \"weight\": 20, \"rationale\": \"Consumer Cyclical sector, high growth potential in the EV market.\"},\n      {\"ticker\": \"LCID\", \"weight\": 15, \"rationale\": \"Consumer Cyclical sector, another high-growth EV play.\"},\n      {\"ticker\": \"NET\", \"weight\": 15, \"rationale\": \"Technology sector, cloud security and networking growth.\"},\n      {\"ticker\": \"MU\", \"weight\": 10, \"rationale\": \"Technology sector, memory chip manufacturer with cyclical growth potential.\"},\n      {\"ticker\": \"ILMN\", \"weight\": 10, \"rationale\": \"Healthcare sector, genomics leader with long-term growth potential.\"},\n      {\"ticker\": \"JD\", \"weight\": 10, \"rationale\": \"Consumer Cyclical, exposure to fast-growing Chinese e-commerce market.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 18,\n      \"high\": 25\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"25-30%\",\n      \"max_drawdown\": \"30-40%\",\n      \"key_risks\": [\"Market corrections, Technology sector downturn, EV market competition, Interest rate hikes, Global economic recession\"]\n    },\n    \"rebalance_frequency\": \"Annually\"\n  },\n  \"overall_assessment\": \"The portfolios are constructed using a quantitative approach, prioritizing stocks with high domain scores within their respective sectors.  The conservative portfolio focuses on capital preservation using lower-volatility stocks from defensive sectors.  The balanced portfolio aims for moderate growth with a mix of sectors and risk levels.  The aggressive portfolio targets maximum growth with higher-risk stocks from growth-oriented sectors.  All portfolios should be monitored regularly and rebalanced as needed to maintain the desired risk profile.\"\n}\n```",
+  "generated_at": "2026-01-02T17:01:38.055180"
+}

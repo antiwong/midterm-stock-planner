@@ -1,0 +1,187 @@
+# Mid-term Stock Planner - Cursor Rules
+
+You are working on a research codebase that builds and backtests mid-term, fundamentals-aware equity portfolios (3-month horizon, monthly or bi-weekly rebalancing). The goal is to rank stocks, construct portfolios, and evaluate them with realistic risk/return metrics, using deterministic data and models, not opaque LLM outputs.
+
+## 1. Core design constraints
+
+- Prediction target: 3-month forward **excess** return vs a benchmark (e.g., S&P 500 / MSCI World).
+- Style: long-only, top-N portfolios (typically 10 names) with explicit limits on max position weight, max sector weight, max turnover, max drawdown.
+- Universe: liquid large/mid-cap equities, defined by configuration.
+- No live trading or broker integration; outputs are **research signals only**.
+
+When editing or generating code:
+
+- Respect the existing module structure: data loading, feature engineering, models, backtesting, risk, fundamentals, explainability, visualization, CLI.
+- New features must integrate via configuration (YAML + dataclasses) and produce CSV/JSON outputs that are easy to inspect.
+
+## 2. Fundamental + model-based vertical analysis (within domains)
+
+Implement and preserve a **vertical selection step** for each rebalance date:
+
+- Define domains as sectors or industries from the fundamental data.
+- For each domain, compute a **domain_score** per stock as a configurable combination of:
+  - Model score (predicted 3-month excess return).
+  - Value metrics (e.g., `valuescore`, PE/PB ranks).
+  - Quality metrics (e.g., `qualityscore`, ROE and margin composites).
+- Apply hard numeric filters before ranking, such as:
+  - Minimum ROE, minimum margins.
+  - Maximum debt-to-equity.
+- Select the top K names per domain as candidates (K configurable), and always export a CSV with:
+  - Ticker, sector/industry, model score, value/quality scores, key ratios, domain_score, rank.
+
+Do not rely on any LLM to change tickers or scores; the vertical selection must be 100% numeric and reproducible.
+
+## 3. Horizontal portfolio construction (across domains)
+
+Implement and preserve a **horizontal step** that builds a 10-stock (configurable) portfolio from the vertical candidates:
+
+- Start from top-K candidates across all domains; calculate per-stock daily returns from price history.
+- Compute portfolio statistics from raw daily returns (see metric checks below).
+- Construct weights using explicit methods:
+  - Equal weight or score-weighted (normalized domain_score).
+- Enforce constraints:
+  - `maxweight`, `minweight`, `maxsectorweight`, `maxturnover`.
+- Use risk analytics:
+  - Correlation matrix, covariance matrix, portfolio volatility.
+  - Diversification score based on correlations.
+  - Sector exposure and factor concentration (using SHAP factor aggregation if available).
+- Export enriched portfolio CSVs per rebalance date with:
+  - Tickers, weights, sectors, domain_scores.
+  - Per-stock contribution to risk/return where available.
+
+Again, no LLM should alter holdings or weights; only numeric logic and configuration may do so.
+
+## 4. Metric and scaling checks (CRITICAL)
+
+The most important guardrail: **returns and volatility must be correctly scaled**.
+
+Enforce the following rules in code and reviews:
+
+### 4.1 Return representation
+- Daily returns must be plain decimals (e.g., 0.01 for 1%, -0.02 for -2%), not multiplied by 100.
+- Cumulative return should be computed as:
+  ```python
+  total_return = final_value / initial_value - 1
+  ```
+- Annualized return from daily returns:
+  ```python
+  annualized_return = (1 + mean_daily_return)**252 - 1
+  ```
+- When displaying a "%", do the `* 100` only at the UI/logging layer, never inside the stored metric.
+
+### 4.2 Volatility
+- Volatility must be computed from daily returns as:
+  ```python
+  volatility = std(daily_returns) * sqrt(252)
+  ```
+- Volatility should be stored as a decimal (e.g., 0.20 for 20% annualized), not as "20" or "2000".
+- Any log line that prints e.g. "Vol=675%" should be derived by converting 0.0675 to percent, not by scaling an already-scaled number again.
+
+### 4.3 Sharpe ratio
+- Sharpe must be computed as:
+  ```python
+  sharpe = (annualized_return - risk_free_rate) / volatility
+  ```
+  with both numerator and denominator in the same units (decimals).
+- If volatility or returns are mis-scaled, fix the scaling before computing Sharpe; never divide by a percent that was already multiplied by 100.
+
+### 4.4 Drawdown
+- Max drawdown must be computed from the equity curve as:
+  ```python
+  max_dd = min((equity / rolling_max) - 1)
+  ```
+- It should be stored as a decimal (e.g., -0.25 for -25%), with `%` added only at display.
+
+### 4.5 Hit / win rate
+- For period-based hit rate:
+  ```python
+  hit_rate = (# periods where portfolio_return > benchmark_return) / total_periods
+  ```
+- For trade-based hit rate:
+  ```python
+  hit_rate = (# profitable_trades) / total_trades
+  ```
+- Always document which definition is used in each metric JSON and keep it consistent.
+
+### 4.6 Sanity bounds
+For realistic mid-term equity strategies, typical ranges should be:
+- Annualized return: single- to low-double-digit percentages for moderate risk
+- Volatility: 10-30% range
+- Max drawdown: rarely better than -5% and rarely worse than -60% for equities
+
+**RED FLAGS - treat as bugs:**
+- Annualized return > 100% or volatility > 80% for a "moderate" profile
+- Cumulative returns or volatilities in the thousands of percent
+- Total return of 156,678% or volatility of 1,000%+
+
+Whenever numbers look too extreme, assume mis-scaling and trace the pipeline until the units are consistent.
+
+## 5. Backtest and optimization consistency
+
+- Walk-forward backtests must:
+  - Use only past data in each training window and test on future periods.
+  - Include transaction costs and slippage in P&L.
+  - Respect turnover and position/sector limits at each rebalance.
+- Optimization routines must:
+  - Use the **same definitions of return and volatility** as backtesting.
+  - Score portfolios with an objective that matches the profile.
+  - Never assume or log returns/volatility as percents unless the underlying numbers are decimals and only converted at display.
+
+Add assertions or checks where possible:
+```python
+assert 0 <= volatility <= 1, f"Volatility {volatility} out of range - check scaling"
+assert -1 <= max_drawdown <= 0, f"Max drawdown {max_drawdown} out of range"
+assert -1 <= total_return <= 10, f"Total return {total_return} suspicious - check scaling"
+```
+
+## 6. Explainability and factor exposure
+
+- Use SHAP to explain the model's predictions and the portfolio's factor tilts, but never allow SHAP or any LLM interpretation to override numeric constraints.
+- For each portfolio analysis, try to output:
+  - Top factors (e.g., momentum, value, quality, volatility, liquidity) driving the portfolio's expected return.
+  - Warnings when a single factor accounts for more than ~50% of the portfolio's SHAP-based factor exposure.
+- This explanation layer is descriptive only; it must not alter holdings or metrics.
+
+## 7. Use of LLMs / "AI recommendations"
+
+- All tickers, weights, and metrics must come from the deterministic pipeline (data → features → model → portfolio + backtest).
+- LLMs may:
+  - Summarize numeric results.
+  - Highlight risks or regime sensitivities that are already present in the numbers.
+  - Suggest additional diagnostics or plots.
+- LLMs must **not**:
+  - Invent tickers or weights.
+  - Change holdings or metrics.
+  - Override risk constraints.
+
+## 8. General coding expectations
+
+- Use type hints, small focused functions, and unit tests for critical pieces (return/vol calculations, Sharpe, drawdown, scaling and conversion functions).
+- Prefer clarity and traceability over cleverness.
+- When in doubt, add logging that prints both:
+  - The raw decimal values (e.g., `annualized_return=0.1234`) and
+  - The formatted percents (e.g., `12.34%`) so mistakes are obvious.
+
+Follow these rules whenever you add or modify backtesting, optimization, risk, or visualization code, so that portfolio recommendations are numerically sound and easy for the user to inspect and reason about.
+
+## 9. Risk Analysis Scripts
+
+The following scripts provide comprehensive portfolio risk analysis:
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/strengthen_recommendations.py` | All-in-one risk analysis (`--full` for extended) |
+| `scripts/comprehensive_risk_analysis.py` | Tail risk (VaR, CVaR), drawdown duration, regime analysis |
+| `scripts/stress_testing.py` | Scenario-based stress tests (7 predefined scenarios) |
+| `scripts/conscience_filter.py` | Ethical/conscience-based exclusion filters |
+
+These scripts must also adhere to the metric scaling rules above. Key analyses include:
+
+- **Tail Risk**: VaR/CVaR at 95% and 99% confidence, return percentiles
+- **Drawdown Duration**: Recovery times, underwater periods
+- **Regime Analysis**: Performance by Bull/Bear × High/Low Volatility
+- **Stress Scenarios**: Tech Crash, Energy Crash, AI Bubble Pop, etc.
+- **Position Diagnostics**: Per-stock volatility, worst outcomes
+- **Conscience Filters**: Weapons, tobacco, gambling, fossil fuels exclusions
+
+See `docs/risk-analysis-guide.md` for full documentation.

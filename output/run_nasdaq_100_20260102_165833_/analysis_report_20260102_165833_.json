@@ -1,0 +1,170 @@
+{
+  "run_id": "20260102_165833_82e7b997",
+  "run_name": "NASDAQ 100 - Backtest 2026-01-02 16:58",
+  "generated_at": "2026-01-02T17:01:24.259073",
+  "workflow_steps": {
+    "data_validation": false,
+    "portfolio_enrichment": true,
+    "vertical_analysis": true,
+    "horizontal_analysis": true
+  },
+  "run_metrics": {
+    "total_return": 0.8390642613298129,
+    "sharpe_ratio": 0.37097513810548216,
+    "max_drawdown": -0.6074160987300637,
+    "volatility": 0,
+    "win_rate": 0.49827288428324695
+  },
+  "portfolio_summary": {
+    "run_id": "20260102_165833_82e7b997",
+    "run_name": "NASDAQ 100 - Backtest 2026-01-02 16:58",
+    "n_stocks": 88,
+    "n_sectors": 7,
+    "diversification": {
+      "stock_level_ew": 0.9886363636363636,
+      "stock_level_rp": 0.9873564534645964,
+      "sector_level_ew": 0.7887396694214877,
+      "sector_level_rp": 0.8211938903124585,
+      "effective_n_ew": 88.0,
+      "effective_n_rp": 79.09173246603486
+    },
+    "score_distributions": {
+      "Value Score": {
+        "mean": 54.09676491739569,
+        "std": 12.868374406063104,
+        "min": 50.0,
+        "max": 100.0,
+        "median": 50.0
+      },
+      "Quality Score": {
+        "mean": 48.285568181818185,
+        "std": 7.260967068986541,
+        "min": 18.975,
+        "max": 66.22,
+        "median": 50.0
+      },
+      "Tech Score": {
+        "mean": 100.0,
+        "std": 0.0,
+        "min": 100.0,
+        "max": 100.0,
+        "median": 100.0
+      }
+    },
+    "sector_breakdown": {
+      "count": {
+        "Communication Services": 11,
+        "Consumer Cyclical": 15,
+        "Consumer Defensive": 7,
+        "Healthcare": 12,
+        "Industrials": 8,
+        "Technology": 32,
+        "Utilities": 3
+      },
+      "ew_pct": {
+        "Communication Services": 12.5,
+        "Consumer Cyclical": 17.045454545454547,
+        "Consumer Defensive": 7.954545454545454,
+        "Healthcare": 13.636363636363635,
+        "Industrials": 9.090909090909092,
+        "Technology": 36.36363636363637,
+        "Utilities": 3.4090909090909087
+      },
+      "rp_pct": {
+        "Communication Services": 12.409466019738256,
+        "Consumer Cyclical": 15.91171176860403,
+        "Consumer Defensive": 10.864748906336873,
+        "Healthcare": 12.134630135725601,
+        "Industrials": 12.138781388327114,
+        "Technology": 30.5306666516262,
+        "Utilities": 6.009995129641934
+      }
+    },
+    "top_sectors": [
+      "Technology",
+      "Consumer Cyclical",
+      "Healthcare"
+    ],
+    "generated_at": "2026-01-02T17:01:23.606640"
+  },
+  "portfolio": {
+    "n_holdings": 10,
+    "risk_metrics": {
+      "volatility": 0.2,
+      "diversification_score": 0.8999997246961103,
+      "effective_n": 9.999972469686817,
+      "sharpe_ratio": 0,
+      "sortino_ratio": 0,
+      "max_drawdown": 0.0,
+      "var_95": 0.0,
+      "cvar_95": 0.0
+    },
+    "constraints": {
+      "max_drawdown": "True",
+      "volatility": "True",
+      "diversification": "True"
+    },
+    "holdings": [
+      {
+        "ticker": "MRVL",
+        "sector": "Technology",
+        "weight": 0.10026010124827965,
+        "domain_score": 25.312305935520993
+      },
+      {
+        "ticker": "RIVN",
+        "sector": "Consumer Cyclical",
+        "weight": 0.10025165662452984,
+        "domain_score": 25.310173951838507
+      },
+      {
+        "ticker": "LCID",
+        "sector": "Consumer Cyclical",
+        "weight": 0.10014178122074735,
+        "domain_score": 25.282434105172644
+      },
+      {
+        "ticker": "JD",
+        "sector": "Consumer Cyclical",
+        "weight": 0.10004657697640724,
+        "domain_score": 25.25839823318475
+      },
+      {
+        "ticker": "WBD",
+        "sector": "Communication Services",
+        "weight": 0.10000467515789296,
+        "domain_score": 25.247819432283066
+      },
+      {
+        "ticker": "XEL",
+        "sector": "Utilities",
+        "weight": 0.09998558399942252,
+        "domain_score": 25.242999556401724
+      },
+      {
+        "ticker": "CSCO",
+        "sector": "Technology",
+        "weight": 0.09985468674825117,
+        "domain_score": 25.20995239979091
+      },
+      {
+        "ticker": "GILD",
+        "sector": "Healthcare",
+        "weight": 0.09984009953527291,
+        "domain_score": 25.20626961877379
+      },
+      {
+        "ticker": "NET",
+        "sector": "Technology",
+        "weight": 0.09982933238862515,
+        "domain_score": 25.20355127611696
+      },
+      {
+        "ticker": "DXCM",
+        "sector": "Healthcare",
+        "weight": 0.09978550610057138,
+        "domain_score": 25.192486611335823
+      }
+    ]
+  }
+}

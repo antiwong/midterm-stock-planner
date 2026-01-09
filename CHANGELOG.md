@@ -1,0 +1,574 @@
+# Changelog
+
+All notable changes to the Mid-term Stock Planner project are documented here.
+
+## [3.4.0] - 2026-01-02
+
+### Added
+
+#### Backtest Diagnostics & Error Handling
+- **Enhanced Error Messages** (`src/backtest/rolling.py`)
+  - Detailed diagnostics when no predictions are generated
+  - Shows data date range, window sizes, and step configuration
+  - Lists all skipped windows with reasons (insufficient data, training failures, etc.)
+  - Provides actionable recommendations (reduce window sizes, remove date filters, etc.)
+  
+- **Backtest Data Diagnostic Script** (`scripts/diagnose_backtest_data.py`)
+  - Checks data date ranges and span
+  - Validates window size requirements vs available data
+  - Tests training dataset creation
+  - Identifies date filter issues
+  - Provides specific recommendations for fixing data issues
+
+### Fixed
+- **"No predictions generated" Error**: Now provides comprehensive diagnostics instead of generic error
+- **Window Skipping**: Tracks and reports all skipped windows with specific reasons
+- **Data Range Validation**: Better detection of insufficient data for walk-forward windows
+
+### Changed
+- Error messages now include actionable troubleshooting steps
+- Window skipping reasons are logged and reported in error output
+
+---
+
+## [3.3.0] - 2026-01-02
+
+### Added
+
+#### Comprehensive Risk Analysis Module (`scripts/comprehensive_risk_analysis.py`)
+- **Downside & Tail Risk Analysis**
+  - Return distribution percentiles (daily, monthly, quarterly)
+  - Value at Risk (VaR) at 95% and 99% confidence
+  - Conditional VaR (Expected Shortfall)
+  - Worst month/quarter outcomes with dates
+
+- **Drawdown Duration Analysis**
+  - Max drawdown depth and date
+  - Time to recovery from major drawdowns
+  - Underwater period percentage
+  - Top 5 worst drawdown periods with full details
+
+- **Sub-Period Performance**
+  - Automatic breakdown: 2020, 2021, 2022, 2023, 2024
+  - Return, volatility, Sharpe, max drawdown per period
+  - Identifies regime dependency
+
+- **Position-Level Risk Diagnostics**
+  - Individual stock volatility and worst outcomes
+  - High-risk position flags (weight vs worst month)
+  - Momentum tracking for large positions
+
+#### Stress Testing Module (`scripts/stress_testing.py`)
+- **Scenario-Based Stress Tests**
+  - Tech Crash (-30%): Technology sector shock
+  - Energy Crash (-40%): Energy/uranium sector shock
+  - Rate Spike: Growth stocks impact
+  - Broad Bear (-25%): General market decline
+  - AI Bubble Pop: AI-related stocks crash
+  - EV Washout: Clean energy/EV crash
+  - Inflation Surge: Commodity benefit, growth hurt
+
+- **Position Reduction Simulation**
+  - Impact of reducing exposure by 50%
+  - Volatility, return, Sharpe, drawdown comparison
+  - Capital-at-risk guidance
+
+#### Conscience Filter Module (`scripts/conscience_filter.py`)
+- **Industry Exclusion Categories**
+  - Defense & Weapons (LMT, RTX, NOC, etc.)
+  - Tobacco & Nicotine (MO, PM, etc.)
+  - Alcohol & Spirits (BUD, DEO, etc.)
+  - Gambling & Casinos (LVS, WYNN, DKNG, etc.)
+  - Fossil Fuels (XOM, CVX, COP, etc.)
+  - Private Prisons (GEO, CXW)
+  - Predatory Finance
+
+- **ESG Concern Flags** (Informational)
+  - Environmental: High emissions, water intensive
+  - Social: Data privacy, controversial products
+  - Governance: Dual-class shares
+
+- **Filter Application**
+  - Category-based exclusions
+  - Sector-based exclusions
+  - Specific ticker exclusions
+  - Weight renormalization after filtering
+
+#### Thematic & Sector Dependence Analysis
+- **Theme Concentration**
+  - Nuclear/Uranium exposure
+  - Clean Energy/EV exposure
+  - High-Beta Tech/AI exposure
+  - Traditional Energy exposure
+
+- **Correlation Cluster Analysis**
+  - Average pairwise correlation
+  - Highly correlated pairs (>0.70)
+  - Correlation clusters for diversification check
+
+#### Sizing Recommendations
+- **Capital Allocation Guidance**
+  - Based on max drawdown tolerance
+  - Recovery time considerations
+  - Conservative/Moderate/Aggressive allocations
+
+### Changed
+- `strengthen_recommendations.py` now integrates all analysis modules
+- New `--full` flag for extended analyses
+- Summary includes issues and warnings separately
+
+---
+
+## [3.2.0] - 2026-01-02
+
+### Added
+
+#### Automated Safeguards & Validation (`src/validation/safeguards.py`)
+- **Portfolio Constraint Validation**
+  - Weights sum to 1.0 check (critical - fails run if violated)
+  - Position count matches `top_n` config
+  - No negative weights (long-only constraint)
+  - No excessive single position (>50%)
+  
+- **Risk Profile Bounds**
+  - Conservative: Vol <25%, DD >-20%, Sector <35%
+  - Moderate: Vol <50%, DD >-40%, Sector <50%
+  - Aggressive: Vol <80%, DD >-70%, Sector <70%
+  
+- **Automatic Integration**
+  - Runs as Step 8 in `full_analysis_workflow.py`
+  - Generates `validation_report.json` for each run
+  - CLI: `python -m src.validation.safeguards <run_dir> --profile moderate`
+
+#### Recommendation Strengthening Analysis (`scripts/strengthen_recommendations.py`)
+- **Regime Analysis**: Bull/Bear × High/Low Vol performance breakdown
+- **Factor Exposure (SHAP-like)**: Identifies if single factor dominates (>50%)
+- **Stress Testing**: Position sizing impact on drawdown and Sharpe
+- **Conscience Filters**: Exclude sectors/tickers and recalculate metrics
+- CLI: `python scripts/strengthen_recommendations.py --exclude-sectors "Energy,Defense"`
+
+#### Extended Backtest Coverage
+- Fixed benchmark data to extend through 2025-12-31
+- Added 5th walk-forward window covering 2024 data
+- Total coverage: Feb 2020 - Dec 2024 (59 monthly rebalances)
+
+#### Date Range Specification
+- **CLI Arguments**: `--start-date` and `--end-date` for filtering backtest data
+- **Config Support**: `backtest.start_date` and `backtest.end_date` in config.yaml
+- **Run Info Output**: New `run_info.json` file in each run folder containing:
+  - Requested and actual date ranges
+  - Full backtest configuration
+  - Watchlist information
+  - Run metadata
+
+#### Comprehensive Test Suite (`tests/`)
+- 76 automated tests covering:
+  - Data integrity (prices, benchmark, sectors)
+  - Backtest configuration (weights, positions)
+  - Metric scaling (returns, volatility, Sharpe)
+  - Safeguards validation
+  - Pipeline integration
+- Documentation: `tests/TEST_DOCUMENTATION.md`
+
+### Fixed
+- `AIInsightsGenerator` missing methods (`generate_executive_summary`, etc.)
+- Backtest portfolio size: Changed `top_n: null` → `top_n: 10` for fixed 10-stock portfolio
+- Benchmark data was limiting backtest to 2024-01 (now extends to 2024-12)
+
+### Changed
+- Risk profile bounds now configurable per profile (conservative/moderate/aggressive)
+- Validation integrated into analysis workflow automatically
+
+---
+
+## [3.1.0] - 2026-01-02
+
+### Added
+
+#### Sector Classification System
+- **Automatic Sector Fetching** (`scripts/fetch_sector_data.py`)
+  - Fetches sector/industry data from Yahoo Finance for all watchlist stocks
+  - Caches data in `data/sectors.csv` and `data/sectors.json`
+  - Supports incremental updates (only fetches missing tickers)
+  - Force refresh option with `--force` flag
+  - **Result**: Reduced "Other" sector from 84.6% to 0.6%
+
+#### Data Validation
+- **Pre-flight Data Checks** in `full_analysis_workflow.py`
+  - Validates price data coverage before running analysis
+  - Reports missing tickers, date range issues, data quality
+  - Generates validation reports in JSON and Markdown
+  - Automatic skip option with `--skip-validation` flag
+
+#### Watchlist Management
+- **Symbol Validation & Deduplication** (`src/app/dashboard/data.py`)
+  - `validate_watchlist_symbols()` - Validates and cleans symbol lists
+  - `clean_and_deduplicate_symbols()` - Removes duplicates, normalizes case
+  - Automatic sector fetching when creating custom watchlists
+  - Invalid symbol filtering (special characters, too long)
+
+#### Portfolio Analysis Enhancements
+- **Enhanced Overview Tab**
+  - Portfolio details panel (name, holdings count, sectors, average score)
+  - All Holdings display with color-coded score pills (0-100 scale)
+  - AI-generated insights for each chart
+  - Hero section with gradient banner and glass-morphism metric cards
+
+- **New Charts Added**
+  - Cumulative Returns chart
+  - Sector Sunburst visualization
+  - Score Violin Plot
+  - Monthly Returns Heatmap
+  - Risk-Return Scatter plot
+  - VaR Analysis Chart
+  - Gauge Charts (Volatility, Sharpe, Max Drawdown)
+  - Lollipop Chart for Top 10 stocks
+  - Interactive Holdings Table
+
+- **Performance Tab**
+  - Equity Curve with drawdown overlay
+  - Daily Returns Bar Chart
+  - Monthly Performance Calendar
+  - Return Statistics panel
+
+- **Sectors Tab**
+  - Interactive Treemap
+  - Radar Chart for sector scores
+  - Holdings by Sector bar chart
+  - Top Stocks by Sector cards
+
+- **Risk Tab**
+  - 6 Risk Metric Cards
+  - VaR Analysis visualization
+  - Risk-adjusted return metrics
+
+### Fixed
+
+- **Pipeline Filtering Bug** - Watchlist now properly overrides `universe.txt`
+  - Before: Only 95 stocks processed (limited by universe.txt)
+  - After: All 337 stocks in watchlist processed correctly
+
+- **Sector Classification** - Replaced hardcoded 56-stock mapping with yfinance data
+  - Before: 285 stocks (84.6%) classified as "Other"
+  - After: Only 2 stocks (0.6%) remain unclassified
+  - Sector Diversification: 0.28 → 0.91
+
+- **AI Recommendations Loading** - Fixed glob pattern to find recommendation files
+  - Pattern now correctly matches `recommendations_*.json`
+
+- **Color Contrast Issues** - Fixed light text on light backgrounds
+  - Added dark gradient backgrounds to section titles
+  - Fixed holdings cards, chart insights, AI summary panels
+
+- **Holdings Display** - Fixed HTML rendering issues
+  - Normalized scores from 0-1 to 0-100 scale
+  - Changed to column-based rendering for reliability
+
+- **overall_assessment Error** - Fixed `'str' object has no attribute 'get'`
+  - AI tab now correctly handles string vs dict values
+
+### Changed
+
+- **Sector Mapping** - All analysis modules now use cached sector data
+  - `src/analysis/domain_analysis.py`
+  - `src/app/cli.py`
+  - `scripts/analyze_portfolio.py`
+
+- **Output Folder Naming** - Includes watchlist name for custom watchlists
+  - Format: `run_{watchlist}_{timestamp}_{hash}/`
+
+---
+
+## [3.0.0] - 2025-12-31
+
+### Added
+
+#### Portfolio Builder
+- **Personalized Portfolio Optimization** (`src/analysis/portfolio_optimizer.py`)
+  - InvestorProfile dataclass with 12+ configurable parameters
+  - Risk tolerance levels: conservative (8% return, 10% max DD), moderate (12%, 15%), aggressive (18%, 25%)
+  - Target return, max drawdown, max volatility preferences
+  - Portfolio size (configurable, default 10 stocks)
+  - Position limits (min/max weight per stock)
+  - Sector limits (max weight per sector, default 35%)
+  - Style preferences: value, growth, blend
+  - Dividend preference: income, neutral, growth
+  - Time horizon: short (1yr), medium (3yr), long (5yr+)
+  - Preset profiles with `get_preset_profile()` helper
+  - Custom parameter overrides via kwargs
+
+- **Vertical Analysis (Within-Sector)**
+  - Domain score computation with configurable weights
+  - Quality/value/profitability filters
+  - Top-K candidates per sector
+  - Exportable candidate CSVs
+
+- **Horizontal Analysis (Cross-Sector)**
+  - Candidate pool aggregation
+  - Sector constraint enforcement
+  - Risk-optimized weight allocation
+  - Diversification requirements
+
+- **Portfolio Optimization Script** (`scripts/run_portfolio_optimizer.py`)
+  - CLI with profile presets (`--risk-tolerance conservative|moderate|aggressive`)
+  - Custom parameter overrides for all InvestorProfile fields
+  - AI analysis integration with `--with-ai-recommendations` flag
+  - Outputs: optimized portfolio CSV, metrics JSON, AI recommendations MD
+
+- **AI Portfolio Recommendations** (`src/analysis/gemini_commentary.py`)
+  - Multi-profile recommendations (conservative, balanced, aggressive)
+  - Per-profile: expected return, risk assessment, time horizon, suggested holdings
+  - Model fallback list: gemini-2.0-flash-exp → gemini-1.5-flash-latest → gemini-pro
+  - Read-only commentary mode (explains, doesn't modify portfolios)
+
+#### Analysis Pipeline Improvements
+- **4-Stage Pipeline with Guards**
+  - Stage 1: Backtest (always available) - generates base metrics, positions, returns
+  - Stage 2: Enrichment (requires Stage 1) - adds sector breakdown, risk metrics, diversification
+  - Stage 3: Domain Analysis (requires Stage 1) - vertical/horizontal analysis, candidate scoring
+  - Stage 4: AI Analysis (requires Stage 1) - commentary, recommendations, risk insights
+  - Visual status indicators (✅ Complete, 🔴 Not Started, 🟡 Partial)
+  - Dependency guards prevent out-of-order execution
+  - Warning system for missing optional stages
+
+- **Full Analysis Workflow** (`scripts/full_analysis_workflow.py`)
+  - One-click execution of all 4 stages
+  - Automatic folder creation and organization
+  - Progress reporting with stage status
+  - Error handling with stage-specific messages
+
+- **Run-Specific Output Folders**
+  - Each backtest creates `output/run_{run_id}/` (16-char prefix)
+  - Standard output files: `backtest_metrics.json`, `backtest_returns.csv`, `backtest_positions.csv`
+  - Domain analysis: `vertical_candidates_*.csv`, `horizontal_portfolio_*.csv`
+  - AI outputs: `ai_commentary.md`, `ai_recommendations.json`
+  - Easy cleanup with folder deletion
+
+#### Dashboard Enhancements
+- **Portfolio Builder Page** (`🎯 Portfolio Builder`)
+  - Risk & Return section: risk tolerance, target return, max drawdown, max volatility
+  - Portfolio Construction section: size, min/max position weight, max sector weight
+  - Style Preferences section: investment style, dividend preference, time horizon
+  - Profile presets dropdown (Conservative/Moderate/Aggressive)
+  - Real-time profile summary card
+  - Run selector from available backtest runs
+  - AI recommendations toggle
+  - Results display with portfolio table, metrics, and charts
+  - Sector allocation pie chart
+  - Weight distribution bar chart
+
+- **Improved Run Analysis Page**
+  - Quick Start: Full Analysis button prominently at top
+  - Pipeline status overview with 4-stage visual
+  - Stage tabs with dependency guards
+  - Run selector with folder status indicators (📁/⚪)
+  - Output file browser with file counts
+  - Live script execution output
+
+- **Portfolio Analysis Enhancements**
+  - Integrated Domain Analysis Results
+  - AI-Powered Analysis with recommendations
+  - Vertical analysis candidates view
+  - Horizontal portfolio composition
+  - Risk metrics comparison charts
+
+#### New Documentation
+- `docs/portfolio-builder.md` - Comprehensive portfolio builder guide
+  - InvestorProfile parameters reference
+  - Risk tolerance and time horizon explanations
+  - Workflow diagrams for vertical/horizontal analysis
+  - Output files and interpretation guide
+  - API reference for PortfolioOptimizer class
+
+- `docs/domain-analysis.md` - Vertical/horizontal analysis details
+  - Composite domain score formula
+  - Fundamental filters configuration
+  - Portfolio optimization algorithm
+  - Integration with backtest pipeline
+
+#### Updated Documentation
+- `README.md` - Complete feature overview with Portfolio Builder section
+- `docs/dashboard.md` - All seven pages documented including Portfolio Builder
+- `docs/ai-insights.md` - Portfolio recommendations and multi-profile analysis
+- `docs/design.md` - Updated architecture with Portfolio Builder module
+- `CHANGELOG.md` - Complete version history
+
+### Changed
+
+- **CLI Output Structure**
+  - All backtest outputs now go to run-specific folders
+  - Legacy paths supported for backwards compatibility
+
+- **Dashboard Navigation**
+  - Added Portfolio Builder page
+  - Reordered navigation for workflow clarity
+
+- **Analysis Scripts**
+  - All scripts accept `--run-id` parameter
+  - Output folder determined by run ID
+
+### Fixed
+
+- **Run folder not created** - Fixed CLI to create `output/run_{run_id}/` before saving files
+- **Dashboard not refreshing** - Added refresh buttons and `st.cache_resource.clear()` calls
+- **Domain analysis argument error** - Added `--run-id` argument parsing in domain_analysis.py
+- **Gemini model availability** - Added model name fallback list across all Gemini integrations
+- **Dropdown showing deleted runs** - Updated run selector to filter by existing folders
+- **Win rate showing N/A** - Fixed by mapping `hit_rate` to `win_rate` in database
+- **Universe count None** - Fixed CLI to count unique tickers from backtest positions
+- **Timestamp showing UTC** - Changed to `datetime.now()` for local time display
+- **Stock scores all None** - Enhanced feature engineering to populate all score columns
+
+---
+
+## [2.0.0] - 2025-12-31
+
+### Added
+
+#### Risk-Aware Portfolio Construction
+- **Risk Parity Allocation** (`src/risk/risk_parity.py`)
+  - Inverse volatility weighting for simple risk-aware allocation
+  - Full risk parity with equal risk contribution per position
+  - Vol-capped sizing to limit volatility contribution
+  - Beta-adjusted allocation to target portfolio beta
+  - Sector constraints with configurable maximum weights
+
+- **Portfolio Risk Profile**
+  - Concentration metrics (HHI, Effective N)
+  - Beta exposure analysis (Low/Med/High breakdown)
+  - Risk tilt classification (Defensive/Balanced/High Beta)
+  - Automated warning generation for risk issues
+
+- **Risk Analysis Script** (`scripts/run_risk_aware_analysis.py`)
+  - Load existing analysis runs
+  - Calculate stock volatilities and betas
+  - Apply risk parity allocation
+  - Generate risk reports with AI insights
+
+#### AI-Powered Insights
+- **AI Insights Generator** (`src/analytics/ai_insights.py`)
+  - Integration with Google Gemini API
+  - Executive summary generation
+  - Top picks analysis with detailed explanations
+  - Sector analysis and rotation guidance
+  - Risk assessment and warnings
+  - Actionable investment recommendations
+  - Individual stock AI analysis
+  - Fallback to rule-based insights when AI unavailable
+
+- **Risk-Aware AI Insights**
+  - Allocation rationale explanations
+  - Beta exposure analysis
+  - Position sizing recommendations
+
+#### Web Dashboard
+- **Streamlit Dashboard** (`src/app/dashboard.py`)
+  - Overview page with summary metrics
+  - Analysis runs browser with filtering
+  - Stock explorer with search and score breakdown
+  - AI Insights page with tabbed interface
+  - Run comparison (side-by-side)
+  - Settings and database management
+
+- **Interactive Features**
+  - Score distribution charts
+  - Score breakdown bar charts
+  - Performance over time visualization
+  - Individual stock AI analysis
+
+#### Analytics Database
+- **SQLite Database** (`src/analytics/models.py`)
+  - `runs` table for analysis run metadata
+  - `stock_scores` table for per-stock scores
+  - `trades` table for backtest trade history
+  - `portfolio_snapshots` for portfolio state tracking
+  - `watchlist_stocks` for watchlist management
+
+- **Run Manager** (`src/analytics/manager.py`)
+  - High-level API for database operations
+  - Run lifecycle management
+  - Batch score insertion
+  - Run comparison utilities
+
+#### Diversified Stock Universe
+- **Watchlist Updates** (`config/watchlists.yaml`)
+  - Blue chip stocks (23 large-cap stalwarts)
+  - Nuclear energy (NLR, URA, CCJ, etc.)
+  - Clean energy (ICLN, TAN, etc.)
+  - Semiconductor ETFs
+  - Broad market ETFs
+
+#### API Configuration
+- **API Key Management** (`src/config/api_keys.py`)
+  - Environment variable loading from `.env`
+  - API key status checking
+  - Connection testing for all APIs
+  - Graceful fallback when keys missing
+
+### Changed
+
+- **Position Sizing** - Multiple methods now available:
+  - Equal weight (baseline)
+  - Volatility-weighted
+  - Score-weighted
+  - Kelly criterion
+  - ATR-based
+
+- **Report Generation** - Now includes:
+  - AI-generated insights in Markdown reports
+  - AI sections in HTML reports
+  - Risk analysis appendix
+  - Sector exposure tables
+
+- **Documentation** - Comprehensive updates:
+  - New risk-parity.md for allocation methods
+  - New ai-insights.md for Gemini integration
+  - New dashboard.md for Streamlit UI
+  - New analytics-database.md for data storage
+  - New api-configuration.md for API setup
+  - Updated design.md with new features
+  - Updated risk-management.md with risk parity reference
+  - Updated comparison.md with new capabilities
+
+### Fixed
+
+- **None values in stock analysis** - Properly handle `None` values from pandas Series when generating AI insights
+- **Datetime comparison errors** - Fixed offset-naive vs offset-aware datetime comparisons in sentiment analysis
+
+### Deprecated
+
+- None
+
+### Removed
+
+- None
+
+---
+
+## [1.0.0] - 2025-12-30
+
+### Initial Release
+
+- Core ML pipeline with LightGBM
+- Walk-forward backtesting
+- SHAP explainability
+- Technical and fundamental features
+- Sentiment analysis integration
+- CLI interface
+- Configuration management
+- Basic risk metrics
+
+---
+
+## Document References
+
+| Feature | Documentation |
+|---------|---------------|
+| Portfolio Builder | [docs/portfolio-builder.md](docs/portfolio-builder.md) |
+| Domain Analysis | [docs/domain-analysis.md](docs/domain-analysis.md) |
+| Dashboard | [docs/dashboard.md](docs/dashboard.md) |
+| Risk Parity | [docs/risk-parity.md](docs/risk-parity.md) |
+| AI Insights | [docs/ai-insights.md](docs/ai-insights.md) |
+| Database | [docs/analytics-database.md](docs/analytics-database.md) |
+| API Config | [docs/api-configuration.md](docs/api-configuration.md) |
+| Main Design | [docs/design.md](docs/design.md) |

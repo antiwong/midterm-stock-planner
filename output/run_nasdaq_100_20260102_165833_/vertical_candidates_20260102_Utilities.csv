@@ -1,0 +1,4 @@
+ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
+XEL,Utilities,0.4859991128034469,50.0,50.0,25.242999556401724,1
+EXC,Utilities,0.23049856061009188,50.0,50.0,25.115249280305044,2
+AEP,Utilities,0.20238853625753675,50.0,50.0,25.10119426812877,3

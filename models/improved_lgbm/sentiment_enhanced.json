@@ -1,0 +1,136 @@
+{
+  "analysis_date": "2025-12-30T23:29:43.292226",
+  "tickers": [
+    "NVDA",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "META",
+    "TSLA",
+    "AMD",
+    "CRM",
+    "AVGO"
+  ],
+  "results": [
+    {
+      "ticker": "NVDA",
+      "article_count": 10,
+      "lexicon_score": 0.6333333333333333,
+      "llm_score": 0.5,
+      "llm_summary": "The article expresses a positive outlook for semiconductor stocks, including NVDA, predicting a come",
+      "headlines": [
+        "3 Semiconductor Stocks Well-Poised for a Comeback in 2026",
+        "Making fortunes and letting it ride: 13 New Year investing r",
+        "Nvidia Stock Is \u2018Ripe\u2019 for Gains in 2026, According to This "
+      ]
+    },
+    {
+      "ticker": "AAPL",
+      "article_count": 10,
+      "lexicon_score": 0.4,
+      "llm_score": 0.3666666666666667,
+      "llm_summary": "The article highlights Jim Cramer's positive view on Apple (AAPL), emphasizing its high consumer pro",
+      "headlines": [
+        "Apple (AAPL)\u2019s the Only One That Maintains High Consumer Pro",
+        "Stocks See Support As Year-End Bullish Sentiment Continues",
+        "Here\u2019s How Apple (AAPL) Impacted Harbor Capital Appreciation"
+      ]
+    },
+    {
+      "ticker": "MSFT",
+      "article_count": 9,
+      "lexicon_score": 0.4444444444444444,
+      "llm_score": -0.033333333333333326,
+      "llm_summary": "The article highlights Dan Ives' positive outlook on Microsoft (MSFT), suggesting it's a top quality",
+      "headlines": [
+        "Here\u2019s What Dan Ives Think About Microsoft Corporation (MSFT",
+        "NVIDIA\u2019s $20B Groq Deal Is a Warning Shot to AI Rivals",
+        "Microsoft (MSFT) Fell Due to Concerns About Its Relationship"
+      ]
+    },
+    {
+      "ticker": "GOOGL",
+      "article_count": 9,
+      "lexicon_score": 0.5185185185185186,
+      "llm_score": 0.19999999999999996,
+      "llm_summary": "The article discusses Nvidia's outlook for 2026, suggesting a positive trajectory due to the planned",
+      "headlines": [
+        "Nvidia Stock Had a Volatile 2025: What\u2019s the 2026 Forecast?",
+        "Broadcom\u2019s Margin Warning Spooked Wall Street\u2014But Cash Flow ",
+        "NVIDIA\u2019s $20B Groq Deal Is a Warning Shot to AI Rivals"
+      ]
+    },
+    {
+      "ticker": "AMZN",
+      "article_count": 10,
+      "lexicon_score": 0.5666666666666667,
+      "llm_score": 0.16666666666666666,
+      "llm_summary": "The article discusses Nvidia's potential for decent returns in 2026 following a volatile 2025. The p",
+      "headlines": [
+        "Nvidia Stock Had a Volatile 2025: What\u2019s the 2026 Forecast?",
+        "NVIDIA\u2019s $20B Groq Deal Is a Warning Shot to AI Rivals",
+        "Have a MERRY Christmas With These 9 Unusually Active Options"
+      ]
+    },
+    {
+      "ticker": "META",
+      "article_count": 0,
+      "lexicon_score": 0,
+      "llm_score": null,
+      "llm_summary": null
+    },
+    {
+      "ticker": "TSLA",
+      "article_count": 10,
+      "lexicon_score": 0.3333333333333333,
+      "llm_score": 0.39999999999999997,
+      "llm_summary": "Tesla is facing a new investigation related to door safety, adding to existing concerns about the co",
+      "headlines": [
+        "As Tesla Faces a New Investigation Over Door Safety, How Sho",
+        "Canaccord Remains Bullish on Tesla (TSLA) Despite Near-Term ",
+        "Tesla Shares Way Up Since First Big Money Buy, Keep Rising"
+      ]
+    },
+    {
+      "ticker": "AMD",
+      "article_count": 10,
+      "lexicon_score": 0.3,
+      "llm_score": -0.10000000000000002,
+      "llm_summary": "The article suggests MetaX's IPO surge is causing concern among AI investors, but implies NVIDIA's d",
+      "headlines": [
+        "Is MetaX a NVIDIA Threat\u2014or Just Another DeepSeek Market Sca",
+        "NVIDIA\u2019s $20B Groq Deal Is a Warning Shot to AI Rivals",
+        "Uncover 4 Undervalued Tech Giants Before They Skyrocket in 2"
+      ]
+    },
+    {
+      "ticker": "CRM",
+      "article_count": 3,
+      "lexicon_score": 0.3333333333333333,
+      "llm_score": 0.5666666666666667,
+      "llm_summary": "The article highlights Artisan Value Fund's decision to invest in Salesforce (CRM). This indicates a",
+      "headlines": [
+        "Here\u2019s What Drove the Artisan Value Fund to Pick Salesforce ",
+        "Jim Cramer Says He Is \u201cNot Quite Ready Yet to Give Up on Som",
+        "Uncover 4 Undervalued Tech Giants Before They Skyrocket in 2"
+      ]
+    },
+    {
+      "ticker": "AVGO",
+      "article_count": 5,
+      "lexicon_score": 0.3,
+      "llm_score": 0.5666666666666667,
+      "llm_summary": "The article presents a positive outlook on Broadcom Inc. (AVGO), highlighting its potential as a top",
+      "headlines": [
+        "Here\u2019s What Kim Forrest and William Kerwin Think About Broad",
+        "3 Reasons Broadcom Crashed 15% on Blockbuster Earnings \u2014 And",
+        "Broadcom\u2019s Margin Warning Spooked Wall Street\u2014But Cash Flow "
+      ]
+    }
+  ],
+  "methods": [
+    "lexicon",
+    "gemini_llm"
+  ]
+}

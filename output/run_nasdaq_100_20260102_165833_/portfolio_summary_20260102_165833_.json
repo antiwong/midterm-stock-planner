@@ -1,0 +1,72 @@
+{
+  "run_id": "20260102_165833_82e7b997",
+  "run_name": "NASDAQ 100 - Backtest 2026-01-02 16:58",
+  "n_stocks": 88,
+  "n_sectors": 7,
+  "diversification": {
+    "stock_level_ew": 0.9886363636363636,
+    "stock_level_rp": 0.9873564534645964,
+    "sector_level_ew": 0.7887396694214877,
+    "sector_level_rp": 0.8211938903124585,
+    "effective_n_ew": 88.0,
+    "effective_n_rp": 79.09173246603486
+  },
+  "score_distributions": {
+    "Value Score": {
+      "mean": 54.09676491739569,
+      "std": 12.868374406063104,
+      "min": 50.0,
+      "max": 100.0,
+      "median": 50.0
+    },
+    "Quality Score": {
+      "mean": 48.285568181818185,
+      "std": 7.260967068986541,
+      "min": 18.975,
+      "max": 66.22,
+      "median": 50.0
+    },
+    "Tech Score": {
+      "mean": 100.0,
+      "std": 0.0,
+      "min": 100.0,
+      "max": 100.0,
+      "median": 100.0
+    }
+  },
+  "sector_breakdown": {
+    "count": {
+      "Communication Services": 11,
+      "Consumer Cyclical": 15,
+      "Consumer Defensive": 7,
+      "Healthcare": 12,
+      "Industrials": 8,
+      "Technology": 32,
+      "Utilities": 3
+    },
+    "ew_pct": {
+      "Communication Services": 12.5,
+      "Consumer Cyclical": 17.045454545454547,
+      "Consumer Defensive": 7.954545454545454,
+      "Healthcare": 13.636363636363635,
+      "Industrials": 9.090909090909092,
+      "Technology": 36.36363636363637,
+      "Utilities": 3.4090909090909087
+    },
+    "rp_pct": {
+      "Communication Services": 12.409466019738256,
+      "Consumer Cyclical": 15.91171176860403,
+      "Consumer Defensive": 10.864748906336873,
+      "Healthcare": 12.134630135725601,
+      "Industrials": 12.138781388327114,
+      "Technology": 30.5306666516262,
+      "Utilities": 6.009995129641934
+    }
+  },
+  "top_sectors": [
+    "Technology",
+    "Consumer Cyclical",
+    "Healthcare"
+  ],
+  "generated_at": "2026-01-02T17:01:23.606640"
+}
