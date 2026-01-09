@@ -153,10 +153,15 @@ pytest tests/ -v
 
 The system follows a 4-stage pipeline:
 
-┌────────────┐   ┌─────────────┐   ┌────────────┐   ┌─────────────┐
-│ STAGE 1    │──▶│  STAGE 2    │──▶│  STAGE 3   │──▶│  STAGE 4    │
-│ Backtest   │   │  Enrichment │   │  Domain    │   │  AI Analysis│
-└────────────┘   └─────────────┘   └────────────┘   └─────────────┘
+```
+Stage 1: Backtest
+    ↓
+Stage 2: Enrichment
+    ↓
+Stage 3: Domain Analysis
+    ↓
+Stage 4: AI Analysis
+```
 
 
 | Stage | Description | Output Files |
