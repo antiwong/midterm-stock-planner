@@ -28,6 +28,7 @@
 | [analytics-database.md](analytics-database.md) | SQLite database schema and management |
 | [api-configuration.md](api-configuration.md) | API key setup and configuration |
 | [data-validation.md](data-validation.md) | Data quality validation for AI insights |
+| [portfolio-comparison.md](portfolio-comparison.md) | Comparison of Purchase Triggers vs Portfolio Builder methods |
 
 ---
 
