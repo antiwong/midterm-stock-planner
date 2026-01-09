@@ -84,21 +84,21 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 
 ### Installation
 
-\`\`\`bash
+```bash
 # Create virtual environment
 python -m venv venv
 source venv/bin/activate  # or venv\Scripts\activate on Windows
 
 # Install dependencies
 pip install -r requirements.txt
-\`\`\`
+```
 
 ### Launch Web Dashboard (Recommended)
 
-\`\`\`bash
+```bash
 # Start interactive dashboard at http://localhost:8501
 streamlit run src/app/dashboard.py
-\`\`\`
+```
 
 The dashboard provides a complete UI for:
 - Running backtests
@@ -108,7 +108,7 @@ The dashboard provides a complete UI for:
 
 ### Command Line Usage
 
-\`\`\`bash
+```bash
 # Run a backtest
 python -m src.app.cli run-backtest --config config/config.yaml
 
@@ -147,18 +147,17 @@ python scripts/diagnose_value_quality_scores.py  # Check fundamental data covera
 
 # Run tests
 pytest tests/ -v
-\`\`\`
+```
 
 ## Analysis Pipeline
 
 The system follows a 4-stage pipeline:
 
-\`\`\`
-┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│  STAGE 1    │───▶│  STAGE 2    │───▶│  STAGE 3    │───▶│  STAGE 4    │
-│  Backtest   │    │  Enrichment │    │  Domain     │    │  AI Analysis│
-└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-\`\`\`
+┌────────────┐   ┌─────────────┐   ┌────────────┐   ┌─────────────┐
+│ STAGE 1    │──▶│  STAGE 2    │──▶│  STAGE 3   │──▶│  STAGE 4    │
+│ Backtest   │   │  Enrichment │   │  Domain    │   │  AI Analysis│
+└────────────┘   └─────────────┘   └────────────┘   └─────────────┘
+
 
 | Stage | Description | Output Files |
 |-------|-------------|--------------|
@@ -197,59 +196,41 @@ Build personalized portfolios with adjustable parameters:
 
 ## Project Structure
 
-\`\`\`
+```
+
 midterm-stock-planner/
-├── config/
-│   ├── config.yaml          # Main configuration
-│   └── watchlists.yaml      # Stock watchlists
-├── data/
-│   ├── prices.csv           # Historical price data
-│   ├── fundamentals.csv     # Fundamental data
-│   ├── benchmark.csv        # Benchmark prices
-│   ├── analysis.db          # SQLite database for runs
-│   ├── sectors.csv          # Cached sector/industry data
-│   ├── sectors.json         # Ticker→Sector mapping
-│   └── universe.txt         # Active stock universe
-├── docs/                    # Documentation
-├── src/
-│   ├── analytics/           # Run tracking & reporting
-│   │   ├── models.py        # Database models
-│   │   ├── manager.py       # Run management API
-│   │   └── ai_insights.py   # AI analysis generation
-│   ├── analysis/            # Analysis modules
-│   │   ├── domain_analysis.py    # Vertical/horizontal analysis
-│   │   ├── portfolio_optimizer.py # Personalized portfolios
-│   │   └── gemini_commentary.py  # AI commentary
-│   ├── app/
-│   │   ├── cli.py           # Command-line interface
-│   │   └── dashboard.py     # Streamlit web dashboard
-│   ├── config/
-│   │   └── api_keys.py      # API key management
-│   ├── sentiment/           # Sentiment analysis
-│   ├── features/            # Feature engineering
-│   ├── models/              # Model training/prediction
-│   ├── backtest/            # Walk-forward backtest
-│   └── risk/                # Risk management
-├── scripts/
-│   ├── full_analysis_workflow.py  # Complete pipeline
-│   ├── run_portfolio_optimizer.py # Build portfolios
-│   ├── run_domain_analysis.py     # Domain analysis
-│   ├── analyze_portfolio.py       # Portfolio enrichment
-│   ├── show_purchase_triggers.py  # Display purchase triggers & selection logic
-│   ├── fetch_sector_data.py       # Fetch sectors from yfinance
-│   ├── download_prices.py         # Download/validate price data
-│   ├── strengthen_recommendations.py # Full risk analysis suite
-│   ├── comprehensive_risk_analysis.py # Tail/drawdown/regime analysis
-│   ├── stress_testing.py          # Scenario-based stress tests
-│   └── conscience_filter.py        # Ethical exclusion filters
-└── output/                  # Analysis results
-    └── run_{run_id}/        # Per-run output folder
-        ├── backtest_*.csv/json
-        ├── portfolio_*.csv
-        ├── vertical_*.csv
-        ├── commentary_*.md
-        └── recommendations_*.md
-\`\`\`
+├── config/              # Configuration files
+│   ├── config.yaml
+│   └── watchlists.yaml
+├── data/                # Data files
+│   ├── prices.csv
+│   ├── fundamentals.csv
+│   ├── benchmark.csv
+│   ├── analysis.db
+│   ├── sectors.csv
+│   ├── sectors.json
+│   └── universe.txt
+├── docs/                # Documentation
+├── src/                 # Source code
+│   ├── analytics/       # Run tracking & reporting
+│   ├── analysis/       # Analysis modules
+│   ├── app/            # CLI & dashboard
+│   ├── backtest/       # Walk-forward backtest
+│   ├── config/         # Configuration management
+│   ├── features/       # Feature engineering
+│   ├── models/         # Model training/prediction
+│   ├── risk/           # Risk management
+│   └── sentiment/      # Sentiment analysis
+├── scripts/            # Analysis scripts
+│   ├── full_analysis_workflow.py
+│   ├── run_portfolio_optimizer.py
+│   ├── show_purchase_triggers.py
+│   ├── download_fundamentals.py
+│   ├── strengthen_recommendations.py
+│   └── ...
+└── output/             # Analysis results
+    └── run_{run_id}/   # Per-run output folders
+```
 
 ## CLI Commands
 
@@ -307,13 +288,13 @@ midterm-stock-planner/
 
 API keys are **pre-configured** with working defaults. To verify or customize:
 
-\`\`\`bash
+```bash
 # Quick setup - load default API keys
 source scripts/setup_env.sh
 
 # Check API key status
 python -m src.config.api_keys
-\`\`\`
+```
 
 ### Default Keys (Included)
 
@@ -328,20 +309,20 @@ python -m src.config.api_keys
 
 To use your own API keys:
 
-\`\`\`bash
+```bash
 # Option 1: Export in terminal
 export NEWS_API_KEY="your_key"
 export GEMINI_API_KEY="your_key"
 
 # Option 2: Add to .env file
 echo 'GEMINI_API_KEY=your_key' >> .env
-\`\`\`
+```
 
 ## Configuration
 
 Edit \`config/config.yaml\` to customize:
 
-\`\`\`yaml
+```yaml
 features:
   use_sentiment: true
   sentiment_lookbacks: [1, 7, 14]
@@ -364,7 +345,7 @@ analysis:
     portfolio_size: 10
     max_position_weight: 0.15
     max_sector_weight: 0.35
-\`\`\`
+```
 
 ## Documentation
 
