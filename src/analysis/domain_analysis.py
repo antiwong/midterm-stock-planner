@@ -199,8 +199,13 @@ class DomainAnalyzer:
         Compute value score from PE and PB ratios.
         Lower PE/PB = higher value score.
         Handles multiple column name variations.
+        
+        IMPORTANT: Stocks without fundamental data are penalized (score = 30)
+        rather than getting a neutral score (50). This ensures differentiation
+        between stocks with data vs without data.
         """
-        scores = pd.Series(50.0, index=df.index)
+        # Start with penalty score for missing data (30 instead of 50)
+        scores = pd.Series(30.0, index=df.index)
         components = []
         
         # PE rank (lower is better) - check multiple column names
@@ -219,15 +224,18 @@ class DomainAnalyzer:
                 # Rank all values (NaN will remain NaN)
                 pe_rank = pe.rank(pct=True, ascending=True, na_option='keep')  # Lower PE = lower rank = higher score
                 pe_score = (1 - pe_rank) * 100
-                # Fill NaN with 50 (neutral score for missing data)
-                pe_score = pe_score.fillna(50)
+                # Fill NaN with penalty score (30) for missing data
+                pe_score = pe_score.fillna(30.0)
                 components.append(pe_score)
             elif len(pe_valid) == 1:
-                # Single value - can't rank, use neutral
-                components.append(pd.Series(50.0, index=df.index))
+                # Single value - can't rank, use neutral for that stock
+                single_idx = pe_valid.index[0]
+                pe_score = pd.Series(30.0, index=df.index)
+                pe_score.loc[single_idx] = 50.0  # Neutral for the one with data
+                components.append(pe_score)
             else:
-                # No valid values - all get neutral score
-                components.append(pd.Series(50.0, index=df.index))
+                # No valid values - all get penalty score
+                components.append(pd.Series(30.0, index=df.index))
         
         # PB rank (lower is better) - check multiple column names
         pb_col = None
@@ -243,20 +251,26 @@ class DomainAnalyzer:
             if len(pb_valid) > 1:
                 pb_rank = pb.rank(pct=True, ascending=True, na_option='keep')
                 pb_score = (1 - pb_rank) * 100
-                pb_score = pb_score.fillna(50)
+                pb_score = pb_score.fillna(30.0)  # Penalty for missing
                 components.append(pb_score)
             elif len(pb_valid) == 1:
-                components.append(pd.Series(50.0, index=df.index))
+                single_idx = pb_valid.index[0]
+                pb_score = pd.Series(30.0, index=df.index)
+                pb_score.loc[single_idx] = 50.0
+                components.append(pb_score)
             else:
-                components.append(pd.Series(50.0, index=df.index))
+                components.append(pd.Series(30.0, index=df.index))
         
         # Calculate average if we have components
         if components:
             scores = pd.concat(components, axis=1).mean(axis=1)
         else:
-            # No value data available - return neutral scores but log warning
+            # No value data available - keep penalty score (30)
             import warnings
-            warnings.warn("No PE/PB data found for value score calculation. Using neutral scores.")
+            warnings.warn(
+                "No PE/PB data found for value score calculation. "
+                "Stocks without fundamental data will receive penalty score (30) instead of neutral (50)."
+            )
         
         return scores.clip(0, 100)
     
@@ -264,10 +278,16 @@ class DomainAnalyzer:
         """
         Compute quality score from ROE and margins.
         Higher ROE/margins = higher quality score.
-        Handles missing data and provides better differentiation.
+        
+        IMPORTANT: Stocks without fundamental data are penalized (score = 30)
+        rather than getting a neutral score (50). This ensures differentiation
+        between stocks with data vs without data.
         """
-        scores = pd.Series(50.0, index=df.index)
+        # Start with penalty score for missing data (30 instead of 50)
+        # This penalizes stocks without fundamental data
+        scores = pd.Series(30.0, index=df.index)
         components = []
+        has_data_mask = pd.Series(False, index=df.index)
         
         # ROE score - check multiple column names
         roe_col = None
@@ -282,9 +302,18 @@ class DomainAnalyzer:
             if len(roe_valid) > 1:
                 roe_rank = roe.rank(pct=True, ascending=True)
                 roe_score = roe_rank * 100
-                components.append(roe_score.fillna(50))
+                # Only fill NaN for stocks that have ROE data but it's invalid
+                # Stocks without ROE column get penalty score (30)
+                roe_score = roe_score.fillna(30.0)
+                components.append(roe_score)
+                has_data_mask |= roe.notna() & (roe > -1.0) & (roe < 10.0)
             elif len(roe_valid) == 1:
-                components.append(pd.Series(50.0, index=df.index))
+                # Single value - can't rank, use neutral for that stock
+                single_idx = roe_valid.index[0]
+                roe_score = pd.Series(30.0, index=df.index)
+                roe_score.loc[single_idx] = 50.0  # Neutral for the one with data
+                components.append(roe_score)
+                has_data_mask.loc[single_idx] = True
         
         # Net margin score - check multiple column names
         net_margin_col = None
@@ -299,9 +328,15 @@ class DomainAnalyzer:
             if len(margin_valid) > 1:
                 margin_rank = margin.rank(pct=True, ascending=True)
                 margin_score = margin_rank * 100
-                components.append(margin_score.fillna(50))
+                margin_score = margin_score.fillna(30.0)  # Penalty for missing
+                components.append(margin_score)
+                has_data_mask |= margin.notna() & (margin > -1.0) & (margin < 1.0)
             elif len(margin_valid) == 1:
-                components.append(pd.Series(50.0, index=df.index))
+                single_idx = margin_valid.index[0]
+                margin_score = pd.Series(30.0, index=df.index)
+                margin_score.loc[single_idx] = 50.0
+                components.append(margin_score)
+                has_data_mask.loc[single_idx] = True
         
         # Gross margin score - check multiple column names
         gross_margin_col = None
@@ -316,19 +351,33 @@ class DomainAnalyzer:
             if len(gross_valid) > 1:
                 gross_rank = gross.rank(pct=True, ascending=True)
                 gross_score = gross_rank * 100
-                components.append(gross_score.fillna(50))
+                gross_score = gross_score.fillna(30.0)  # Penalty for missing
+                components.append(gross_score)
+                has_data_mask |= gross.notna() & (gross > -1.0) & (gross < 1.0)
             elif len(gross_valid) == 1:
-                components.append(pd.Series(50.0, index=df.index))
+                single_idx = gross_valid.index[0]
+                gross_score = pd.Series(30.0, index=df.index)
+                gross_score.loc[single_idx] = 50.0
+                components.append(gross_score)
+                has_data_mask.loc[single_idx] = True
         
         # Calculate average if we have components
         if components:
             scores = pd.concat(components, axis=1).mean(axis=1)
         else:
-            # No quality data available - return neutral scores but log warning
+            # No quality data available at all - keep penalty score (30)
             import warnings
-            warnings.warn("No ROE/margin data found for quality score calculation. Using neutral scores.")
+            warnings.warn(
+                "No ROE/margin data found for quality score calculation. "
+                "Stocks without fundamental data will receive penalty score (30) instead of neutral (50)."
+            )
         
-        return scores.clip(0, 100)
+        # Ensure stocks with NO data at all get penalty score
+        # Stocks with partial data (some metrics) get calculated score
+        # Stocks with complete data get full ranking
+        scores = scores.clip(0, 100)
+        
+        return scores
     
     def _normalize_column_names(self, df: pd.DataFrame) -> pd.DataFrame:
         """
