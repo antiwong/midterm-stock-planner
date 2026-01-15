@@ -238,6 +238,14 @@ class ComprehensiveAnalysisRunner:
                 ]
             }
         
+        # Normalize timezones to avoid tz-naive/tz-aware issues
+        if hasattr(returns.index, 'tz') and returns.index.tz is not None:
+            returns.index = returns.index.tz_localize(None)
+        if hasattr(weights.index, 'tz') and weights.index.tz is not None:
+            weights.index = weights.index.tz_localize(None)
+        if stock_returns is not None and hasattr(stock_returns.index, 'tz') and stock_returns.index.tz is not None:
+            stock_returns.index = stock_returns.index.tz_localize(None)
+        
         # Run attribution
         attribution = self.attribution_analyzer.analyze(
             portfolio_returns=returns,
@@ -354,19 +362,54 @@ class ComprehensiveAnalysisRunner:
         else:
             current_weights = weights
         
-        # Extract stock features from stock_data
+        # Extract stock features from stock_data - handle both DataFrame and dict formats
         if stock_data is None:
             return {'error': 'Stock data required for factor exposure'}
         
-        # Pivot features
-        feature_columns = [c for c in stock_data.columns 
-                          if c not in ['date', 'ticker', 'return', 'sector']]
+        # Handle different data formats
+        if isinstance(stock_data, pd.DataFrame):
+            # DataFrame format
+            feature_columns = [c for c in stock_data.columns 
+                              if c not in ['date', 'ticker', 'return', 'sector']]
+            
+            if len(feature_columns) == 0:
+                return {'error': 'No feature columns found in stock_data'}
+            
+            # Get latest features for each ticker
+            if 'ticker' in stock_data.columns:
+                stock_features = stock_data.groupby('ticker')[feature_columns].last()
+            else:
+                stock_features = stock_data[feature_columns]
+        elif isinstance(stock_data, dict):
+            # Dict format - get features or data
+            stock_features = stock_data.get('features') or stock_data.get('data')
+            if stock_features is None:
+                return {'error': 'Stock features not found in stock_data'}
+            
+            if not isinstance(stock_features, pd.DataFrame):
+                return {'error': 'Stock features must be a DataFrame'}
+            
+            # Get feature columns
+            feature_columns = [c for c in stock_features.columns 
+                              if c not in ['date', 'ticker', 'return', 'sector']]
+            
+            if len(feature_columns) == 0:
+                return {'error': 'No feature columns found in stock_features'}
+            
+            # Get latest features for each ticker
+            if 'ticker' in stock_features.columns:
+                stock_features = stock_features.groupby('ticker')[feature_columns].last()
+            else:
+                stock_features = stock_features[feature_columns]
+        else:
+            return {'error': 'Invalid stock_data format'}
         
-        if len(feature_columns) == 0:
-            return {'error': 'No feature columns found in stock_data'}
+        # Validate stock_features is a DataFrame
+        if not isinstance(stock_features, pd.DataFrame):
+            return {'error': 'Stock features must be a DataFrame after processing'}
         
-        # Get latest features for each ticker
-        stock_features = stock_data.groupby('ticker')[feature_columns].last()
+        if stock_features.empty:
+            return {'error': 'Stock features DataFrame is empty'}
         
         # Run factor analysis
         factor_results = self.factor_analyzer.analyze(
