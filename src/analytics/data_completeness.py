@@ -172,13 +172,26 @@ class DataCompletenessChecker:
             return weights is not None and not weights.empty if hasattr(weights, 'empty') else weights is not None
         
         elif requirement == DataRequirement.STOCK_RETURNS:
-            # Check if stock returns are available
-            # Could be in stock_data or need to be calculated
+            # Check if stock returns are available from multiple sources
+            # 1. Check stock_data directly
             stock_returns = stock_data.get('returns')
             if stock_returns is not None:
                 if hasattr(stock_returns, 'empty'):
                     return not stock_returns.empty
                 return len(stock_returns) > 0
+            
+            # 2. Check portfolio_data (may have been loaded from redundant sources)
+            stock_returns = portfolio_data.get('stock_returns')
+            if stock_returns is not None:
+                if hasattr(stock_returns, 'empty'):
+                    return not stock_returns.empty
+                return len(stock_returns) > 0
+            
+            # 3. Check if we can derive from stock features
+            if isinstance(stock_data, pd.DataFrame):
+                if 'return' in stock_data.columns or 'returns' in stock_data.columns:
+                    return True
+            
             return False
         
         elif requirement == DataRequirement.STOCK_FEATURES:

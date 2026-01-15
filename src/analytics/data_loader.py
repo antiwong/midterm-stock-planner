@@ -84,9 +84,115 @@ class RunDataLoader:
         return None
     
     def load_stock_returns(self) -> Optional[pd.DataFrame]:
-        """Load individual stock returns."""
-        # This would need to be loaded from price data
-        # For now, return None - would need integration with data pipeline
+        """
+        Load individual stock returns from multiple redundant sources.
+        
+        Tries in order:
+        1. Backtest results (backtest_returns.csv with individual stock returns)
+        2. Price data files (if available)
+        3. Portfolio enriched files (may contain return columns)
+        4. yfinance API (fallback - fetch from Yahoo Finance)
+        """
+        # Try 1: Backtest results with individual stock returns
+        returns_path = self.run_dir / "backtest_returns.csv"
+        if returns_path.exists():
+            df = pd.read_csv(returns_path)
+            if 'date' in df.columns:
+                df['date'] = pd.to_datetime(df['date'])
+                # Check if we have individual stock returns (columns like ticker_return or ticker_ret)
+                stock_cols = [col for col in df.columns if col.endswith('_return') or col.endswith('_ret')]
+                if stock_cols:
+                    # Pivot to get returns by date and ticker
+                    # Assuming format: date, ticker, return or date, ticker_return columns
+                    if 'ticker' in df.columns and 'return' in df.columns:
+                        returns_df = df.pivot_table(
+                            index='date',
+                            columns='ticker',
+                            values='return',
+                            aggfunc='first'
+                        )
+                        return returns_df
+        
+        # Try 2: Price data files
+        price_files = list(self.run_dir.glob("*price*.csv")) + list(self.run_dir.glob("*prices*.csv"))
+        if price_files:
+            for price_file in price_files:
+                try:
+                    df = pd.read_csv(price_file)
+                    if 'date' in df.columns and 'ticker' in df.columns and 'close' in df.columns:
+                        df['date'] = pd.to_datetime(df['date'])
+                        # Calculate returns from close prices
+                        df = df.sort_values(['ticker', 'date'])
+                        df['return'] = df.groupby('ticker')['close'].pct_change()
+                        returns_df = df.pivot_table(
+                            index='date',
+                            columns='ticker',
+                            values='return',
+                            aggfunc='first'
+                        )
+                        return returns_df.dropna(how='all')
+                except Exception:
+                    continue
+        
+        # Try 3: Portfolio enriched files (may have return columns)
+        enriched_files = list(self.run_dir.glob("*portfolio_enriched*.csv"))
+        for enriched_file in enriched_files:
+            try:
+                df = pd.read_csv(enriched_file)
+                # Check for return-related columns
+                return_cols = [col for col in df.columns if 'return' in col.lower() or 'ret' in col.lower()]
+                if return_cols and 'date' in df.columns and 'ticker' in df.columns:
+                    df['date'] = pd.to_datetime(df['date'])
+                    return_col = return_cols[0]  # Use first return column found
+                    returns_df = df.pivot_table(
+                        index='date',
+                        columns='ticker',
+                        values=return_col,
+                        aggfunc='first'
+                    )
+                    return returns_df.dropna(how='all')
+            except Exception:
+                continue
+        
+        # Try 4: yfinance fallback (if we have holdings and date range)
+        try:
+            portfolio_files = list(self.run_dir.glob("portfolio_*.csv"))
+            if portfolio_files:
+                # Get holdings from portfolio file
+                latest_portfolio = max(portfolio_files, key=lambda p: p.stat().st_mtime)
+                portfolio_df = pd.read_csv(latest_portfolio)
+                if 'ticker' in portfolio_df.columns:
+                    tickers = portfolio_df['ticker'].unique().tolist()
+                    
+                    # Get date range from portfolio returns
+                    portfolio_returns = self.load_portfolio_returns()
+                    if portfolio_returns is not None and len(tickers) > 0:
+                        start_date = portfolio_returns.index[0]
+                        end_date = portfolio_returns.index[-1]
+                        
+                        # Fetch from yfinance
+                        import yfinance as yf
+                        all_returns = []
+                        for ticker in tickers[:20]:  # Limit to avoid rate limits
+                            try:
+                                ticker_obj = yf.Ticker(ticker)
+                                hist = ticker_obj.history(start=start_date, end=end_date)
+                                if not hist.empty and 'Close' in hist.columns:
+                                    returns = hist['Close'].pct_change().dropna()
+                                    returns.name = ticker
+                                    all_returns.append(returns)
+                            except Exception:
+                                continue
+                        
+                        if all_returns:
+                            returns_df = pd.DataFrame(all_returns).T
+                            returns_df.index = pd.to_datetime(returns_df.index)
+                            return returns_df
+        except ImportError:
+            pass  # yfinance not available
+        except Exception:
+            pass  # Other errors
+        
         return None
     
     def load_stock_features(self) -> Optional[pd.DataFrame]:
