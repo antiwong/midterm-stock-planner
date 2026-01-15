@@ -24,6 +24,7 @@ These pages follow the typical analysis workflow, displayed in order:
 | 🎯 **Portfolio Builder** | Personalized portfolio construction |
 | 📄 **Reports** | Browse generated reports |
 | 💼 **Portfolio Analysis** | Detailed portfolio view |
+| 📊 **Comprehensive Analysis** | Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis |
 | 🔍 **Purchase Triggers** | Purchase triggers and selection logic |
 | 📊 **Analysis Runs** | Filter and explore runs |
 | 🤖 **AI Insights** | Generate AI commentary |
@@ -196,6 +197,99 @@ Comprehensive portfolio view with beautiful visualizations and AI insights:
 - AI-generated insights for each major chart
 - Responsive design with collapsible sections
 - Dark theme optimized color scheme
+
+### 📊 Comprehensive Analysis
+
+Deep dive into portfolio performance with comprehensive analysis modules:
+
+#### Features
+- **Run All Analyses**: One-click button to run all analysis modules for a selected run
+- **Data Loading**: Automatically loads portfolio data from run output files
+- **Database Storage**: All analysis results saved to database for historical tracking
+- **Tabbed Interface**: Separate tabs for each analysis type
+
+#### Analysis Modules
+
+**1. Performance Attribution Tab**
+- Decomposes portfolio returns into components:
+  - Factor attribution (value, growth, quality, momentum)
+  - Sector attribution (which sectors added/subtracted value)
+  - Stock selection attribution (did we pick the right stocks?)
+  - Timing attribution (did rebalancing help or hurt?)
+- Summary metrics for each attribution component
+- Detailed breakdown charts and tables
+
+**2. Benchmark Comparison Tab**
+- Compares portfolio vs benchmarks (SPY, QQQ, sector ETFs)
+- Metrics displayed:
+  - Alpha (excess return)
+  - Beta (market sensitivity)
+  - Information ratio
+  - Tracking error
+  - Up/Down capture ratios
+- Side-by-side comparison of portfolio vs benchmark metrics
+
+**3. Factor Exposure Tab**
+- Analyzes portfolio factor loadings:
+  - Market (beta)
+  - Size (small vs large cap)
+  - Value (cheap vs expensive)
+  - Momentum
+  - Quality
+  - Low volatility
+- Factor exposure chart (positive/negative exposures)
+- Factor contribution to return and risk
+
+**4. Rebalancing Analysis Tab**
+- Analyzes portfolio drift from target weights
+- Metrics:
+  - Current drift
+  - Average turnover
+  - Total transaction costs
+  - Number of rebalancing events
+- Drift over time chart
+- Rebalancing recommendations (when to rebalance)
+
+**5. Style Analysis Tab**
+- Classifies portfolio style:
+  - Growth vs Value (based on PE ratios)
+  - Large vs Small cap (based on market cap)
+- Portfolio PE vs market average
+- Market cap classification
+- Overall style summary
+
+**6. AI Insights Tab**
+- Displays all AI-generated insights for the run
+- Grouped by insight type (executive summary, sector analysis, etc.)
+- Shows generation timestamp
+- Links to full AI Insights page
+
+**7. Recommendations Tab**
+- Displays all investment recommendations for the run
+- Grouped by action (BUY, SELL, HOLD)
+- Shows:
+  - Ticker, date, reason, confidence
+  - Target price, stop loss
+  - Actual return (if tracked)
+  - Whether target/stop-loss was hit
+
+#### Usage
+
+1. **Select Run**: Choose an analysis run from the dropdown
+2. **Run Analysis**: Click "🔄 Run All Analyses" to generate all analysis modules
+3. **View Results**: Navigate through tabs to see different analysis types
+4. **Export**: Export results (coming soon)
+
+#### Data Requirements
+
+- **Portfolio Returns**: Required for attribution and benchmark comparison
+- **Portfolio Weights**: Required for rebalancing and style analysis
+- **Stock Features**: Required for factor exposure and style analysis
+- **Stock Returns**: Optional, enhances attribution analysis
+
+If data is missing, the analysis will show an error message indicating what's needed.
+
+See [Comprehensive Analysis System Documentation](comprehensive-analysis-system.md) for details.
 
 ### 📊 Analysis Runs
 

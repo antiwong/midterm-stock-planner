@@ -2,6 +2,81 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.6.0] - 2026-01-10
+
+### Added
+
+#### Comprehensive Analysis System
+- **Performance Attribution Analysis** (`src/analytics/performance_attribution.py`)
+  - Decomposes portfolio returns into factor, sector, stock selection, and timing components
+  - All results stored in database for historical tracking
+  - GUI integration with interactive charts
+
+- **Benchmark Comparison** (`src/analytics/benchmark_comparison.py`)
+  - Compares portfolio vs benchmarks (SPY, QQQ, sector ETFs)
+  - Calculates alpha, beta, tracking error, information ratio, up/down capture ratios
+  - Side-by-side metrics comparison
+
+- **Factor Exposure Analysis** (`src/analytics/factor_exposure.py`)
+  - Analyzes portfolio factor loadings (market, size, value, momentum, quality, low vol)
+  - Calculates factor contributions to return and risk
+  - Visual exposure charts
+
+- **Rebalancing Analysis** (`src/analytics/rebalancing_analysis.py`)
+  - Analyzes portfolio drift from target weights
+  - Calculates turnover and transaction costs
+  - Determines optimal rebalancing frequency
+  - Provides rebalancing recommendations
+
+- **Style Analysis** (`src/analytics/style_analysis.py`)
+  - Classifies portfolio style (growth vs value, large vs small cap)
+  - Tracks style consistency over time
+  - Detects style drift
+
+- **Historical Recommendation Tracking**
+  - Tracks all AI-generated recommendations in database
+  - Monitors actual performance vs targets
+  - Updates performance over time via `scripts/track_recommendations.py`
+  - Calculates hit rates and recommendation quality
+
+- **Database-Backed Analysis Storage**
+  - All analysis results stored in SQLite database (`data/analysis.db`)
+  - Tables: `analysis_results`, `ai_insights`, `recommendations`, `benchmark_comparisons`, `factor_exposures`, `performance_attributions`
+  - Historical tracking and comparison across runs
+  - Deduplication of AI insights via prompt hashing
+
+- **Comprehensive Analysis GUI Page** (`src/app/dashboard/pages/comprehensive_analysis.py`)
+  - Single page with tabs for all analysis types
+  - One-click "Run All Analyses" button
+  - Data loader integration for automatic data loading from run output files
+  - Interactive charts and visualizations for each analysis type
+
+- **Data Loader** (`src/analytics/data_loader.py`)
+  - Loads portfolio returns, weights, stock features from run output files
+  - Handles missing data gracefully
+  - Integrated with comprehensive analysis runner
+
+- **Analysis Service** (`src/analytics/analysis_service.py`)
+  - Unified interface for saving/retrieving analysis results
+  - Methods for all analysis types
+  - Historical query capabilities
+
+- **Comprehensive Analysis Runner** (`src/analytics/comprehensive_analysis.py`)
+  - Runs all analysis modules in one call
+  - Saves all results to database automatically
+  - Handles errors gracefully
+
+- **Scripts**
+  - `scripts/run_comprehensive_analysis.py`: CLI tool to run all analyses for a run
+  - `scripts/track_recommendations.py`: Update recommendation performance over time
+
+### Changed
+- AI insights generation now automatically saves to database when `run_id` is provided
+- All analysis results are now stored permanently in database
+- Comprehensive Analysis page added to dashboard navigation
+
+---
+
 ## [3.5.0] - 2026-01-09
 
 ### Added

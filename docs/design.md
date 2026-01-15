@@ -30,6 +30,7 @@
 | [data-validation.md](data-validation.md) | Data quality validation for AI insights |
 | [portfolio-comparison.md](portfolio-comparison.md) | Comparison of Purchase Triggers vs Portfolio Builder methods |
 | [analysis-improvements.md](analysis-improvements.md) | Roadmap for enhancing analytical capabilities |
+| [comprehensive-analysis-system.md](comprehensive-analysis-system.md) | Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis |
 
 ---
 
@@ -255,8 +256,17 @@ src/
 │   └── performance.py
 │
 ├── analytics/                 # Analytics
-│   ├── __init__.py            # See: visualization-analytics.md
-│   └── performance.py
+│   ├── __init__.py            # See: visualization-analytics.md, comprehensive-analysis-system.md
+│   ├── performance.py
+│   ├── performance_attribution.py
+│   ├── benchmark_comparison.py
+│   ├── factor_exposure.py
+│   ├── rebalancing_analysis.py
+│   ├── style_analysis.py
+│   ├── comprehensive_analysis.py
+│   ├── analysis_service.py
+│   ├── data_loader.py
+│   └── analysis_models.py
 │
 ├── config/                    # Configuration
 │   ├── __init__.py            # See: configuration-cli.md
@@ -413,7 +423,7 @@ src/
 | Phase | Features | Status | Documents |
 |-------|----------|--------|-----------|
 | **MVP (Phase 1)** | Data loading, Core features, LightGBM, Walk-forward BT, SHAP, CLI, Run tracking | ✅ Complete | [data-engineering.md](data-engineering.md), [model-training.md](model-training.md), [backtesting.md](backtesting.md) |
-| **Phase 2** | Extended indicators, Portfolio SHAP, Risk module, Position sizing, Risk Parity, AI Insights, Dashboard, Analytics DB | ✅ Complete | [technical-indicators.md](technical-indicators.md), [risk-management.md](risk-management.md), [risk-parity.md](risk-parity.md), [ai-insights.md](ai-insights.md), [dashboard.md](dashboard.md) |
+| **Phase 2** | Extended indicators, Portfolio SHAP, Risk module, Position sizing, Risk Parity, AI Insights, Dashboard, Analytics DB, Comprehensive Analysis | ✅ Complete | [technical-indicators.md](technical-indicators.md), [risk-management.md](risk-management.md), [risk-parity.md](risk-parity.md), [ai-insights.md](ai-insights.md), [dashboard.md](dashboard.md), [comprehensive-analysis-system.md](comprehensive-analysis-system.md) |
 | **Phase 3** | Time-series overlay, Live data integration, Broker connection | ☐ Planned | - |
 
 ---
