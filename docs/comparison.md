@@ -18,6 +18,9 @@ This document provides a detailed comparison between **Stockbot** and **Mid-term
 | **Portfolio Builder** | ❌ | ✅ Personalized optimization |
 | **Domain Analysis** | ❌ | ✅ Vertical & horizontal analysis |
 | **Database** | File-based | SQLite with run tracking |
+| **Comprehensive Analysis** | ❌ | ✅ Performance attribution, benchmark comparison, factor exposure |
+| **Historical Tracking** | ❌ | ✅ All analysis results stored in database |
+| **Recommendation Tracking** | ❌ | ✅ Track recommendation performance over time |
 
 ---
 
@@ -119,6 +122,11 @@ This document provides a detailed comparison between **Stockbot** and **Mid-term
 | **A/B Comparison** | ❌ | ✅ (with/without sentiment) |
 | **Equity Curve** | ✅ | ✅ |
 | **Drawdown Analysis** | ✅ | ✅ |
+| **Performance Attribution** | ❌ | ✅ Factor, sector, stock selection, timing |
+| **Benchmark Comparison** | ❌ | ✅ Alpha, beta, tracking error, up/down capture |
+| **Factor Exposure** | ❌ | ✅ Market, size, value, momentum, quality, low vol |
+| **Rebalancing Analysis** | ❌ | ✅ Drift, turnover, transaction costs, optimal frequency |
+| **Style Analysis** | ❌ | ✅ Growth/value, size classification |
 
 ### 8. Risk Management
 
@@ -210,6 +218,9 @@ This document provides a detailed comparison between **Stockbot** and **Mid-term
 | **Run Analysis UI** | ❌ | ✅ 4-stage pipeline with guards |
 | **Profile Presets** | ❌ | ✅ One-click investor profiles |
 | **Run Folders** | ❌ | ✅ Per-run output organization |
+| **Comprehensive Analysis UI** | ❌ | ✅ All analysis modules in one page |
+| **Historical Analysis** | ❌ | ✅ Database-backed analysis storage |
+| **Recommendation Tracking** | ❌ | ✅ Track recommendation performance |
 
 ### 11.1. Dashboard Pages (Mid-term Stock Planner)
 
@@ -221,6 +232,7 @@ This document provides a detailed comparison between **Stockbot** and **Mid-term
 | **📉 Compare Runs** | Side-by-side run comparison |
 | **🤖 AI Insights** | Gemini-powered analysis and recommendations |
 | **💼 Portfolio Analysis** | Fundamental + risk-aware views |
+| **📊 Comprehensive Analysis** | Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis |
 | **🎯 Portfolio Builder** | Personalized portfolio optimization |
 | **🎮 Run Analysis** | Execute analysis pipeline with guards |
 | **⚙️ Settings** | Database management, API status |
