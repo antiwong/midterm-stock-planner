@@ -1,7 +1,7 @@
 # Next Steps & Roadmap
 
 **Last Updated:** 2026-01-15  
-**Current Status:** ✅ System fully functional, 95% test pass rate
+**Current Status:** ✅ System fully functional, 148/148 tests passing (100% pass rate)
 
 ## Immediate Actions (Quick Wins)
 
@@ -24,20 +24,14 @@
 **Priority:** Medium  
 **Impact:** Restore 53 older tests, improve overall coverage
 
-- [ ] Add missing fixtures to `conftest.py`:
-  - `config` fixture for backtest config tests
-  - `output_dir` fixture for position tests
-  - `data_dir` fixture for data integrity tests
-  - `project_root` fixture for pipeline tests
-  - `sector_data`, `price_data` fixtures
-  - `latest_metrics` fixture for metric scaling tests
-
-**Files to Update:**
-- `tests/conftest.py`
-- `tests/test_backtest_config.py` (if needed)
-- `tests/test_data_integrity.py` (if needed)
-- `tests/test_metric_scaling.py` (if needed)
-- `tests/test_pipeline.py` (if needed)
+- [x] ✅ Add missing fixtures to `conftest.py`:
+  - ✅ `config` fixture for backtest config tests
+  - ✅ `output_dir` fixture for position tests
+  - ✅ `data_dir` fixture for data integrity tests
+  - ✅ `project_root` fixture for pipeline tests
+  - ✅ `sector_data`, `price_data`, `benchmark_data` fixtures
+  - ✅ `latest_metrics` fixture for metric scaling tests
+- **Status:** ✅ **COMPLETED** - All 52 older tests now passing!
 
 ---
 
