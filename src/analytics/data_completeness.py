@@ -196,8 +196,27 @@ class DataCompletenessChecker:
         
         elif requirement == DataRequirement.STOCK_FEATURES:
             # Check if stock features/scores are available
-            features = stock_data.get('features') or stock_data
-            return features is not None and len(features) > 0
+            if isinstance(stock_data, pd.DataFrame):
+                # stock_data is a DataFrame directly
+                return not stock_data.empty if hasattr(stock_data, 'empty') else len(stock_data) > 0
+            elif isinstance(stock_data, dict):
+                # Check for features or data keys
+                features = stock_data.get('features')
+                data = stock_data.get('data')
+                
+                # Check if we have a DataFrame
+                if isinstance(features, pd.DataFrame):
+                    return not features.empty
+                elif isinstance(data, pd.DataFrame):
+                    return not data.empty
+                elif features is not None:
+                    return len(features) > 0 if hasattr(features, '__len__') else True
+                elif data is not None:
+                    return len(data) > 0 if hasattr(data, '__len__') else True
+                else:
+                    # Check if dict itself has content
+                    return len(stock_data) > 0
+            return False
         
         elif requirement == DataRequirement.FUNDAMENTAL_DATA:
             # Check if fundamental data is available (PE ratios, etc.)

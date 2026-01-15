@@ -210,9 +210,22 @@ class ComprehensiveAnalysisRunner:
             return {'error': 'Portfolio returns and weights required'}
         
         # Extract stock returns from stock_data
-        stock_returns = stock_data.pivot_table(
-            index='date', columns='ticker', values='return'
-        ) if 'return' in stock_data.columns else None
+        # Handle both DataFrame and dict formats
+        if isinstance(stock_data, pd.DataFrame):
+            stock_returns = stock_data.pivot_table(
+                index='date', columns='ticker', values='return'
+            ) if 'return' in stock_data.columns and 'date' in stock_data.columns and 'ticker' in stock_data.columns else None
+        elif isinstance(stock_data, dict):
+            # Try to get returns from dict
+            stock_returns = stock_data.get('returns')
+            if stock_returns is None and 'data' in stock_data:
+                data = stock_data['data']
+                if isinstance(data, pd.DataFrame) and 'return' in data.columns:
+                    stock_returns = data.pivot_table(
+                        index='date', columns='ticker', values='return'
+                    ) if 'date' in data.columns and 'ticker' in data.columns else None
+        else:
+            stock_returns = None
         
         if stock_returns is None:
             return {
