@@ -317,10 +317,14 @@ def _render_manual_entry_form():
         
         st.markdown(f"**Parsed symbols:** {len(symbols)}")
         
-        # Validate symbols (with existence check)
+        # Validate symbols (with existence check and Tiger format detection)
         with st.spinner("Validating symbols..."):
             from ..data import validate_watchlist_symbols
-            validation = validate_watchlist_symbols(symbols, check_existence=True)
+            validation = validate_watchlist_symbols(symbols, check_existence=True, detect_tiger_format=True)
+            
+            # Show Tiger format detection
+            if validation.get('tiger_format_detected'):
+                st.info("🐅 Tiger Trading format detected and converted automatically")
             
             valid_symbols = validation['valid_symbols']
             invalid_symbols = validation.get('invalid', [])

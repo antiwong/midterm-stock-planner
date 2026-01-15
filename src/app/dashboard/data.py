@@ -53,13 +53,21 @@ def clean_and_deduplicate_symbols(symbols: List[str]) -> List[str]:
     return cleaned
 
 
-def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True) -> Dict[str, Any]:
+def validate_watchlist_symbols(
+    symbols: List[str], 
+    check_existence: bool = True,
+    detect_tiger_format: bool = True
+) -> Dict[str, Any]:
     """
     Validate watchlist symbols and return validation report.
     
+    Supports Tiger Trading format symbols (e.g., 0700.HK, D05.SG) and automatically
+    converts them to standard format for validation.
+    
     Args:
-        symbols: List of ticker symbols to validate
+        symbols: List of ticker symbols to validate (can be Tiger Trading format)
         check_existence: Whether to check if symbols actually exist (default: True)
+        detect_tiger_format: Whether to auto-detect and convert Tiger format (default: True)
         
     Returns:
         Dictionary with validation results:
@@ -68,6 +76,7 @@ def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True)
         - invalid: List of invalid symbols removed (format issues)
         - non_existent: List of symbols that don't exist (if check_existence=True)
         - warnings: List of warning messages
+        - tiger_conversion: Conversion info if Tiger format detected
     """
     original_count = len(symbols)
     cleaned = []
@@ -77,6 +86,41 @@ def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True)
     
     import re
     
+    # Detect Tiger Trading format
+    tiger_format_detected = False
+    if detect_tiger_format:
+        try:
+            from .symbol_converter import detect_tiger_format
+            tiger_format_detected = detect_tiger_format(symbols)
+        except Exception:
+            pass
+    
+    # Convert Tiger symbols if detected
+    if tiger_format_detected:
+        try:
+            from .symbol_converter import validate_and_convert_tiger_symbols
+            tiger_result = validate_and_convert_tiger_symbols(symbols, check_existence=False)
+            
+            # Use converted symbols for validation
+            symbols_to_validate = tiger_result['converted_symbols']
+            conversion_map = tiger_result['conversion_map']
+            
+            # Update symbols list
+            symbols = symbols_to_validate
+            
+            # Store conversion info
+            tiger_conversion = {
+                'detected': True,
+                'conversion_map': conversion_map,
+                'exchange_map': tiger_result.get('exchange_map', {}),
+            }
+        except Exception as e:
+            logger.warning(f"Tiger format conversion failed: {e}")
+            tiger_format_detected = False
+            tiger_conversion = None
+    else:
+        tiger_conversion = None
+    
     for symbol in symbols:
         s = str(symbol).strip().upper()
         
@@ -84,8 +128,9 @@ def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True)
         if not s:
             continue
         
-        # Basic validation
-        if not re.match(r'^[A-Z0-9\.\-]{1,10}$', s):
+        # Basic validation (relaxed for exchange suffixes)
+        # Allow longer symbols for exchange suffixes (e.g., 0700.HK)
+        if not re.match(r'^[A-Z0-9\.\-]{1,15}$', s):
             invalid.append(symbol)
             continue
         
@@ -111,6 +156,14 @@ def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True)
         'invalid': invalid,
         'warnings': warnings,
     }
+    
+    # Add Tiger conversion info if available
+    if tiger_conversion:
+        result['tiger_conversion'] = tiger_conversion
+        result['tiger_format_detected'] = True
+        warnings.append(f"Tiger Trading format detected and converted")
+    else:
+        result['tiger_format_detected'] = False
     
     # Check existence if requested
     if check_existence and cleaned:
