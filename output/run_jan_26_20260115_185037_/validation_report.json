@@ -1,0 +1,152 @@
+{
+  "run_id": "run_jan_26_20260115_185037_",
+  "passed": false,
+  "checks": [
+    {
+      "check": "weights_sum_to_one",
+      "passed": true,
+      "message": "All 59 dates have weights summing to 1.0",
+      "severity": "error",
+      "details": {
+        "dates_checked": 59
+      }
+    },
+    {
+      "check": "no_negative_weights",
+      "passed": true,
+      "message": "All weights are non-negative (long-only)",
+      "severity": "error",
+      "details": {}
+    },
+    {
+      "check": "no_excessive_position",
+      "passed": true,
+      "message": "No single position exceeds 50%",
+      "severity": "error",
+      "details": {
+        "limit": 0.5
+      }
+    },
+    {
+      "check": "return_sanity",
+      "passed": true,
+      "message": "Returns within sane bounds (Total: 68.7%, Ann: 12.1%)",
+      "severity": "error",
+      "details": {
+        "total_return": 0.687257037946561,
+        "annualized_return": 0.12056849074118059
+      }
+    },
+    {
+      "check": "position_count",
+      "passed": false,
+      "message": "59 dates have incorrect position count (expected 10)",
+      "severity": "error",
+      "details": {
+        "expected": 10,
+        "error_dates": {
+          "2020-02-01 00:00:00": 5,
+          "2020-03-01 00:00:00": 5,
+          "2020-04-01 00:00:00": 5,
+          "2020-05-01 00:00:00": 5,
+          "2020-06-01 00:00:00": 5,
+          "2020-07-01 00:00:00": 5,
+          "2020-08-01 00:00:00": 5,
+          "2020-09-01 00:00:00": 5,
+          "2020-10-01 00:00:00": 5,
+          "2020-11-01 00:00:00": 6,
+          "2020-12-01 00:00:00": 6,
+          "2021-01-01 00:00:00": 6,
+          "2021-02-01 00:00:00": 6,
+          "2021-03-01 00:00:00": 6,
+          "2021-04-01 00:00:00": 6,
+          "2021-05-01 00:00:00": 6,
+          "2021-06-01 00:00:00": 6,
+          "2021-07-01 00:00:00": 6,
+          "2021-08-01 00:00:00": 6,
+          "2021-09-01 00:00:00": 6,
+          "2021-10-01 00:00:00": 6,
+          "2021-11-01 00:00:00": 6,
+          "2021-12-01 00:00:00": 6,
+          "2022-01-01 00:00:00": 6,
+          "2022-02-01 00:00:00": 6,
+          "2022-03-01 00:00:00": 6,
+          "2022-04-01 00:00:00": 6,
+          "2022-05-01 00:00:00": 6,
+          "2022-06-01 00:00:00": 6,
+          "2022-07-01 00:00:00": 6,
+          "2022-08-01 00:00:00": 6,
+          "2022-09-01 00:00:00": 6,
+          "2022-10-01 00:00:00": 6,
+          "2022-11-01 00:00:00": 6,
+          "2022-12-01 00:00:00": 6,
+          "2023-01-01 00:00:00": 6,
+          "2023-02-01 00:00:00": 6,
+          "2023-03-01 00:00:00": 6,
+          "2023-04-01 00:00:00": 6,
+          "2023-05-01 00:00:00": 6,
+          "2023-06-01 00:00:00": 6,
+          "2023-07-01 00:00:00": 6,
+          "2023-08-01 00:00:00": 6,
+          "2023-09-01 00:00:00": 6,
+          "2023-10-01 00:00:00": 6,
+          "2023-11-01 00:00:00": 6,
+          "2023-12-01 00:00:00": 6,
+          "2024-01-01 00:00:00": 6,
+          "2024-02-01 00:00:00": 6,
+          "2024-03-01 00:00:00": 6,
+          "2024-04-01 00:00:00": 6,
+          "2024-05-01 00:00:00": 6,
+          "2024-06-01 00:00:00": 6,
+          "2024-07-01 00:00:00": 6,
+          "2024-08-01 00:00:00": 6,
+          "2024-09-01 00:00:00": 6,
+          "2024-10-01 00:00:00": 6,
+          "2024-11-01 00:00:00": 6,
+          "2024-12-01 00:00:00": 6
+        }
+      }
+    },
+    {
+      "check": "volatility_bounds",
+      "passed": true,
+      "message": "Volatility 31.7% within moderate limit (50%)",
+      "severity": "error",
+      "details": {
+        "actual": 0.31726688559827193,
+        "limit": 0.5,
+        "profile": "moderate"
+      }
+    },
+    {
+      "check": "drawdown_bounds",
+      "passed": false,
+      "message": "Max drawdown -46.0% exceeds moderate limit (-40%)",
+      "severity": "warning",
+      "details": {
+        "actual": -0.4597210429947456,
+        "limit": -0.4,
+        "profile": "moderate"
+      }
+    },
+    {
+      "check": "sector_concentration",
+      "passed": true,
+      "message": "No sector exceeds 50% limit (moderate profile)",
+      "severity": "error",
+      "details": {
+        "limit": 0.5,
+        "profile": "moderate"
+      }
+    },
+    {
+      "check": "factor_concentration",
+      "passed": true,
+      "message": "Factor variance is zero (all equal scores)",
+      "severity": "error",
+      "details": {
+        "factor_contributions": {}
+      }
+    }
+  ]
+}

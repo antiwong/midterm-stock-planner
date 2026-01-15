@@ -151,10 +151,15 @@ def test_analysis_modules(run_dir):
         loader = RunDataLoader(Path(run_dir))
         portfolio_data = loader.load_portfolio_data()
         
-        if not portfolio_data or not portfolio_data.get('returns'):
-            print(f"\n  ⚠️  No portfolio returns data - some tests may be skipped")
+        if not portfolio_data:
+            print(f"\n  ⚠️  No portfolio data loaded - some tests may be skipped")
         else:
-            print(f"\n  ✅ Portfolio data available for testing")
+            returns = portfolio_data.get('returns')
+            has_returns = returns is not None and (hasattr(returns, '__len__') and len(returns) > 0 if hasattr(returns, '__len__') else returns is not None)
+            if not has_returns:
+                print(f"\n  ⚠️  No portfolio returns data - some tests may be skipped")
+            else:
+                print(f"\n  ✅ Portfolio data available for testing")
         
         return True
         
@@ -235,7 +240,7 @@ def test_analysis_service(db_path="data/analysis.db"):
             'get_analysis_result',
             'save_ai_insight',
             'get_ai_insight',
-            'save_recommendation',
+            'save_recommendations',  # Note: plural
             'get_recommendations',
         ]
         

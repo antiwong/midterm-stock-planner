@@ -27,19 +27,20 @@ def main():
     
     args = parser.parse_args()
     
-    # Get run from database
+    # Get run from database (optional - can work without it)
     db = get_db(args.db_path)
     session = db.get_session()
     
     try:
         run = session.query(Run).filter_by(run_id=args.run_id).first()
-        if not run:
-            print(f"Error: Run {args.run_id} not found in database")
-            return 1
-        
-        print(f"Running comprehensive analysis for run: {run.name or args.run_id}")
-        print(f"  Run ID: {args.run_id}")
-        print(f"  Created: {run.created_at}")
+        if run:
+            print(f"Running comprehensive analysis for run: {run.name or args.run_id}")
+            print(f"  Run ID: {args.run_id}")
+            print(f"  Created: {run.created_at}")
+        else:
+            print(f"Running comprehensive analysis for run: {args.run_id}")
+            print(f"  Run ID: {args.run_id}")
+            print(f"  Note: Run not found in database (will proceed with file-based data)")
         print()
         
         # Get run directory
