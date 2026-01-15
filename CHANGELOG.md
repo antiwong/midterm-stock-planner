@@ -2,6 +2,27 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.9.1] - 2026-01-15
+
+### Added
+
+#### Comprehensive Test Suite for Advanced Analytics
+- **`tests/test_advanced_analytics.py`** - 57 comprehensive test cases
+  - Event-Driven Analysis: 10 tests covering Fed meetings, benchmarks, edge cases
+  - Tax Optimization: 9 tests covering wash sales, tax-loss harvesting, thresholds
+  - Monte Carlo Simulation: 10 tests covering methods, VaR, CVaR, reproducibility
+  - Turnover & Churn Analysis: 10 tests covering methods, churn rate, holding periods
+  - Earnings Calendar: 6 tests covering fetching, exposure, impact analysis
+  - Real-Time Monitoring: 10 tests covering alerts, summaries, thresholds
+  - Integration: 2 tests for module imports and instantiation
+- **Test Coverage:** 100% pass rate (57/57 tests)
+- **Total Test Suite:** 208+ tests (151 existing + 57 new)
+
+### Documentation Updates
+- Updated `docs/test-suite-documentation.md` with advanced analytics test details
+- Updated `docs/test-execution-results.md` with new test counts and results
+- Updated `README.md` with comprehensive test statistics
+
 ## [3.9.0] - 2026-01-15
 
 ### Added

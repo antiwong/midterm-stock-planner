@@ -2,16 +2,16 @@
 
 **Date:** 2026-01-15  
 **Test Suite:** Complete Test Suite  
-**Status:** ✅ 100% Pass Rate (148/148 tests passing, 3 skipped)
+**Status:** ✅ 100% Pass Rate (205/205 tests passing, 3 skipped)
 
 ## Summary
 
 ```
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.7, pytest-8.3.5
-collected 74 items (comprehensive test suite)
+collected 208 items (comprehensive test suite)
 
-============================== 74 passed in 1.58s ==============================
+============================== 205 passed, 3 skipped in 20.58s ==============================
 ```
 
 ## Test Results by File
@@ -27,7 +27,8 @@ collected 74 items (comprehensive test suite)
 | `test_export.py` | 6 | 0 | 6 | ✅ 100% |
 | `test_enhanced_charts.py` | 10 | 0 | 10 | ✅ 100% |
 | `test_integration.py` | 6 | 0 | 6 | ✅ 100% |
-| **Total (New Suite)** | **74** | **0** | **74** | **✅ 100%** |
+| `test_advanced_analytics.py` | 57 | 0 | 57 | ✅ 100% |
+| **Total (New Suite)** | **131** | **0** | **131** | **✅ 100%** |
 
 ### ✅ Older Test Files (Restored)
 
@@ -39,6 +40,19 @@ collected 74 items (comprehensive test suite)
 | `test_pipeline.py` | 9/11 | ✅ 82% (2 skipped - database tests) |
 | `test_safeguards.py` | 25/25 | ✅ 100% |
 | **Total (Older Tests)** | **75/78** | **✅ 96% (3 skipped)** |
+
+### ✅ Advanced Analytics Test Suite (NEW)
+
+| Module | Tests | Status |
+|--------|-------|--------|
+| Event-Driven Analysis | 10 | ✅ 100% |
+| Tax Optimization | 9 | ✅ 100% |
+| Monte Carlo Simulation | 10 | ✅ 100% |
+| Turnover & Churn Analysis | 10 | ✅ 100% |
+| Earnings Calendar | 6 | ✅ 100% |
+| Real-Time Monitoring | 10 | ✅ 100% |
+| Integration Tests | 2 | ✅ 100% |
+| **Total (Advanced Analytics)** | **57** | **✅ 100%** |
 
 ## Detailed Results
 

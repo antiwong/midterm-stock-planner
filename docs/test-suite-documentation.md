@@ -54,6 +54,78 @@ The test suite provides comprehensive coverage for all major components of the m
    - Error recovery
    - Complete vs partial data scenarios
 
+8. **`test_advanced_analytics.py`** - Advanced analytics modules tests (NEW)
+   - **Event-Driven Analysis** (10 tests)
+     - Fed meeting impact analysis
+     - Custom event dates
+     - Benchmark comparison
+     - Empty/invalid data handling
+     - Event window calculations
+     - Multiple event types
+     - Large lookback windows
+     - Performance metrics validation
+   
+   - **Tax Optimization** (9 tests)
+     - Wash sale detection (basic and complex scenarios)
+     - Tax-loss harvesting suggestions
+     - No-loss scenarios
+     - Custom wash sale windows
+     - Empty trades handling
+     - Multiple tickers
+     - Threshold variations
+   
+   - **Monte Carlo Simulation** (10 tests)
+     - Bootstrap, normal, and t-distribution methods
+     - Insufficient data handling
+     - VaR and CVaR calculations
+     - Confidence intervals
+     - Different simulation counts
+     - Different time horizons
+     - Reproducibility with seeds
+     - Historical statistics
+   
+   - **Turnover & Churn Analysis** (10 tests)
+     - Sum of absolute changes method
+     - One-way and two-way methods
+     - Insufficient data handling
+     - Annualized turnover
+     - Churn rate calculation
+     - Holding period analysis
+     - Empty weights handling
+     - Turnover statistics
+     - Threshold variations
+   
+   - **Earnings Calendar Integration** (6 tests)
+     - Earnings dates fetching structure
+     - Portfolio earnings exposure
+     - Earnings impact analysis
+     - Empty tickers handling
+     - Exposure calculations
+     - Caching functionality
+   
+   - **Real-Time Monitoring** (10 tests)
+     - Daily summary generation
+     - Drawdown alerts
+     - Position change alerts
+     - Stock price alerts
+     - Custom thresholds
+     - Empty data handling
+     - Alert levels
+     - Benchmark comparison
+     - Volume spike detection
+     - Summary metrics validation
+   
+   - **Integration Tests** (2 tests)
+     - Module importability
+     - Module instantiation
+
+## Test Statistics
+
+- **Total Test Files:** 8
+- **Total Test Cases:** 208+ (151 existing + 57 new advanced analytics tests)
+- **Pass Rate:** 100% (all tests passing)
+- **Coverage:** All major components including 6 advanced analytics modules
+
 ## Running Tests
 
 ### Run All Tests
