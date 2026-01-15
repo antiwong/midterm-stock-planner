@@ -316,7 +316,30 @@ def _render_manual_entry_form():
         symbols = list(dict.fromkeys(symbols))  # Remove duplicates
         
         st.markdown(f"**Parsed symbols:** {len(symbols)}")
-        _render_symbols_grid(symbols)
+        
+        # Validate symbols (with existence check)
+        with st.spinner("Validating symbols..."):
+            from ..data import validate_watchlist_symbols
+            validation = validate_watchlist_symbols(symbols, check_existence=True)
+            
+            valid_symbols = validation['valid_symbols']
+            invalid_symbols = validation.get('invalid', [])
+            non_existent = validation.get('non_existent', [])
+            unknown = validation.get('unknown_symbols', [])
+            
+            if invalid_symbols:
+                st.warning(f"⚠️ {len(invalid_symbols)} invalid format symbols: {', '.join(invalid_symbols[:10])}")
+            if non_existent:
+                st.error(f"❌ {len(non_existent)} symbols do not exist: {', '.join(non_existent[:10])}")
+            if unknown:
+                st.info(f"ℹ️ {len(unknown)} symbols could not be validated: {', '.join(unknown[:10])}")
+            
+            if valid_symbols:
+                st.success(f"✅ {len(valid_symbols)} valid symbols")
+                _render_symbols_grid(valid_symbols)
+            
+            # Update symbols to only valid ones
+            symbols = valid_symbols
     
     # Create button
     st.markdown("---")

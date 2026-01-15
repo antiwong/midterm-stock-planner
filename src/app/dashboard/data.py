@@ -53,18 +53,20 @@ def clean_and_deduplicate_symbols(symbols: List[str]) -> List[str]:
     return cleaned
 
 
-def validate_watchlist_symbols(symbols: List[str]) -> Dict[str, Any]:
+def validate_watchlist_symbols(symbols: List[str], check_existence: bool = True) -> Dict[str, Any]:
     """
     Validate watchlist symbols and return validation report.
     
     Args:
         symbols: List of ticker symbols to validate
+        check_existence: Whether to check if symbols actually exist (default: True)
         
     Returns:
         Dictionary with validation results:
-        - valid_symbols: List of valid symbols
+        - valid_symbols: List of valid symbols (format + existence if check_existence=True)
         - duplicates: List of duplicate symbols removed
-        - invalid: List of invalid symbols removed
+        - invalid: List of invalid symbols removed (format issues)
+        - non_existent: List of symbols that don't exist (if check_existence=True)
         - warnings: List of warning messages
     """
     original_count = len(symbols)
@@ -101,7 +103,7 @@ def validate_watchlist_symbols(symbols: List[str]) -> Dict[str, Any]:
     if invalid:
         warnings.append(f"Removed {len(invalid)} invalid symbols")
     
-    return {
+    result = {
         'valid_symbols': cleaned,
         'original_count': original_count,
         'final_count': len(cleaned),
@@ -109,6 +111,35 @@ def validate_watchlist_symbols(symbols: List[str]) -> Dict[str, Any]:
         'invalid': invalid,
         'warnings': warnings,
     }
+    
+    # Check existence if requested
+    if check_existence and cleaned:
+        try:
+            from .symbol_validator import validate_symbols_batch
+            existence_check = validate_symbols_batch(cleaned)
+            
+            # Update result with existence check
+            result['existence_check'] = existence_check
+            result['valid_symbols'] = existence_check['valid_symbols']  # Only keep existing symbols
+            result['non_existent'] = existence_check['invalid_symbols']
+            result['unknown_symbols'] = existence_check['unknown_symbols']
+            result['final_count'] = len(existence_check['valid_symbols'])
+            
+            if existence_check['invalid_symbols']:
+                warnings.append(f"{len(existence_check['invalid_symbols'])} symbols do not exist and were removed")
+            if existence_check['unknown_symbols']:
+                warnings.append(f"{len(existence_check['unknown_symbols'])} symbols could not be validated")
+            
+            result['warnings'] = warnings
+            
+        except Exception as e:
+            # If existence check fails, log but don't fail
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Symbol existence check failed: {e}")
+            result['existence_check_error'] = str(e)
+    
+    return result
 
 
 def get_database():
@@ -762,9 +793,15 @@ def create_custom_watchlist(
     Raises:
         ValueError: If watchlist_id already exists
     """
-    # Clean and deduplicate symbols
-    validation = validate_watchlist_symbols(symbols)
+    # Clean and deduplicate symbols, and check existence
+    validation = validate_watchlist_symbols(symbols, check_existence=True)
     cleaned_symbols = validation['valid_symbols']
+    
+    # Warn if symbols were removed
+    if validation.get('non_existent'):
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.warning(f"Removed {len(validation['non_existent'])} non-existent symbols: {validation['non_existent'][:10]}")
     
     db = get_database()
     session = db.get_session()
