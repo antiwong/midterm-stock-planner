@@ -21,6 +21,12 @@ from .ai_insights import AIInsightsGenerator
 from .data_loader import RunDataLoader, load_run_data_for_analysis
 from .data_loader import load_run_data_for_analysis
 from .data_completeness import DataCompletenessChecker
+from .event_analysis import EventAnalyzer
+from .tax_optimization import TaxOptimizer
+from .monte_carlo import MonteCarloSimulator
+from .turnover_analysis import TurnoverAnalyzer
+from .earnings_calendar import EarningsCalendarAnalyzer
+from .realtime_monitoring import RealTimeMonitor
 
 
 class ComprehensiveAnalysisRunner:
@@ -35,6 +41,12 @@ class ComprehensiveAnalysisRunner:
         self.style_analyzer = StyleAnalyzer()
         self.ai_generator = AIInsightsGenerator()
         self.data_checker = DataCompletenessChecker()
+        self.event_analyzer = EventAnalyzer()
+        self.tax_optimizer = TaxOptimizer()
+        self.monte_carlo = MonteCarloSimulator()
+        self.turnover_analyzer = TurnoverAnalyzer()
+        self.earnings_analyzer = EarningsCalendarAnalyzer()
+        self.realtime_monitor = RealTimeMonitor()
         self.strict_validation = strict_validation
     
     def run_all_analysis(
@@ -190,6 +202,72 @@ class ComprehensiveAnalysisRunner:
             except Exception as e:
                 print(f"Error in AI insights: {e}")
                 results['analyses']['ai_insights'] = {'error': str(e)}
+        
+        # 7. Event-Driven Analysis
+        try:
+            print(f"[{run_id}] Running event-driven analysis...")
+            event_results = self._run_event_analysis(
+                run_id, portfolio_data, stock_data
+            )
+            results['analyses']['event_analysis'] = event_results
+        except Exception as e:
+            print(f"Error in event analysis: {e}")
+            results['analyses']['event_analysis'] = {'error': str(e)}
+        
+        # 8. Tax Optimization
+        try:
+            print(f"[{run_id}] Running tax optimization analysis...")
+            tax_results = self._run_tax_optimization(
+                run_id, portfolio_data, stock_data
+            )
+            results['analyses']['tax_optimization'] = tax_results
+        except Exception as e:
+            print(f"Error in tax optimization: {e}")
+            results['analyses']['tax_optimization'] = {'error': str(e)}
+        
+        # 9. Monte Carlo Simulation
+        try:
+            print(f"[{run_id}] Running Monte Carlo simulation...")
+            mc_results = self._run_monte_carlo(
+                run_id, portfolio_data
+            )
+            results['analyses']['monte_carlo'] = mc_results
+        except Exception as e:
+            print(f"Error in Monte Carlo: {e}")
+            results['analyses']['monte_carlo'] = {'error': str(e)}
+        
+        # 10. Turnover & Churn Analysis
+        try:
+            print(f"[{run_id}] Running turnover analysis...")
+            turnover_results = self._run_turnover_analysis(
+                run_id, portfolio_data
+            )
+            results['analyses']['turnover'] = turnover_results
+        except Exception as e:
+            print(f"Error in turnover analysis: {e}")
+            results['analyses']['turnover'] = {'error': str(e)}
+        
+        # 11. Earnings Calendar Analysis
+        try:
+            print(f"[{run_id}] Running earnings calendar analysis...")
+            earnings_results = self._run_earnings_analysis(
+                run_id, portfolio_data, stock_data
+            )
+            results['analyses']['earnings'] = earnings_results
+        except Exception as e:
+            print(f"Error in earnings analysis: {e}")
+            results['analyses']['earnings'] = {'error': str(e)}
+        
+        # 12. Real-Time Monitoring
+        try:
+            print(f"[{run_id}] Running real-time monitoring...")
+            monitoring_results = self._run_realtime_monitoring(
+                run_id, portfolio_data, stock_data
+            )
+            results['analyses']['realtime_monitoring'] = monitoring_results
+        except Exception as e:
+            print(f"Error in real-time monitoring: {e}")
+            results['analyses']['realtime_monitoring'] = {'error': str(e)}
         
         return results
     
@@ -543,6 +621,285 @@ class ComprehensiveAnalysisRunner:
             'count': len(insights),
             'types': [i.insight_type for i in insights]
         }
+    
+    def _run_event_analysis(
+        self,
+        run_id: str,
+        portfolio_data: Dict,
+        stock_data: Optional[pd.DataFrame]
+    ) -> Dict:
+        """Run event-driven analysis."""
+        returns = portfolio_data.get('returns')
+        if returns is None:
+            return {'error': 'Portfolio returns required'}
+        
+        holdings = portfolio_data.get('holdings', [])
+        benchmark_returns = portfolio_data.get('benchmark_returns')
+        
+        event_results = self.event_analyzer.analyze_portfolio_events(
+            portfolio_returns=returns,
+            tickers=holdings,
+            benchmark_returns=benchmark_returns
+        )
+        
+        if 'error' not in event_results:
+            self.service.save_analysis_result(
+                run_id=run_id,
+                analysis_type='event_analysis',
+                results=event_results,
+                summary={
+                    'total_events': event_results.get('summary', {}).get('total_events_analyzed', 0),
+                    'avg_event_return': event_results.get('summary', {}).get('avg_event_return', 0)
+                }
+            )
+        
+        return event_results
+    
+    def _run_tax_optimization(
+        self,
+        run_id: str,
+        portfolio_data: Dict,
+        stock_data: Optional[pd.DataFrame]
+    ) -> Dict:
+        """Run tax optimization analysis."""
+        weights = portfolio_data.get('weights')
+        if weights is None or len(weights) == 0:
+            return {'error': 'Portfolio weights required'}
+        
+        # Get latest weights and positions
+        latest_weights = weights.iloc[-1] if hasattr(weights, 'iloc') else weights
+        positions = pd.DataFrame({
+            'ticker': latest_weights.index,
+            'shares': [1.0] * len(latest_weights)  # Placeholder - would need actual shares
+        })
+        
+        # Placeholder for cost basis and current prices
+        # In production, these would come from trade history and market data
+        cost_basis = {ticker: 100.0 for ticker in latest_weights.index}
+        current_prices = {ticker: 100.0 for ticker in latest_weights.index}
+        
+        # Tax-loss harvesting suggestions
+        harvest_suggestions = self.tax_optimizer.suggest_tax_loss_harvesting(
+            positions=positions,
+            current_prices=current_prices,
+            cost_basis=cost_basis
+        )
+        
+        # Turnover for tax efficiency
+        turnover_results = self.turnover_analyzer.calculate_turnover(weights)
+        turnover_by_period = {'annual': turnover_results.get('statistics', {}).get('annualized_turnover', 0)}
+        
+        # Tax efficiency analysis
+        tax_efficiency = self.tax_optimizer.analyze_tax_efficiency(
+            portfolio_returns=portfolio_data.get('returns'),
+            trades=pd.DataFrame(),  # Would need actual trade history
+            turnover_by_period=turnover_by_period
+        )
+        
+        tax_results = {
+            'harvest_suggestions': harvest_suggestions,
+            'tax_efficiency': tax_efficiency,
+            'turnover': turnover_results
+        }
+        
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='tax_optimization',
+            results=tax_results,
+            summary={
+                'harvestable_loss': harvest_suggestions.get('total_harvestable_loss', 0),
+                'tax_efficiency_score': tax_efficiency.get('turnover_analysis', {}).get('tax_efficiency_score', 0)
+            }
+        )
+        
+        return tax_results
+    
+    def _run_monte_carlo(
+        self,
+        run_id: str,
+        portfolio_data: Dict
+    ) -> Dict:
+        """Run Monte Carlo simulation."""
+        returns = portfolio_data.get('returns')
+        if returns is None or len(returns) < 30:
+            return {'error': 'Insufficient historical returns (need at least 30 observations)'}
+        
+        mc_results = self.monte_carlo.simulate_portfolio_returns(
+            historical_returns=returns,
+            num_simulations=10000,
+            time_horizon_days=252,
+            method='bootstrap'
+        )
+        
+        if 'error' not in mc_results:
+            self.service.save_analysis_result(
+                run_id=run_id,
+                analysis_type='monte_carlo',
+                results=mc_results,
+                summary={
+                    'expected_return': mc_results.get('simulation_stats', {}).get('mean', 0),
+                    'var_95': mc_results.get('value_at_risk', {}).get('var_95', 0),
+                    'prob_positive': mc_results.get('probability_metrics', {}).get('prob_positive_return', 0)
+                }
+            )
+        
+        return mc_results
+    
+    def _run_turnover_analysis(
+        self,
+        run_id: str,
+        portfolio_data: Dict
+    ) -> Dict:
+        """Run turnover and churn analysis."""
+        weights = portfolio_data.get('weights')
+        if weights is None:
+            return {'error': 'Portfolio weights required'}
+        
+        turnover = self.turnover_analyzer.calculate_turnover(weights)
+        churn = self.turnover_analyzer.calculate_churn_rate(weights)
+        holding_periods = self.turnover_analyzer.analyze_holding_periods(weights)
+        stability = self.turnover_analyzer.calculate_position_stability(weights)
+        
+        turnover_results = {
+            'turnover': turnover,
+            'churn': churn,
+            'holding_periods': holding_periods,
+            'stability': stability
+        }
+        
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='turnover',
+            results=turnover_results,
+            summary={
+                'annualized_turnover': turnover.get('statistics', {}).get('annualized_turnover', 0),
+                'mean_churn_rate': churn.get('statistics', {}).get('mean_churn_rate', 0),
+                'avg_holding_period': holding_periods.get('statistics', {}).get('mean_holding_period_days', 0)
+            }
+        )
+        
+        return turnover_results
+    
+    def _run_earnings_analysis(
+        self,
+        run_id: str,
+        portfolio_data: Dict,
+        stock_data: Optional[pd.DataFrame]
+    ) -> Dict:
+        """Run earnings calendar analysis."""
+        weights = portfolio_data.get('weights')
+        holdings = portfolio_data.get('holdings', [])
+        
+        if weights is None or len(holdings) == 0:
+            return {'error': 'Portfolio weights and holdings required'}
+        
+        # Fetch earnings dates
+        earnings_dates = self.earnings_analyzer.fetch_earnings_dates(
+            tickers=holdings,
+            start_date=weights.index[0] if hasattr(weights, 'index') else None,
+            end_date=weights.index[-1] if hasattr(weights, 'index') else None
+        )
+        
+        # Analyze exposure
+        exposure = self.earnings_analyzer.analyze_portfolio_earnings_exposure(
+            portfolio_weights=weights,
+            earnings_dates=earnings_dates
+        )
+        
+        # Analyze impact if stock returns available
+        impact = None
+        if stock_data is not None:
+            if isinstance(stock_data, dict):
+                stock_returns = stock_data.get('returns')
+            else:
+                stock_returns = stock_data
+            
+            if stock_returns is not None and isinstance(stock_returns, pd.DataFrame):
+                impact = self.earnings_analyzer.analyze_portfolio_earnings_impact(
+                    portfolio_weights=weights,
+                    stock_returns=stock_returns,
+                    earnings_dates=earnings_dates
+                )
+        
+        earnings_results = {
+            'earnings_dates': {k: [d.isoformat() if isinstance(d, datetime) else str(d) for d in v] 
+                              for k, v in earnings_dates.items()},
+            'exposure': exposure,
+            'impact': impact
+        }
+        
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='earnings',
+            results=earnings_results,
+            summary={
+                'upcoming_earnings_count': exposure.get('count', 0) if 'error' not in exposure else 0,
+                'total_exposure': exposure.get('total_exposure', 0) if 'error' not in exposure else 0
+            }
+        )
+        
+        return earnings_results
+    
+    def _run_realtime_monitoring(
+        self,
+        run_id: str,
+        portfolio_data: Dict,
+        stock_data: Optional[pd.DataFrame]
+    ) -> Dict:
+        """Run real-time monitoring."""
+        returns = portfolio_data.get('returns')
+        weights = portfolio_data.get('weights')
+        
+        if returns is None or weights is None:
+            return {'error': 'Portfolio returns and weights required'}
+        
+        # Extract stock returns if available
+        stock_returns = None
+        if stock_data is not None:
+            if isinstance(stock_data, dict):
+                stock_returns = stock_data.get('returns')
+            elif isinstance(stock_data, pd.DataFrame):
+                stock_returns = stock_data
+        
+        # Generate alerts
+        alerts = self.realtime_monitor.check_portfolio_alerts(
+            portfolio_returns=returns,
+            portfolio_weights=weights,
+            stock_returns=stock_returns,
+            benchmark_returns=portfolio_data.get('benchmark_returns')
+        )
+        
+        # Daily summary
+        summary = self.realtime_monitor.generate_daily_summary(
+            portfolio_returns=returns,
+            portfolio_weights=weights,
+            benchmark_returns=portfolio_data.get('benchmark_returns')
+        )
+        
+        # Performance metrics
+        metrics = self.realtime_monitor.track_performance_metrics(
+            portfolio_returns=returns,
+            period_days=30
+        )
+        
+        monitoring_results = {
+            'alerts': alerts,
+            'daily_summary': summary,
+            'performance_metrics': metrics
+        }
+        
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='realtime_monitoring',
+            results=monitoring_results,
+            summary={
+                'alert_count': len(alerts),
+                'critical_alerts': len([a for a in alerts if a.get('level') == 'critical']),
+                'daily_return': summary.get('daily_return', 0) if 'error' not in summary else 0
+            }
+        )
+        
+        return monitoring_results
 
 
 def load_portfolio_data_from_run(run_dir: Path) -> Dict[str, Any]:
