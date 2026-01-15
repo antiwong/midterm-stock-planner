@@ -52,14 +52,27 @@ def render_comprehensive_analysis():
     col1, col2 = st.columns([3, 1])
     with col1:
         if st.button("🔄 Run All Analyses", type="primary", use_container_width=True):
-            with st.spinner("Running comprehensive analysis..."):
+            from ..components.loading import loading_spinner
+            from ..components.errors import ErrorHandler
+            
+            with loading_spinner("Running comprehensive analysis...", show_progress=False):
                 try:
                     # Load data
                     run_dir = get_run_folder(selected_run_id, selected_run.get('watchlist'))
                     data = load_run_data_for_analysis(selected_run_id, run_dir)
                     
                     if data['error']:
-                        st.error(f"Error loading data: {data['error']}")
+                        ErrorHandler.render_error(
+                            Exception(data['error']),
+                            error_type='data_loading_error',
+                            show_traceback=False,
+                            custom_actions=[
+                                "Verify the run folder exists",
+                                "Check if required data files are present",
+                                "Try selecting a different run",
+                                "Re-run the analysis to generate missing data"
+                            ]
+                        )
                     else:
                         # Run analysis
                         runner = ComprehensiveAnalysisRunner()
@@ -72,9 +85,17 @@ def render_comprehensive_analysis():
                         st.success("✅ Analysis complete!")
                         st.rerun()
                 except Exception as e:
-                    st.error(f"Error running analysis: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
+                    ErrorHandler.render_error(
+                        e,
+                        error_type='analysis_error',
+                        show_traceback=True,
+                        custom_actions=[
+                            "Check the technical details below",
+                            "Verify all required data is available",
+                            "Review configuration settings",
+                            "Try running individual analysis modules"
+                        ]
+                    )
     
     with col2:
         export_format = st.selectbox("Export Format", ["PDF", "Excel"], key="export_format")

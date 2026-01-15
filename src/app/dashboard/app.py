@@ -22,6 +22,7 @@ from src.app.dashboard.config import configure_page, inject_custom_css, PAGES
 
 # Import components
 from src.app.dashboard.components.sidebar import render_sidebar
+from src.app.dashboard.components.shortcuts import check_shortcuts
 
 # Import pages
 from src.app.dashboard.pages import (
@@ -57,6 +58,9 @@ def main():
     
     # Inject custom CSS
     inject_custom_css()
+    
+    # Check for keyboard shortcuts
+    check_shortcuts()
     
     # Load API keys
     load_api_keys()

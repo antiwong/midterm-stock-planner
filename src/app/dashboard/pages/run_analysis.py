@@ -12,6 +12,8 @@ from datetime import datetime, date, timedelta
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_info_card, render_progress_steps, render_alert
+from ..components.loading import render_stage_progress, operation_with_feedback
+from ..components.errors import ErrorHandler
 from ..data import (
     load_runs, get_runs_with_folders, get_run_summary, get_available_run_folders,
     get_all_available_watchlists, load_custom_watchlists
@@ -376,11 +378,12 @@ def _run_new_analysis(watchlist: str, include_ai: bool, custom_name: str = None,
         period_info += f" • *Period: `{start_date}` to `{end_date}`*"
     st.markdown(period_info)
     
-    progress_bar = st.progress(0, text="Initializing...")
+    # Use enhanced loading components
+    render_stage_progress("Initializing", 0, 4)
     output_area = st.empty()
     
     # Step 1: Run backtest
-    progress_bar.progress(10, text="Step 1/4: Running backtest...")
+    render_stage_progress("Running Backtest", 1, 4)
     st.markdown("#### Step 1: Backtest")
     
     cmd_backtest = [
@@ -398,17 +401,28 @@ def _run_new_analysis(watchlist: str, include_ai: bool, custom_name: str = None,
     if end_date:
         cmd_backtest.extend(["--end-date", end_date])
     
-    returncode, output = _run_script_sync(cmd_backtest, output_area)
+    with operation_with_feedback("Running Backtest", show_progress=True):
+        returncode, output = _run_script_sync(cmd_backtest, output_area)
     
     if returncode != 0:
-        progress_bar.progress(100, text="Failed")
-        st.error(f"❌ Backtest failed with code {returncode}")
+        ErrorHandler.render_error(
+            Exception(f"Backtest failed with code {returncode}"),
+            error_type='analysis_error',
+            show_traceback=False,
+            custom_message=f"Backtest failed with exit code {returncode}",
+            custom_actions=[
+                "Check the output above for error details",
+                "Verify watchlist configuration",
+                "Ensure data files are available",
+                "Try running the backtest again"
+            ]
+        )
         return
     
     st.success("✅ Backtest completed!")
     
     # Step 2: Run full analysis workflow
-    progress_bar.progress(40, text="Step 2-4: Running analysis workflow...")
+    render_stage_progress("Running Analysis Workflow", 2, 4)
     st.markdown("#### Steps 2-4: Analysis Workflow")
     
     output_area2 = st.empty()
@@ -428,10 +442,11 @@ def _run_new_analysis(watchlist: str, include_ai: bool, custom_name: str = None,
     if include_ai:
         cmd_analysis.extend(["--with-commentary", "--with-recommendations"])
     
-    returncode, output = _run_script_sync(cmd_analysis, output_area2)
+    with operation_with_feedback("Running Analysis Workflow", show_progress=True):
+        returncode, output = _run_script_sync(cmd_analysis, output_area2)
     
     if returncode == 0:
-        progress_bar.progress(100, text="Complete!")
+        render_stage_progress("Complete", 4, 4)
         st.success("✅ Full analysis completed!")
         st.balloons()
         
@@ -445,8 +460,18 @@ def _run_new_analysis(watchlist: str, include_ai: bool, custom_name: str = None,
         if st.button("🔄 Refresh Page"):
             st.rerun()
     else:
-        progress_bar.progress(100, text="Failed")
-        st.error(f"❌ Analysis workflow failed with code {returncode}")
+        ErrorHandler.render_error(
+            Exception(f"Analysis workflow failed with code {returncode}"),
+            error_type='analysis_error',
+            show_traceback=False,
+            custom_message=f"Analysis workflow failed with exit code {returncode}",
+            custom_actions=[
+                "Review the output above for specific errors",
+                "Check if all required data is available",
+                "Verify configuration settings",
+                "Try running individual stages instead"
+            ]
+        )
 
 
 def _run_stage(stage: str, run_id: str):
