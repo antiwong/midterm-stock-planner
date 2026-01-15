@@ -2,6 +2,49 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.8.0] - 2026-01-15
+
+### Added
+
+#### Comprehensive Test Suite
+- **Test Suite** (`tests/`)
+  - 100+ automated test cases covering all major components
+  - 7 test files organized by component
+  - Shared fixtures and test infrastructure
+  
+- **Test Files**
+  - `test_data_completeness.py` - Data completeness validation tests (15 tests)
+  - `test_data_loader.py` - Data loading and redundant source tests (15+ tests)
+  - `test_comprehensive_analysis.py` - Comprehensive analysis runner tests (10+ tests)
+  - `test_analysis_modules.py` - Individual analysis module tests (15+ tests)
+  - `test_export.py` - Export functionality tests (8+ tests)
+  - `test_enhanced_charts.py` - Enhanced visualization tests (10+ tests)
+  - `test_integration.py` - End-to-end integration tests (5+ tests)
+
+- **Test Infrastructure**
+  - `conftest.py` - Shared fixtures for all tests
+  - `run_tests.py` - Test runner script
+  - `test-suite-documentation.md` - Comprehensive test documentation
+
+- **Test Coverage**
+  - Data completeness validation
+  - Data loading from redundant sources
+  - All analysis modules (Attribution, Factor Exposure, Rebalancing, Style)
+  - Export functionality (PDF/Excel)
+  - Enhanced visualizations
+  - Integration scenarios
+  - Error handling and edge cases
+
+### Changed
+- Updated README.md with Testing section
+- Updated documentation to reference test suite
+
+### Fixed
+- Fixed numpy boolean assertion issues in tests
+- Improved test isolation and cleanup
+
+---
+
 ## [3.7.0] - 2026-01-15
 
 ### Added
