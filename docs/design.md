@@ -492,3 +492,4 @@ from src.visualization.charts import plot_price_with_indicators
 - **[dashboard.md](dashboard.md)** - Streamlit web dashboard for browsing results
 - **[analytics-database.md](analytics-database.md)** - SQLite database schema and management
 - **[api-configuration.md](api-configuration.md)** - API key setup and configuration
+- **[comprehensive-analysis-system.md](comprehensive-analysis-system.md)** - Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis

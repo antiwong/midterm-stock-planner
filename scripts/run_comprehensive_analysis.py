@@ -42,17 +42,44 @@ def main():
         print(f"  Created: {run.created_at}")
         print()
         
-        # Load portfolio data (simplified - would need to load from run output files)
-        portfolio_data = {
-            'returns': None,  # Would load from backtest results
-            'weights': None,  # Would load from portfolio files
-            'holdings': [],  # Would load from portfolio
-            'start_date': run.started_at or run.created_at,
-            'end_date': run.completed_at or datetime.now(),
-            'sector_mapping': {}  # Would load from stock data
-        }
+        # Get run directory
+        if args.run_dir:
+            run_dir = args.run_dir
+        else:
+            from src.app.dashboard.utils import get_run_folder
+            run_dir = get_run_folder(args.run_id)
+        
+        if not run_dir or not run_dir.exists():
+            print(f"Error: Run directory not found: {run_dir}")
+            print("  Please specify --run-dir or ensure run folder exists in output/")
+            return 1
+        
+        print(f"  Run Directory: {run_dir}")
+        print()
+        
+        # Load portfolio data from run output files
+        print("Loading portfolio data...")
+        data = load_run_data_for_analysis(args.run_id, run_dir)
+        
+        if data.get('error'):
+            print(f"Error loading data: {data['error']}")
+            return 1
+        
+        portfolio_data = data['portfolio_data']
+        stock_data = data['stock_data']
+        
+        if not portfolio_data:
+            print("Error: Could not load portfolio data")
+            return 1
+        
+        print(f"  Portfolio returns: {'✓' if portfolio_data.get('returns') is not None else '✗'}")
+        print(f"  Portfolio weights: {'✓' if portfolio_data.get('weights') is not None else '✗'}")
+        print(f"  Holdings: {len(portfolio_data.get('holdings', []))} stocks")
+        print(f"  Date range: {portfolio_data.get('start_date')} to {portfolio_data.get('end_date')}")
+        print()
         
         # Run comprehensive analysis
+        print("Running comprehensive analysis...")
         runner = ComprehensiveAnalysisRunner(db_path=args.db_path)
         
         results = runner.run_all_analysis(
