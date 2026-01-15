@@ -341,7 +341,52 @@ def load_run_data_for_analysis(run_id: str, run_dir: Optional[Path] = None) -> D
     
     try:
         portfolio_data = loader.load_portfolio_data()
-        stock_data = loader.load_stock_data()
+        stock_features = loader.load_stock_features()
+        
+        # Get stock returns from portfolio_data (may have been loaded from redundant sources)
+        stock_returns = portfolio_data.get('stock_returns')
+        
+        # Convert stock_features to dict format if it's a DataFrame
+        if isinstance(stock_features, pd.DataFrame):
+            stock_data = {
+                'features': stock_features,
+                'data': stock_features
+            }
+            # Add stock returns if available from redundant sources
+            if stock_returns is not None:
+                stock_data['returns'] = stock_returns
+        else:
+            stock_data = stock_features or {}
+            # Add stock returns if available from redundant sources
+            if stock_returns is not None:
+                stock_data['returns'] = stock_returns
+        
+        # Try to fill missing fundamental data from enriched files
+        if isinstance(stock_features, pd.DataFrame):
+            # Check if we have fundamental columns
+            fundamental_cols = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
+            has_fundamentals = any(col in stock_features.columns for col in fundamental_cols)
+            
+            if not has_fundamentals:
+                # Try to get from other sources
+                enriched_files = list(run_dir.glob("*portfolio_enriched*.csv"))
+                for enriched_file in enriched_files:
+                    try:
+                        df = pd.read_csv(enriched_file)
+                        fundamental_cols_found = [col for col in df.columns if any(fc in col.lower() for fc in ['pe', 'pb', 'roe', 'margin'])]
+                        if fundamental_cols_found:
+                            # Merge fundamental data
+                            if 'ticker' in df.columns and 'ticker' in stock_features.columns:
+                                stock_features = stock_features.merge(
+                                    df[['ticker'] + fundamental_cols_found],
+                                    on='ticker',
+                                    how='left'
+                                )
+                                stock_data['features'] = stock_features
+                                stock_data['data'] = stock_features
+                            break
+                    except Exception:
+                        continue
         
         return {
             'portfolio_data': portfolio_data,
