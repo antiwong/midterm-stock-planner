@@ -32,7 +32,7 @@ class AnalysisRequirement(Enum):
     ]
     BENCHMARK_COMPARISON = [
         DataRequirement.PORTFOLIO_RETURNS,
-        DataRequirement.BENCHMARK_DATA
+        # BENCHMARK_DATA is optional - benchmark comparison can fetch from yfinance API
     ]
     FACTOR_EXPOSURE = [
         DataRequirement.PORTFOLIO_WEIGHTS,

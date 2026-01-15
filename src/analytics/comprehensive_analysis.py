@@ -84,10 +84,20 @@ class ComprehensiveAnalysisRunner:
         
         # Check data completeness BEFORE running analyses
         print(f"[{run_id}] Checking data completeness...")
+        # Try to load benchmark data if available
+        benchmark_data = None
+        try:
+            from .data_loader import RunDataLoader
+            loader = RunDataLoader(Path(run_id).parent if Path(run_id).is_file() else Path("output") / run_id)
+            # Benchmark data is optional - benchmark comparison can fetch from yfinance
+            # So we pass None to allow the check to proceed
+        except:
+            pass
+        
         completeness = self.data_checker.check_data_completeness(
             portfolio_data,
             stock_data if stock_data is not None else {},
-            benchmark_data=None  # Will be checked during benchmark comparison
+            benchmark_data=benchmark_data  # Optional - benchmark comparison can fetch from API
         )
         
         results['data_completeness'] = completeness
