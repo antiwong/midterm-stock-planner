@@ -520,6 +520,39 @@ save_recommendations_to_file(recommendations, "portfolio_2025", output_dir, "md"
 save_recommendations_to_file(recommendations, "portfolio_2025", output_dir, "json")
 ```
 
+#### Comprehensive Analysis (`src/analytics/`)
+```python
+from src.analytics.comprehensive_analysis import ComprehensiveAnalysisRunner
+from src.analytics.analysis_service import AnalysisService
+from src.analytics.data_loader import load_run_data_for_analysis
+
+# Run all analyses for a run
+runner = ComprehensiveAnalysisRunner()
+data = load_run_data_for_analysis(run_id, run_dir)
+
+results = runner.run_all_analysis(
+    run_id=run_id,
+    portfolio_data=data['portfolio_data'],
+    stock_data=data['stock_data'],
+    save_ai_insights=True
+)
+# Returns: Dict with attribution, benchmark_comparison, factor_exposure, 
+#          rebalancing, style, ai_insights
+
+# Retrieve analysis results
+service = AnalysisService()
+attribution = service.get_analysis_result(run_id, 'attribution')
+benchmark = service.get_analysis_result(run_id, 'benchmark_comparison')
+factor = service.get_analysis_result(run_id, 'factor_exposure')
+rebalancing = service.get_analysis_result(run_id, 'rebalancing')
+style = service.get_analysis_result(run_id, 'style')
+
+# Get recommendations with performance tracking
+recommendations = service.get_recommendations(run_id=run_id)
+# Each recommendation has: ticker, action, date, reason, confidence, 
+#                         target_price, actual_return, hit_target, etc.
+```
+
 ---
 
 ## When to Use Each System
@@ -622,3 +655,5 @@ export GEMINI_API_KEY="your_key"
 8. **Cross-System AI Insights**: Use Gemini to compare signals from both systems
 9. **Unified Risk Dashboard**: Combined risk metrics from both systems
 10. **Automated Rebalancing**: Use Mid-term Planner portfolios as Stockbot trading signals
+11. **Analysis Export**: Export comprehensive analysis to PDF/Excel for reporting
+12. **Monte Carlo Simulation**: Add forward-looking risk scenarios (planned)
