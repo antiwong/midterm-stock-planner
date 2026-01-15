@@ -364,12 +364,18 @@ def _render_style_tab(service: AnalysisService, run_id: str, analysis_types: set
     
     style = result.get_results()
     
+    if 'error' in style:
+        st.error(f"Error: {style['error']}")
+        return
+    
     # Overall style
-    overall = style.get('overall_style', 'Unknown')
+    gv_class = style.get('growth_value', {}).get('classification', 'Unknown')
+    size_class = style.get('size', {}).get('classification', 'Unknown')
+    overall = f"{gv_class} {size_class}"
     st.metric("Overall Style", overall)
     
     # Growth vs Value
-    if 'growth_value' in style:
+    if 'growth_value' in style and style['growth_value']:
         gv = style['growth_value']
         st.subheader("Growth vs Value")
         col1, col2 = st.columns(2)
@@ -378,16 +384,16 @@ def _render_style_tab(service: AnalysisService, run_id: str, analysis_types: set
         with col2:
             if 'portfolio_pe' in gv:
                 st.write(f"**Portfolio PE:** {gv['portfolio_pe']:.2f}")
-                st.write(f"**Market Avg PE:** {gv.get('market_avg_pe', 0):.2f}")
+                if 'weighted_avg_pe' in gv:
+                    st.write(f"**Weighted Avg PE:** {gv['weighted_avg_pe']:.2f}")
     
     # Size
-    if 'size' in style:
+    if 'size' in style and style['size']:
         size = style['size']
         st.subheader("Size Classification")
-        st.write(f"**Classification:** {size.get('classification', 'unknown').replace('_', ' ').title()}")
-        if 'portfolio_mcap' in size:
-            st.write(f"**Portfolio Market Cap:** ${size['portfolio_mcap']/1e9:.2f}B")
-            st.write(f"**Median Market Cap:** ${size.get('median_mcap', 0)/1e9:.2f}B")
+        st.write(f"**Classification:** {size.get('classification', 'unknown')}")
+        if 'portfolio_market_cap_billions' in size:
+            st.write(f"**Portfolio Market Cap:** ${size['portfolio_market_cap_billions']:.2f}B")
 
 
 def _render_recommendations_tab(service: AnalysisService, run_id: str):

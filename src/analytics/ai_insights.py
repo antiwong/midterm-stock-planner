@@ -535,6 +535,7 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
         self,
         scores: List[Dict[str, Any]],
         validation_context: Optional[Dict[str, Any]] = None,
+        run_id: Optional[str] = None,
     ) -> str:
         """
         Generate an executive summary from stock scores.
@@ -595,6 +596,7 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
         self,
         scores: List[Dict[str, Any]],
         validation_context: Optional[Dict[str, Any]] = None,
+        run_id: Optional[str] = None,
     ) -> str:
         """
         Generate sector analysis from stock scores.
@@ -652,6 +654,7 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
         self,
         scores: List[Dict[str, Any]],
         risk_profile: str = "moderate",
+        run_id: Optional[str] = None,
     ) -> str:
         """
         Generate investment recommendations from stock scores.

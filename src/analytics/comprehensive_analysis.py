@@ -329,16 +329,18 @@ class ComprehensiveAnalysisRunner:
             portfolio_weights=weights
         )
         
-        # Save to database
-        self.service.save_analysis_result(
-            run_id=run_id,
-            analysis_type='rebalancing',
-            results=rebalancing,
-            summary={
-                'current_drift': rebalancing.get('current_drift', 0),
-                'recommendation': rebalancing.get('recommendation', '')
-            }
-        )
+        if 'error' not in rebalancing:
+            # Save to database
+            self.service.save_analysis_result(
+                run_id=run_id,
+                analysis_type='rebalancing',
+                results=rebalancing,
+                summary={
+                    'current_drift': rebalancing.get('drift_analysis', {}).get('current_drift', 0),
+                    'should_rebalance': rebalancing.get('recommendations', {}).get('should_rebalance', False),
+                    'total_cost': rebalancing.get('cost_analysis', {}).get('total_transaction_cost', 0)
+                }
+            )
         
         return rebalancing
     
@@ -363,26 +365,39 @@ class ComprehensiveAnalysisRunner:
         if stock_data is None:
             return {'error': 'Stock data required for style analysis'}
         
-        # Extract features
-        feature_columns = [c for c in stock_data.columns 
-                          if c not in ['date', 'ticker', 'return', 'sector']]
-        stock_features = stock_data.groupby('ticker')[feature_columns].last()
+        # Extract features - handle different data formats
+        if 'ticker' in stock_data.columns:
+            # Long format: group by ticker
+            feature_columns = [c for c in stock_data.columns 
+                              if c not in ['date', 'ticker', 'return', 'sector']]
+            if len(feature_columns) > 0:
+                stock_features = stock_data.groupby('ticker')[feature_columns].last()
+            else:
+                return {'error': 'No feature columns found in stock data'}
+        else:
+            # Wide format: already indexed by ticker
+            feature_columns = [c for c in stock_data.columns 
+                              if c not in ['date', 'return', 'sector']]
+            stock_features = stock_data[feature_columns] if len(feature_columns) > 0 else stock_data
         
         style = self.style_analyzer.analyze(
             portfolio_weights=current_weights,
             stock_features=stock_features
         )
         
-        # Save to database
-        self.service.save_analysis_result(
-            run_id=run_id,
-            analysis_type='style',
-            results=style,
-            summary={
-                'overall_style': style.get('overall_style', 'unknown'),
-                'growth_value': style.get('growth_value', {}).get('classification', 'unknown')
-            }
-        )
+        if 'error' not in style:
+            # Save to database
+            overall_style = f"{style.get('growth_value', {}).get('classification', 'Unknown')} {style.get('size', {}).get('classification', 'Unknown')}"
+            self.service.save_analysis_result(
+                run_id=run_id,
+                analysis_type='style',
+                results=style,
+                summary={
+                    'overall_style': overall_style,
+                    'growth_value': style.get('growth_value', {}).get('classification', 'unknown'),
+                    'size': style.get('size', {}).get('classification', 'unknown')
+                }
+            )
         
         return style
     

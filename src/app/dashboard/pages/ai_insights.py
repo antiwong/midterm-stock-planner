@@ -350,7 +350,8 @@ def _generate_new_insights(run_id: str, gen_commentary: bool, gen_recommendation
             
             recommendations = generator.generate_recommendations(
                 scores_df.to_dict('records'),
-                risk_profile=risk_profile.lower()
+                risk_profile=risk_profile.lower(),
+                run_id=run_id
             )
             
             if recommendations:
