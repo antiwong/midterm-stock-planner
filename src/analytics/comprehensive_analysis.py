@@ -381,8 +381,10 @@ class ComprehensiveAnalysisRunner:
             else:
                 stock_features = stock_data[feature_columns]
         elif isinstance(stock_data, dict):
-            # Dict format - get features or data
-            stock_features = stock_data.get('features') or stock_data.get('data')
+            # Dict format - get features or data (avoid DataFrame truth value issue)
+            stock_features = stock_data.get('features')
+            if stock_features is None:
+                stock_features = stock_data.get('data')
             if stock_features is None:
                 return {'error': 'Stock features not found in stock_data'}
             
