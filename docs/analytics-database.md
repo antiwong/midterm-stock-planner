@@ -11,6 +11,9 @@ The analytics database provides persistent storage for:
 3. **Trades** - Backtest trade history
 4. **Portfolio snapshots** - Portfolio state over time
 5. **Watchlists** - User-defined stock lists
+6. **Analysis results** - Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis
+7. **AI insights** - AI-generated analysis and recommendations with deduplication
+8. **Recommendations** - Investment recommendations with performance tracking
 
 ## Database Location
 
@@ -22,6 +25,8 @@ data/analysis.db
 
 ```
 src/analytics/models.py
+src/analytics/analysis_models.py  # Extended models for comprehensive analysis
+src/analytics/analysis_service.py  # Service layer for analysis results
 src/analytics/manager.py
 ```
 
@@ -111,6 +116,104 @@ User-defined watchlists.
 | ticker | VARCHAR(20) | Stock symbol |
 | added_at | DATETIME | When added |
 | notes | TEXT | Optional notes |
+
+### analysis_results
+
+Stores all comprehensive analysis results.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| analysis_type | VARCHAR(50) | Type: attribution, benchmark_comparison, factor_exposure, rebalancing, style |
+| results_json | TEXT | Full analysis results as JSON |
+| summary_json | TEXT | Summary metrics as JSON |
+| created_at | DATETIME | Creation timestamp |
+
+### ai_insights
+
+Stores AI-generated insights with deduplication.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| insight_type | VARCHAR(50) | Type: executive_summary, sector_analysis, recommendations, etc. |
+| content | TEXT | Insight text content |
+| content_json | TEXT | Structured content as JSON (optional) |
+| context_json | TEXT | Context used for generation as JSON |
+| model | VARCHAR(50) | Model used (gemini, openai, etc.) |
+| prompt_hash | VARCHAR(64) | Hash of prompt for deduplication |
+| created_at | DATETIME | Creation timestamp |
+
+### recommendations
+
+Tracks investment recommendations and their performance.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| ticker | VARCHAR(20) | Stock symbol |
+| action | VARCHAR(10) | BUY, SELL, HOLD |
+| recommendation_date | DATETIME | When recommendation was made |
+| reason | TEXT | Reason for recommendation |
+| confidence | FLOAT | Confidence score (0-1) |
+| target_price | FLOAT | Target price (optional) |
+| stop_loss | FLOAT | Stop loss price (optional) |
+| current_price | FLOAT | Price at recommendation time |
+| actual_return | FLOAT | Actual return achieved (updated over time) |
+| hit_target | BOOLEAN | Whether target was hit |
+| hit_stop_loss | BOOLEAN | Whether stop loss was hit |
+| tracking_updated_at | DATETIME | Last performance update |
+
+### benchmark_comparisons
+
+Stores benchmark comparison results.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| benchmark_symbol | VARCHAR(20) | Benchmark ticker (SPY, QQQ, etc.) |
+| benchmark_name | VARCHAR(100) | Human-readable benchmark name |
+| start_date | DATETIME | Comparison start date |
+| end_date | DATETIME | Comparison end date |
+| portfolio_metrics_json | TEXT | Portfolio metrics as JSON |
+| benchmark_metrics_json | TEXT | Benchmark metrics as JSON |
+| relative_metrics_json | TEXT | Relative metrics (alpha, beta, etc.) as JSON |
+| created_at | DATETIME | Creation timestamp |
+
+### factor_exposures
+
+Stores factor exposure analysis results.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| factor_name | VARCHAR(50) | Factor name (market, size, value, momentum, quality, low_vol) |
+| factor_type | VARCHAR(50) | Factor type (market, style, risk) |
+| exposure | FLOAT | Factor exposure value |
+| contribution_to_return | FLOAT | Contribution to portfolio return |
+| contribution_to_risk | FLOAT | Contribution to portfolio risk |
+| created_at | DATETIME | Creation timestamp |
+
+### performance_attributions
+
+Stores performance attribution breakdowns.
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| total_return | FLOAT | Total portfolio return |
+| factor_attribution | FLOAT | Factor contribution |
+| sector_attribution | FLOAT | Sector allocation contribution |
+| stock_selection_attribution | FLOAT | Stock selection contribution |
+| timing_attribution | FLOAT | Timing/rebalancing contribution |
+| breakdown_json | TEXT | Detailed breakdown as JSON |
+| created_at | DATETIME | Creation timestamp |
 
 ## Usage
 
