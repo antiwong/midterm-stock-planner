@@ -138,25 +138,19 @@ class ComprehensiveAnalysisRunner:
             }
         
         # 2. Benchmark Comparison
+        # Benchmark comparison can always run (fetches data from API if needed)
         benchmark_status = completeness['analysis_status'].get('benchmark_comparison', {})
-        if benchmark_status.get('can_run', False):
-            try:
-                print(f"[{run_id}] Running benchmark comparison...")
-                benchmark_results = self._run_benchmark_comparison(
-                    run_id, portfolio_data
-                )
-                results['analyses']['benchmark'] = benchmark_results
-            except Exception as e:
-                print(f"❌ Error in benchmark comparison: {e}")
-                results['analyses']['benchmark'] = {'error': str(e)}
-                results['errors'].append({'analysis': 'benchmark_comparison', 'error': str(e)})
-        else:
-            print(f"⚠️  Skipping benchmark comparison: {benchmark_status.get('message', 'Missing required data')}")
-            results['analyses']['benchmark'] = {
-                'error': benchmark_status.get('message', 'Missing required data'),
-                'skipped': True,
-                'missing_data': benchmark_status.get('missing', [])
-            }
+        # Always try to run benchmark comparison (it can fetch from yfinance)
+        try:
+            print(f"[{run_id}] Running benchmark comparison...")
+            benchmark_results = self._run_benchmark_comparison(
+                run_id, portfolio_data
+            )
+            results['analyses']['benchmark'] = benchmark_results
+        except Exception as e:
+            print(f"❌ Error in benchmark comparison: {e}")
+            results['analyses']['benchmark'] = {'error': str(e)}
+            results['errors'].append({'analysis': 'benchmark_comparison', 'error': str(e)})
         
         # 3. Factor Exposure
         try:

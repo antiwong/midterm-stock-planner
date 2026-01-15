@@ -139,9 +139,15 @@ class DataCompletenessChecker:
         
         # Determine severity and message
         if missing:
-            if analysis_type in ['attribution', 'benchmark_comparison']:
+            # Benchmark comparison can fetch data from API, so it's not critical
+            if analysis_type in ['attribution']:
                 severity = 'error'
                 message = f"Cannot run {analysis_type}: Missing critical data ({', '.join(missing)})"
+            elif analysis_type == 'benchmark_comparison':
+                # Benchmark data is optional - can fetch from yfinance
+                severity = 'warning'
+                message = f"{analysis_type} will fetch benchmark data from API (no local data required)"
+                can_run = True  # Allow to run even without local benchmark data
             else:
                 severity = 'warning'
                 message = f"{analysis_type} may be incomplete: Missing data ({', '.join(missing)})"
