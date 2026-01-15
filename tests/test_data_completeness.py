@@ -179,7 +179,7 @@ class TestDataCompletenessChecker:
             stock_with_fundamentals,
             None
         )
-        assert result is True or result == True
+        assert bool(result) is True
         
         # Test with zero PE (missing data)
         stock_zero_pe = {
@@ -194,7 +194,7 @@ class TestDataCompletenessChecker:
             stock_zero_pe,
             None
         )
-        assert result is False
+        assert bool(result) is False
         
         # Test missing fundamental data
         result = self.checker._check_requirement(
