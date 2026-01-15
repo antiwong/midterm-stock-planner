@@ -877,9 +877,15 @@ def update_custom_watchlist(
         if category is not None:
             watchlist.category = category
         if symbols is not None:
-            # Clean and deduplicate symbols
-            validation = validate_watchlist_symbols(symbols)
+            # Clean and deduplicate symbols, and check existence
+            validation = validate_watchlist_symbols(symbols, check_existence=True)
             watchlist.set_symbols(validation['valid_symbols'])
+            
+            # Warn if symbols were removed
+            if validation.get('non_existent'):
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Removed {len(validation['non_existent'])} non-existent symbols from {watchlist_id}: {validation['non_existent'][:10]}")
         if source_watchlists is not None:
             watchlist.set_source_watchlists(source_watchlists)
         if is_default is not None:
