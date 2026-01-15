@@ -20,12 +20,13 @@ from .style_analysis import StyleAnalyzer
 from .ai_insights import AIInsightsGenerator
 from .data_loader import RunDataLoader, load_run_data_for_analysis
 from .data_loader import load_run_data_for_analysis
+from .data_completeness import DataCompletenessChecker
 
 
 class ComprehensiveAnalysisRunner:
     """Run all analysis modules and save to database."""
     
-    def __init__(self, db_path: str = "data/analysis.db"):
+    def __init__(self, db_path: str = "data/analysis.db", strict_validation: bool = True):
         self.service = AnalysisService(db_path)
         self.attribution_analyzer = PerformanceAttributionAnalyzer()
         self.benchmark_comparator = BenchmarkComparator()
@@ -33,6 +34,8 @@ class ComprehensiveAnalysisRunner:
         self.rebalancing_analyzer = RebalancingAnalyzer()
         self.style_analyzer = StyleAnalyzer()
         self.ai_generator = AIInsightsGenerator()
+        self.data_checker = DataCompletenessChecker()
+        self.strict_validation = strict_validation
     
     def run_all_analysis(
         self,
@@ -61,30 +64,77 @@ class ComprehensiveAnalysisRunner:
         results = {
             'run_id': run_id,
             'timestamp': datetime.now().isoformat(),
-            'analyses': {}
+            'analyses': {},
+            'data_completeness': None,
+            'warnings': [],
+            'errors': []
         }
         
+        # Check data completeness BEFORE running analyses
+        print(f"[{run_id}] Checking data completeness...")
+        completeness = self.data_checker.check_data_completeness(
+            portfolio_data,
+            stock_data if stock_data is not None else {},
+            benchmark_data=None  # Will be checked during benchmark comparison
+        )
+        
+        results['data_completeness'] = completeness
+        
+        # Print completeness report
+        report = self.data_checker.generate_report(completeness)
+        print(report)
+        
+        # Collect warnings and errors
+        results['warnings'].extend(completeness.get('warnings', []))
+        results['errors'].extend(completeness.get('errors', []))
+        
+        # If strict validation and critical errors, stop or warn
+        if self.strict_validation and completeness.get('errors'):
+            print("\n⚠️  CRITICAL: Missing required data for some analyses!")
+            print("   Analysis will continue but some results may be incomplete.")
+            print("   See data completeness report above for details.\n")
+        
         # 1. Performance Attribution
-        try:
-            print(f"[{run_id}] Running performance attribution...")
-            attribution_results = self._run_attribution(
-                run_id, portfolio_data, stock_data
-            )
-            results['analyses']['attribution'] = attribution_results
-        except Exception as e:
-            print(f"Error in attribution: {e}")
-            results['analyses']['attribution'] = {'error': str(e)}
+        attribution_status = completeness['analysis_status'].get('attribution', {})
+        if attribution_status.get('can_run', False):
+            try:
+                print(f"[{run_id}] Running performance attribution...")
+                attribution_results = self._run_attribution(
+                    run_id, portfolio_data, stock_data
+                )
+                results['analyses']['attribution'] = attribution_results
+            except Exception as e:
+                print(f"❌ Error in attribution: {e}")
+                results['analyses']['attribution'] = {'error': str(e)}
+                results['errors'].append({'analysis': 'attribution', 'error': str(e)})
+        else:
+            print(f"⚠️  Skipping attribution: {attribution_status.get('message', 'Missing required data')}")
+            results['analyses']['attribution'] = {
+                'error': attribution_status.get('message', 'Missing required data'),
+                'skipped': True,
+                'missing_data': attribution_status.get('missing', [])
+            }
         
         # 2. Benchmark Comparison
-        try:
-            print(f"[{run_id}] Running benchmark comparison...")
-            benchmark_results = self._run_benchmark_comparison(
-                run_id, portfolio_data
-            )
-            results['analyses']['benchmark'] = benchmark_results
-        except Exception as e:
-            print(f"Error in benchmark comparison: {e}")
-            results['analyses']['benchmark'] = {'error': str(e)}
+        benchmark_status = completeness['analysis_status'].get('benchmark_comparison', {})
+        if benchmark_status.get('can_run', False):
+            try:
+                print(f"[{run_id}] Running benchmark comparison...")
+                benchmark_results = self._run_benchmark_comparison(
+                    run_id, portfolio_data
+                )
+                results['analyses']['benchmark'] = benchmark_results
+            except Exception as e:
+                print(f"❌ Error in benchmark comparison: {e}")
+                results['analyses']['benchmark'] = {'error': str(e)}
+                results['errors'].append({'analysis': 'benchmark_comparison', 'error': str(e)})
+        else:
+            print(f"⚠️  Skipping benchmark comparison: {benchmark_status.get('message', 'Missing required data')}")
+            results['analyses']['benchmark'] = {
+                'error': benchmark_status.get('message', 'Missing required data'),
+                'skipped': True,
+                'missing_data': benchmark_status.get('missing', [])
+            }
         
         # 3. Factor Exposure
         try:
@@ -109,15 +159,25 @@ class ComprehensiveAnalysisRunner:
             results['analyses']['rebalancing'] = {'error': str(e)}
         
         # 5. Style Analysis
-        try:
-            print(f"[{run_id}] Running style analysis...")
-            style_results = self._run_style_analysis(
-                run_id, portfolio_data, stock_data
-            )
-            results['analyses']['style'] = style_results
-        except Exception as e:
-            print(f"Error in style analysis: {e}")
-            results['analyses']['style'] = {'error': str(e)}
+        style_status = completeness['analysis_status'].get('style', {})
+        if style_status.get('can_run', False):
+            try:
+                print(f"[{run_id}] Running style analysis...")
+                style_results = self._run_style_analysis(
+                    run_id, portfolio_data, stock_data
+                )
+                results['analyses']['style'] = style_results
+            except Exception as e:
+                print(f"❌ Error in style analysis: {e}")
+                results['analyses']['style'] = {'error': str(e)}
+                results['errors'].append({'analysis': 'style', 'error': str(e)})
+        else:
+            print(f"⚠️  Skipping style analysis: {style_status.get('message', 'Missing required data')}")
+            results['analyses']['style'] = {
+                'error': style_status.get('message', 'Missing required data'),
+                'skipped': True,
+                'missing_data': style_status.get('missing', [])
+            }
         
         # 6. AI Insights (if requested)
         if save_ai_insights:
@@ -155,7 +215,15 @@ class ComprehensiveAnalysisRunner:
         ) if 'return' in stock_data.columns else None
         
         if stock_returns is None:
-            return {'error': 'Stock returns not found in stock_data'}
+            return {
+                'error': 'Stock returns not found in stock_data',
+                'missing_data': ['stock_returns'],
+                'fix_instructions': [
+                    'Stock returns are needed for performance attribution. '
+                    'These can be calculated from price data or loaded from backtest results. '
+                    'The data loader needs to be enhanced to extract individual stock returns.'
+                ]
+            }
         
         # Run attribution
         attribution = self.attribution_analyzer.analyze(
