@@ -571,6 +571,16 @@ STANDALONE_TOOLS = [
     ("🔀 Advanced Comparison", "advanced_comparison"),
 ]
 
+# Advanced Analytics
+ADVANCED_ANALYTICS = [
+    ("📅 Event Analysis", "event_analysis"),
+    ("💰 Tax Optimization", "tax_optimization"),
+    ("🎲 Monte Carlo", "monte_carlo"),
+    ("🔄 Turnover Analysis", "turnover_analysis"),
+    ("📅 Earnings Calendar", "earnings_calendar"),
+    ("⚡ Real-Time Monitoring", "realtime_monitoring"),
+]
+
 # Utilities
 UTILITIES = [
     ("📚 Documentation", "documentation"),
@@ -578,4 +588,4 @@ UTILITIES = [
 ]
 
 # Combined list for backward compatibility
-PAGES = MAIN_WORKFLOW + STANDALONE_TOOLS + UTILITIES
+PAGES = MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES

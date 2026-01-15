@@ -41,6 +41,12 @@ from src.app.dashboard.pages import (
     render_advanced_comparison,
     render_documentation,
     render_settings,
+    render_event_analysis,
+    render_tax_optimization,
+    render_monte_carlo,
+    render_turnover_analysis,
+    render_earnings_calendar,
+    render_realtime_monitoring,
 )
 
 
@@ -83,6 +89,12 @@ def main():
         "🤖 AI Insights": render_ai_insights,
         "📈 Compare Runs": render_compare_runs,
         "🔀 Advanced Comparison": render_advanced_comparison,
+        "📅 Event Analysis": render_event_analysis,
+        "💰 Tax Optimization": render_tax_optimization,
+        "🎲 Monte Carlo": render_monte_carlo,
+        "🔄 Turnover Analysis": render_turnover_analysis,
+        "📅 Earnings Calendar": render_earnings_calendar,
+        "⚡ Real-Time Monitoring": render_realtime_monitoring,
         "📚 Documentation": render_documentation,
         "⚙️ Settings": render_settings,
     }

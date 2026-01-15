@@ -19,6 +19,12 @@ from .watchlist_manager import render_watchlist_manager
 from .documentation import render_documentation
 from .comprehensive_analysis import render_comprehensive_analysis
 from .advanced_comparison import render_advanced_comparison
+from .event_analysis import render_event_analysis
+from .tax_optimization import render_tax_optimization
+from .monte_carlo import render_monte_carlo
+from .turnover_analysis import render_turnover_analysis
+from .earnings_calendar import render_earnings_calendar
+from .realtime_monitoring import render_realtime_monitoring
 
 __all__ = [
     'render_overview',
@@ -36,4 +42,10 @@ __all__ = [
     'render_settings',
     'render_watchlist_manager',
     'render_documentation',
+    'render_event_analysis',
+    'render_tax_optimization',
+    'render_monte_carlo',
+    'render_turnover_analysis',
+    'render_earnings_calendar',
+    'render_realtime_monitoring',
 ]

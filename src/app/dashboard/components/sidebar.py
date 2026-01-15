@@ -7,7 +7,7 @@ Navigation sidebar with quick stats.
 import streamlit as st
 from typing import Optional
 
-from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, UTILITIES, COLORS
+from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS
 from ..data import load_runs, get_available_run_folders
 from ..utils import get_project_root
 
@@ -38,7 +38,7 @@ def render_sidebar() -> str:
         st.session_state.selected_nav_item = MAIN_WORKFLOW[0][0]
     
     # Track all pages for lookup
-    all_pages = MAIN_WORKFLOW + STANDALONE_TOOLS + UTILITIES
+    all_pages = MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES
     
     # Find current selection across all groups
     current_selection = st.session_state.selected_nav_item
@@ -49,6 +49,8 @@ def render_sidebar() -> str:
         current_group = 'main'
     elif current_selection in [p[0] for p in STANDALONE_TOOLS]:
         current_group = 'tools'
+    elif current_selection in [p[0] for p in ADVANCED_ANALYTICS]:
+        current_group = 'advanced'
     elif current_selection in [p[0] for p in UTILITIES]:
         current_group = 'utils'
     else:
@@ -84,6 +86,27 @@ def render_sidebar() -> str:
     
     # Tools Section - Use buttons
     for label, identifier in STANDALONE_TOOLS:
+        is_selected = (label == current_selection)
+        button_type = "primary" if is_selected else "secondary"
+        if st.sidebar.button(
+            label,
+            key=f"nav_btn_{identifier}",
+            use_container_width=True,
+            type=button_type
+        ):
+            st.session_state.selected_nav_item = label
+            st.rerun()
+    
+    # Advanced Analytics Section
+    st.sidebar.markdown("---")
+    st.sidebar.markdown("""
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+        Advanced Analytics
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Advanced Analytics Section - Use buttons
+    for label, identifier in ADVANCED_ANALYTICS:
         is_selected = (label == current_selection)
         button_type = "primary" if is_selected else "secondary"
         if st.sidebar.button(
