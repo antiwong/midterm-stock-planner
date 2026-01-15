@@ -1,6 +1,5 @@
 """
-Mid-term Stock Planner Test Suite
-
-This test suite validates data integrity, metric calculations, 
-backtest configuration, and pipeline components.
+Test Suite for Mid-term Stock Planner
+======================================
+Comprehensive test cases for all components.
 """

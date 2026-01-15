@@ -1,96 +1,120 @@
 """
-Pytest configuration and shared fixtures for the test suite.
+Pytest Configuration
+=====================
+Shared fixtures and configuration for tests.
 """
 
 import pytest
 import pandas as pd
 import numpy as np
+from datetime import datetime
 from pathlib import Path
-import yaml
-import sys
-
-# Add project root to path
-PROJECT_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+import tempfile
+import shutil
 
 
 @pytest.fixture
-def project_root():
-    """Return the project root directory."""
-    return PROJECT_ROOT
+def temp_directory():
+    """Create a temporary directory for tests."""
+    temp_dir = Path(tempfile.mkdtemp())
+    yield temp_dir
+    if temp_dir.exists():
+        shutil.rmtree(temp_dir)
 
 
 @pytest.fixture
-def config_path(project_root):
-    """Return the path to the main config file."""
-    return project_root / "config" / "config.yaml"
+def sample_portfolio_data():
+    """Create sample portfolio data."""
+    dates = pd.date_range('2020-01-01', periods=100, freq='D')
+    return {
+        'returns': pd.Series(np.random.normal(0.001, 0.02, 100), index=dates),
+        'weights': pd.DataFrame({
+            'AAPL': np.random.uniform(0.1, 0.3, 100),
+            'MSFT': np.random.uniform(0.1, 0.3, 100),
+            'GOOGL': np.random.uniform(0.1, 0.3, 100)
+        }, index=dates),
+        'holdings': ['AAPL', 'MSFT', 'GOOGL'],
+        'sector_mapping': {
+            'AAPL': 'Technology',
+            'MSFT': 'Technology',
+            'GOOGL': 'Technology'
+        },
+        'start_date': dates[0],
+        'end_date': dates[-1]
+    }
 
 
 @pytest.fixture
-def data_dir(project_root):
-    """Return the path to the data directory."""
-    return project_root / "data"
-
-
-@pytest.fixture
-def output_dir(project_root):
-    """Return the path to the output directory."""
-    return project_root / "output"
-
-
-@pytest.fixture
-def config(config_path):
-    """Load and return the configuration."""
-    with open(config_path) as f:
-        return yaml.safe_load(f)
-
-
-@pytest.fixture
-def price_data(data_dir):
-    """Load price data."""
-    price_path = data_dir / "prices.csv"
-    if price_path.exists():
-        df = pd.read_csv(price_path, parse_dates=['date'])
-        return df
-    return None
-
-
-@pytest.fixture
-def benchmark_data(data_dir):
-    """Load benchmark data."""
-    bench_path = data_dir / "benchmark.csv"
-    if bench_path.exists():
-        df = pd.read_csv(bench_path, parse_dates=['date'])
-        return df
-    return None
-
-
-@pytest.fixture
-def sector_data(data_dir):
-    """Load sector mapping data."""
-    sector_path = data_dir / "sectors.csv"
-    if sector_path.exists() and sector_path.stat().st_size > 0:
-        df = pd.read_csv(sector_path)
-        return df
-    return None
-
-
-@pytest.fixture
-def sample_returns():
-    """Generate sample returns for testing metric calculations."""
-    np.random.seed(42)
-    # Realistic daily returns: mean ~0.05% daily, std ~1.5%
-    returns = np.random.normal(0.0005, 0.015, 252)
-    return pd.Series(returns)
-
-
-@pytest.fixture
-def sample_positions():
-    """Generate sample portfolio positions for testing."""
-    tickers = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 
-               'META', 'TSLA', 'JPM', 'V', 'UNH']
-    weights = [0.1] * 10  # Equal weight
-    return pd.DataFrame({
-        'ticker': tickers,
-        'weight': weights
+def sample_stock_data():
+    """Create sample stock data."""
+    dates = pd.date_range('2020-01-01', periods=100, freq='D')
+    
+    stock_features = pd.DataFrame({
+        'ticker': ['AAPL', 'MSFT', 'GOOGL'],
+        'score': [80, 75, 70],
+        'beta': [1.1, 1.2, 0.9],
+        'pe_ratio': [25.0, 30.0, 20.0],
+        'pb_ratio': [5.0, 6.0, 4.0],
+        'roe': [0.15, 0.18, 0.12]
     })
+    
+    stock_returns = pd.DataFrame({
+        'AAPL': np.random.normal(0.001, 0.02, 100),
+        'MSFT': np.random.normal(0.001, 0.02, 100),
+        'GOOGL': np.random.normal(0.001, 0.02, 100)
+    }, index=dates)
+    
+    return {
+        'features': stock_features,
+        'data': stock_features,
+        'returns': stock_returns
+    }
+
+
+@pytest.fixture
+def sample_run_directory(temp_directory):
+    """Create a sample run directory with all required files."""
+    run_dir = temp_directory / 'test_run'
+    run_dir.mkdir()
+    
+    dates = pd.date_range('2020-01-01', periods=100, freq='D')
+    
+    # Portfolio returns
+    returns_df = pd.DataFrame({
+        'date': dates,
+        'portfolio_return': np.random.normal(0.001, 0.02, 100)
+    })
+    returns_df.to_csv(run_dir / 'backtest_returns.csv', index=False)
+    
+    # Portfolio positions
+    positions = []
+    for date in dates:
+        positions.append({'date': date, 'ticker': 'AAPL', 'weight': 0.4})
+        positions.append({'date': date, 'ticker': 'MSFT', 'weight': 0.35})
+        positions.append({'date': date, 'ticker': 'GOOGL', 'weight': 0.25})
+    positions_df = pd.DataFrame(positions)
+    positions_df.to_csv(run_dir / 'backtest_positions.csv', index=False)
+    
+    # Price data
+    price_data = []
+    for date in dates:
+        for ticker in ['AAPL', 'MSFT', 'GOOGL']:
+            price_data.append({
+                'date': date,
+                'ticker': ticker,
+                'close': 100 * (1 + np.random.normal(0.001, 0.02))
+            })
+    price_df = pd.DataFrame(price_data)
+    price_df.to_csv(run_dir / 'prices.csv', index=False)
+    
+    # Portfolio enriched
+    enriched_df = pd.DataFrame({
+        'ticker': ['AAPL', 'MSFT', 'GOOGL'],
+        'score': [80, 75, 70],
+        'beta': [1.1, 1.2, 0.9],
+        'pe_ratio': [25.0, 30.0, 20.0],
+        'sector': ['Technology', 'Technology', 'Technology']
+    })
+    enriched_df.to_csv(run_dir / 'portfolio_enriched.csv', index=False)
+    
+    return run_dir
