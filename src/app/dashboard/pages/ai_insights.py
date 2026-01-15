@@ -80,61 +80,199 @@ def _render_recommendations_tab(run_id: str):
     """Render AI recommendations tab."""
     render_section_header("Portfolio Recommendations", "💡")
     
-    recommendations = load_ai_recommendations(run_id)
+    # Try loading from database first
+    from src.analytics.analysis_service import AnalysisService
+    service = AnalysisService()
+    db_insights = service.get_all_ai_insights(run_id)
+    db_recommendations = [i for i in db_insights if i.insight_type == 'recommendations']
+    
+    # Also try loading from files
+    file_recommendations = load_ai_recommendations(run_id)
+    
+    # Use database recommendations if available, otherwise use file
+    recommendations = None
+    if db_recommendations:
+        # Get latest recommendation from database
+        latest = max(db_recommendations, key=lambda x: x.created_at)
+        # Try to parse as JSON, otherwise use as text
+        try:
+            import json
+            recommendations = json.loads(latest.content) if latest.content else None
+        except:
+            # If not JSON, create a simple dict structure
+            recommendations = {
+                'summary': latest.content,
+                'generated_at': latest.created_at.isoformat(),
+                'risk_profile': latest.metadata.get('risk_profile', 'moderate') if latest.metadata else 'moderate'
+            }
     
     if not recommendations:
-        st.info("No AI recommendations available for this run. Generate one using the 'Generate New' tab.")
+        recommendations = file_recommendations
+    
+    if not recommendations:
+        st.info("No AI recommendations available for this run. Generate one using the options below.")
+        
+        # Quick generate button
+        st.markdown("### Quick Generate Recommendations")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            risk_profile = st.selectbox(
+                "Risk Profile",
+                ["Conservative", "Moderate", "Aggressive"],
+                key="recommendations_risk_profile"
+            )
+        
+        with col2:
+            if st.button("🚀 Generate Recommendations", type="primary", use_container_width=True):
+                from ..components.loading import loading_spinner
+                from ..components.errors import ErrorHandler
+                
+                with loading_spinner("Generating recommendations... This may take 1-2 minutes.", show_progress=False):
+                    try:
+                        from src.analytics.ai_insights import AIInsightsGenerator
+                        from ..data import load_run_scores
+                        import pandas as pd
+                        from datetime import datetime
+                        import json
+                        
+                        # Load stock data
+                        scores = load_run_scores(run_id)
+                        if not scores:
+                            st.error("No stock data available for this run")
+                            return
+                        
+                        scores_df = pd.DataFrame(scores)
+                        
+                        # Generate recommendations
+                        generator = AIInsightsGenerator(save_to_db=True)
+                        
+                        if not generator.is_available:
+                            st.error("AI insights not available. Please check GEMINI_API_KEY configuration.")
+                            return
+                        
+                        # Generate recommendations
+                        recommendations_text = generator.generate_recommendations(
+                            scores_df.to_dict('records'),
+                            risk_profile=risk_profile.lower(),
+                            run_id=run_id
+                        )
+                        
+                        if recommendations_text:
+                            # Save to database
+                            service.save_ai_insight(
+                                run_id=run_id,
+                                insight_type='recommendations',
+                                content=recommendations_text,
+                                metadata={'risk_profile': risk_profile.lower()}
+                            )
+                            
+                            # Also save to file for compatibility
+                            run_folder = get_run_folder(run_id)
+                            run_folder.mkdir(parents=True, exist_ok=True)
+                            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                            
+                            recommendations_json = {
+                                'run_id': run_id,
+                                'risk_profile': risk_profile.lower(),
+                                'generated_at': datetime.now().isoformat(),
+                                'recommendations': recommendations_text,
+                                'summary': recommendations_text
+                            }
+                            
+                            json_file = run_folder / f"recommendations_{run_id[:8]}_{timestamp}.json"
+                            with open(json_file, 'w') as f:
+                                json.dump(recommendations_json, f, indent=2)
+                            
+                            st.success("✅ Recommendations generated successfully!")
+                            st.rerun()
+                        else:
+                            st.warning("⚠️ No recommendations generated. Check API configuration.")
+                            
+                    except Exception as e:
+                        ErrorHandler.render_error(
+                            e,
+                            error_type='ai_generation_error',
+                            show_traceback=True,
+                            custom_actions=[
+                                "Check GEMINI_API_KEY is configured",
+                                "Verify stock data is available",
+                                "Try generating from 'Generate New' tab instead"
+                            ]
+                        )
+        
+        st.markdown("---")
+        st.markdown("### Alternative Method")
+        st.markdown("""
+        **Generate from 'Generate New' Tab:**
+        - Go to the **"🔮 Generate New"** tab above
+        - Check **"Generate Recommendations"**
+        - Select your **Risk Profile**
+        - Click **"🚀 Generate AI Insights"**
+        """)
         return
     
-    # Display recommendations by profile
+    # Display recommendations
+    # Check if structured (with profiles) or plain text
     profiles = recommendations.get('profiles', {})
     
-    if not profiles:
-        st.markdown(recommendations.get('summary', 'No summary available'))
-        return
-    
-    profile_tabs = st.tabs([p.title() for p in profiles.keys()])
-    
-    for tab, (profile_name, profile_data) in zip(profile_tabs, profiles.items()):
-        with tab:
-            st.markdown(f"### {profile_name.title()} Portfolio")
-            
-            # Profile metrics
-            col1, col2, col3 = st.columns(3)
-            
-            with col1:
-                expected_return = profile_data.get('expected_return')
-                if expected_return:
-                    st.metric("Expected Return", f"{expected_return}")
-            
-            with col2:
-                risk_level = profile_data.get('risk_level')
-                if risk_level:
-                    st.metric("Risk Level", risk_level)
-            
-            with col3:
-                time_horizon = profile_data.get('time_horizon')
-                if time_horizon:
-                    st.metric("Time Horizon", time_horizon)
-            
-            # Holdings
-            holdings = profile_data.get('holdings', [])
-            if holdings:
-                st.markdown("**Suggested Holdings:**")
-                for holding in holdings:
-                    if isinstance(holding, dict):
-                        ticker = holding.get('ticker', 'Unknown')
-                        weight = holding.get('weight', 0)
-                        rationale = holding.get('rationale', '')
-                        st.write(f"- **{ticker}** ({weight*100:.1f}%): {rationale}")
-                    else:
-                        st.write(f"- {holding}")
-            
-            # Rationale
-            rationale = profile_data.get('rationale', '')
-            if rationale:
-                with st.expander("View Rationale"):
-                    st.markdown(rationale)
+    if profiles:
+        # Structured recommendations with multiple profiles
+        profile_tabs = st.tabs([p.title() for p in profiles.keys()])
+        
+        for tab, (profile_name, profile_data) in zip(profile_tabs, profiles.items()):
+            with tab:
+                st.markdown(f"### {profile_name.title()} Portfolio")
+                
+                # Profile metrics
+                col1, col2, col3 = st.columns(3)
+                
+                with col1:
+                    expected_return = profile_data.get('expected_return')
+                    if expected_return:
+                        st.metric("Expected Return", f"{expected_return}")
+                
+                with col2:
+                    risk_level = profile_data.get('risk_level')
+                    if risk_level:
+                        st.metric("Risk Level", risk_level)
+                
+                with col3:
+                    time_horizon = profile_data.get('time_horizon')
+                    if time_horizon:
+                        st.metric("Time Horizon", time_horizon)
+                
+                # Holdings
+                holdings = profile_data.get('holdings', [])
+                if holdings:
+                    st.markdown("**Suggested Holdings:**")
+                    for holding in holdings:
+                        if isinstance(holding, dict):
+                            ticker = holding.get('ticker', 'Unknown')
+                            weight = holding.get('weight', 0)
+                            rationale = holding.get('rationale', '')
+                            st.write(f"- **{ticker}** ({weight*100:.1f}%): {rationale}")
+                        else:
+                            st.write(f"- {holding}")
+                
+                # Rationale
+                rationale = profile_data.get('rationale', '')
+                if rationale:
+                    with st.expander("View Rationale"):
+                        st.markdown(rationale)
+    else:
+        # Plain text recommendations (from database or simple format)
+        summary = recommendations.get('summary') or recommendations.get('recommendations')
+        if summary:
+            # Show metadata if available
+            if 'risk_profile' in recommendations:
+                st.info(f"**Risk Profile:** {recommendations['risk_profile'].title()}")
+            if 'generated_at' in recommendations:
+                st.caption(f"Generated: {recommendations['generated_at']}")
+            st.markdown("---")
+            st.markdown(summary)
+        else:
+            st.markdown(recommendations.get('recommendations', 'No recommendations available'))
 
 
 def _render_stock_analysis_tab(run_id: str):
