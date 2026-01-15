@@ -97,7 +97,19 @@ def generate_report(run_id):
         factor_result = service.get_analysis_result(run_id, 'factor_exposure')
         if factor_result:
             factor_data = factor_result.get_results()
-            exposures = factor_data.get('exposures', {})
+            # Check for factor_exposures list (new format) or exposures dict (old format)
+            factor_exposures_list = factor_data.get('factor_exposures', [])
+            exposures_dict = factor_data.get('exposures', {})
+            
+            if factor_exposures_list:
+                # New format: list of factor exposure dicts
+                exposures = {fe['factor_name']: fe for fe in factor_exposures_list}
+            elif exposures_dict:
+                # Old format: dict of exposures
+                exposures = exposures_dict
+            else:
+                exposures = {}
+            
             if exposures:
                 print(f"  Found {len(exposures)} factor exposures:")
                 for factor_name, exp_data in exposures.items():
