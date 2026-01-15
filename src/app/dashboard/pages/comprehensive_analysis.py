@@ -244,17 +244,57 @@ def _render_attribution_tab(service: AnalysisService, run_id: str, analysis_type
         st.subheader("Detailed Breakdown")
         breakdown = attribution['breakdown']
         
-        if 'factor' in breakdown:
-            st.write("**Factor Attribution:**")
-            factor_df = pd.DataFrame(list(breakdown['factor']['by_factor'].items()), 
-                                   columns=['Factor', 'Contribution'])
-            st.dataframe(factor_df, use_container_width=True)
+        # Factor breakdown
+        if 'factor' in breakdown and breakdown['factor']:
+            factor_data = breakdown['factor']
+            # Handle different structures: dict with 'by_factor' or direct dict
+            if isinstance(factor_data, dict):
+                if 'by_factor' in factor_data:
+                    factor_items = factor_data['by_factor']
+                else:
+                    # Direct dict of factors
+                    factor_items = factor_data
+                
+                if factor_items and isinstance(factor_items, dict):
+                    st.write("**Factor Attribution:**")
+                    factor_df = pd.DataFrame(list(factor_items.items()), 
+                                           columns=['Factor', 'Contribution'])
+                    st.dataframe(factor_df, use_container_width=True)
         
-        if 'sector' in breakdown:
-            st.write("**Sector Attribution:**")
-            sector_df = pd.DataFrame(list(breakdown['sector']['by_sector'].items()),
-                                   columns=['Sector', 'Contribution'])
-            st.dataframe(sector_df, use_container_width=True)
+        # Sector breakdown
+        if 'sector' in breakdown and breakdown['sector']:
+            sector_data = breakdown['sector']
+            # Handle different structures: dict with 'by_sector' or direct dict
+            if isinstance(sector_data, dict):
+                if 'by_sector' in sector_data:
+                    sector_items = sector_data['by_sector']
+                else:
+                    # Direct dict of sectors
+                    sector_items = sector_data
+                
+                if sector_items and isinstance(sector_items, dict):
+                    st.write("**Sector Attribution:**")
+                    sector_df = pd.DataFrame(list(sector_items.items()),
+                                           columns=['Sector', 'Contribution'])
+                    st.dataframe(sector_df, use_container_width=True)
+        
+        # Stock selection breakdown
+        if 'stock_selection' in breakdown and breakdown['stock_selection']:
+            stock_data = breakdown['stock_selection']
+            # Handle different structures
+            if isinstance(stock_data, dict):
+                if 'by_sector' in stock_data:
+                    stock_items = stock_data['by_sector']
+                elif 'by_stock' in stock_data:
+                    stock_items = stock_data['by_stock']
+                else:
+                    stock_items = stock_data
+                
+                if stock_items and isinstance(stock_items, dict):
+                    st.write("**Stock Selection Attribution:**")
+                    stock_df = pd.DataFrame(list(stock_items.items()),
+                                          columns=['Stock/Sector', 'Contribution'])
+                    st.dataframe(stock_df, use_container_width=True)
 
 
 def _render_benchmark_tab(service: AnalysisService, run_id: str, analysis_types: set):
