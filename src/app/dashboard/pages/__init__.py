@@ -18,6 +18,7 @@ from .settings import render_settings
 from .watchlist_manager import render_watchlist_manager
 from .documentation import render_documentation
 from .comprehensive_analysis import render_comprehensive_analysis
+from .advanced_comparison import render_advanced_comparison
 
 __all__ = [
     'render_overview',
@@ -31,6 +32,7 @@ __all__ = [
     'render_stock_explorer',
     'render_ai_insights',
     'render_compare_runs',
+    'render_advanced_comparison',
     'render_settings',
     'render_watchlist_manager',
     'render_documentation',

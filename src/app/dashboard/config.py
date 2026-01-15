@@ -568,6 +568,7 @@ STANDALONE_TOOLS = [
     ("📋 Watchlist Manager", "watchlist_manager"),
     ("🔎 Stock Explorer", "stock_explorer"),
     ("📈 Compare Runs", "compare_runs"),
+    ("🔀 Advanced Comparison", "advanced_comparison"),
 ]
 
 # Utilities

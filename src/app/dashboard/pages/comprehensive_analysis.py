@@ -77,8 +77,43 @@ def render_comprehensive_analysis():
                     st.code(traceback.format_exc())
     
     with col2:
+        export_format = st.selectbox("Export Format", ["PDF", "Excel"], key="export_format")
         if st.button("📥 Export Results", use_container_width=True):
-            st.info("Export functionality coming soon")
+            try:
+                from ..export import export_to_pdf, export_to_excel
+                
+                # Collect all analysis results
+                all_results = {}
+                for analysis_type in ['attribution', 'benchmark_comparison', 'factor_exposure', 'rebalancing', 'style']:
+                    result = service.get_analysis_result(selected_run_id, analysis_type)
+                    if result:
+                        all_results[analysis_type] = {
+                            'results': result.get_results() if hasattr(result, 'get_results') else result.results_json,
+                            'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
+                        }
+                
+                if export_format == "PDF":
+                    pdf_bytes = export_to_pdf(all_results, selected_run)
+                    st.download_button(
+                        label="📥 Download PDF",
+                        data=pdf_bytes,
+                        file_name=f"analysis_{selected_run_id[:16]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf"
+                    )
+                else:
+                    excel_bytes = export_to_excel(all_results, selected_run)
+                    st.download_button(
+                        label="📥 Download Excel",
+                        data=excel_bytes,
+                        file_name=f"analysis_{selected_run_id[:16]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+            except ImportError as e:
+                st.error(f"Export requires additional packages: {e}")
+            except Exception as e:
+                st.error(f"Export failed: {e}")
+                import traceback
+                st.code(traceback.format_exc())
     
     st.markdown("---")
     
@@ -148,20 +183,37 @@ def _render_attribution_tab(service: AnalysisService, run_id: str, analysis_type
     with col5:
         st.metric("Timing", format_percent(attribution['attributions'].get('timing', 0)))
     
-    # Attribution breakdown chart
+    # Attribution waterfall chart
+    st.markdown("### Attribution Waterfall Chart")
+    waterfall_data = {
+        'factor_attribution': attribution['attributions'].get('factor', 0),
+        'sector_attribution': attribution['attributions'].get('sector', 0),
+        'stock_selection_attribution': attribution['attributions'].get('stock_selection', 0),
+        'timing_attribution': attribution['attributions'].get('timing', 0),
+        'total_return': attribution.get('total_return', 0)
+    }
+    fig = create_attribution_waterfall(waterfall_data, "Performance Attribution Waterfall")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Also show bar chart for comparison
+    st.markdown("### Attribution Breakdown (Bar Chart)")
     attributions = attribution['attributions']
     fig = go.Figure(data=[
         go.Bar(
             x=list(attributions.keys()),
-            y=[attributions.get(k, 0) for k in attributions.keys()],
-            marker_color=['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b']
+            y=[attributions.get(k, 0) * 100 for k in attributions.keys()],
+            marker_color=['#6366f1', '#8b5cf6', '#06b6d4', '#10b981', '#f59e0b'],
+            text=[f"{attributions.get(k, 0)*100:.2f}%" for k in attributions.keys()],
+            textposition='outside'
         )
     ])
     fig.update_layout(
         title="Performance Attribution Breakdown",
         xaxis_title="Attribution Component",
-        yaxis_title="Return Contribution",
-        height=400
+        yaxis_title="Return Contribution (%)",
+        height=400,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
     )
     st.plotly_chart(fig, use_container_width=True)
     
@@ -252,23 +304,40 @@ def _render_factor_tab(service: AnalysisService, run_id: str, analysis_types: se
         st.info("No factor exposures calculated.")
         return
     
-    # Factor exposure chart
-    factors_df = pd.DataFrame(factor_exposures)
+    # Factor exposure heatmap
+    st.markdown("### Factor Exposure Heatmap")
+    exposures_dict = {}
+    for factor in factor_exposures:
+        exposures_dict[factor['factor_name']] = {
+            'exposure': factor.get('exposure', 0),
+            'contribution_to_return': factor.get('contribution_to_return', 0),
+            'contribution_to_risk': factor.get('contribution_to_risk', 0)
+        }
     
+    fig = create_factor_exposure_heatmap(exposures_dict, "Factor Exposure Analysis")
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Also show bar chart
+    st.markdown("### Factor Exposures (Bar Chart)")
+    factors_df = pd.DataFrame(factor_exposures)
     fig = go.Figure(data=[
         go.Bar(
             x=factors_df['factor_name'],
             y=factors_df['exposure'],
             marker_color=factors_df['exposure'].apply(
                 lambda x: '#10b981' if x > 0 else '#ef4444'
-            )
+            ),
+            text=[f"{x:.3f}" for x in factors_df['exposure']],
+            textposition='outside'
         )
     ])
     fig.update_layout(
         title="Factor Exposures",
         xaxis_title="Factor",
         yaxis_title="Exposure",
-        height=400
+        height=400,
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)"
     )
     fig.add_hline(y=0, line_dash="dash", line_color="gray")
     st.plotly_chart(fig, use_container_width=True)
