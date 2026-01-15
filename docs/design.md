@@ -29,6 +29,7 @@
 | [api-configuration.md](api-configuration.md) | API key setup and configuration |
 | [data-validation.md](data-validation.md) | Data quality validation for AI insights |
 | [portfolio-comparison.md](portfolio-comparison.md) | Comparison of Purchase Triggers vs Portfolio Builder methods |
+| [analysis-improvements.md](analysis-improvements.md) | Roadmap for enhancing analytical capabilities |
 
 ---
 
