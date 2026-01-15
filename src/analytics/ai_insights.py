@@ -9,10 +9,18 @@ import json
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 import warnings
+import hashlib
 
 # Load API keys
 from src.config.api_keys import load_api_keys
 load_api_keys()
+
+# Import analysis service for database operations
+try:
+    from .analysis_service import AnalysisService
+    ANALYSIS_SERVICE_AVAILABLE = True
+except ImportError:
+    ANALYSIS_SERVICE_AVAILABLE = False
 
 try:
     import google.generativeai as genai
@@ -37,6 +45,8 @@ class AIInsightsGenerator:
         self,
         api_key: Optional[str] = None,
         model_name: str = None,
+        save_to_db: bool = True,
+        db_path: str = "data/analysis.db"
     ):
         """
         Initialize the AI insights generator.
@@ -44,10 +54,15 @@ class AIInsightsGenerator:
         Args:
             api_key: Gemini API key (or uses GEMINI_API_KEY env var)
             model_name: Gemini model to use (auto-detects if None)
+            save_to_db: Whether to save insights to database
+            db_path: Path to analysis database
         """
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
         self.model_name = model_name
         self._model = None
+        self.save_to_db = save_to_db and ANALYSIS_SERVICE_AVAILABLE
+        if self.save_to_db:
+            self.analysis_service = AnalysisService(db_path)
         
         if GEMINI_AVAILABLE and self.api_key:
             try:
@@ -87,6 +102,7 @@ class AIInsightsGenerator:
         sector_breakdown: Dict[str, Dict[str, float]],
         model_metrics: Dict[str, float],
         run_name: str = "Analysis",
+        run_id: Optional[str] = None,
     ) -> Dict[str, str]:
         """
         Generate comprehensive AI insights for the portfolio analysis.
@@ -97,17 +113,30 @@ class AIInsightsGenerator:
             sector_breakdown: Sector performance breakdown
             model_metrics: Model performance metrics
             run_name: Name of the analysis run
+            run_id: Run ID for database storage (optional)
             
         Returns:
             Dictionary with different insight sections
         """
         if not self.is_available:
-            return self._generate_fallback_insights(top_stocks, sector_breakdown)
+            insights = self._generate_fallback_insights(top_stocks, sector_breakdown)
+            if self.save_to_db and run_id:
+                self._save_insights_to_db(run_id, insights, context={})
+            return insights
         
         # Build the analysis context
         context = self._build_context(
             top_stocks, bottom_stocks, sector_breakdown, model_metrics
         )
+        
+        # Create context dict for database storage
+        context_dict = {
+            'top_stocks': top_stocks[:10],
+            'bottom_stocks': bottom_stocks[:5],
+            'sector_breakdown': sector_breakdown,
+            'model_metrics': {k: v for k, v in model_metrics.items() 
+                            if k not in ['data_quality', 'data_errors', 'data_warnings']}
+        }
         
         insights = {}
         
@@ -115,28 +144,104 @@ class AIInsightsGenerator:
         insights['executive_summary'] = self._generate_section(
             "executive_summary", context
         )
+        if self.save_to_db and run_id:
+            self.analysis_service.save_ai_insight(
+                run_id=run_id,
+                insight_type='executive_summary',
+                content=insights['executive_summary'],
+                context=context_dict,
+                model=self.model_name or 'gemini',
+                prompt_hash=self._hash_context(context_dict)
+            )
         
         # Generate top picks analysis
         insights['top_picks_analysis'] = self._generate_section(
             "top_picks", context
         )
+        if self.save_to_db and run_id:
+            self.analysis_service.save_ai_insight(
+                run_id=run_id,
+                insight_type='top_picks_analysis',
+                content=insights['top_picks_analysis'],
+                context=context_dict,
+                model=self.model_name or 'gemini',
+                prompt_hash=self._hash_context(context_dict)
+            )
         
         # Generate sector analysis
         insights['sector_analysis'] = self._generate_section(
             "sector_analysis", context
         )
+        if self.save_to_db and run_id:
+            self.analysis_service.save_ai_insight(
+                run_id=run_id,
+                insight_type='sector_analysis',
+                content=insights['sector_analysis'],
+                context=context_dict,
+                model=self.model_name or 'gemini',
+                prompt_hash=self._hash_context(context_dict)
+            )
         
         # Generate risk assessment
         insights['risk_assessment'] = self._generate_section(
             "risk_assessment", context
         )
+        if self.save_to_db and run_id:
+            self.analysis_service.save_ai_insight(
+                run_id=run_id,
+                insight_type='risk_assessment',
+                content=insights['risk_assessment'],
+                context=context_dict,
+                model=self.model_name or 'gemini',
+                prompt_hash=self._hash_context(context_dict)
+            )
         
         # Generate actionable recommendations
         insights['recommendations'] = self._generate_section(
             "recommendations", context
         )
+        if self.save_to_db and run_id:
+            # Try to extract structured recommendations
+            recommendations_json = self._extract_recommendations(insights['recommendations'])
+            self.analysis_service.save_ai_insight(
+                run_id=run_id,
+                insight_type='recommendations',
+                content=insights['recommendations'],
+                content_json=recommendations_json,
+                context=context_dict,
+                model=self.model_name or 'gemini',
+                prompt_hash=self._hash_context(context_dict)
+            )
         
         return insights
+    
+    def _hash_context(self, context: Dict) -> str:
+        """Generate hash of context for deduplication."""
+        context_str = json.dumps(context, sort_keys=True, default=str)
+        return hashlib.sha256(context_str.encode()).hexdigest()
+    
+    def _extract_recommendations(self, recommendations_text: str) -> Dict:
+        """Extract structured recommendations from text."""
+        # Simple extraction - can be enhanced
+        return {
+            'text': recommendations_text,
+            'extracted': False  # Placeholder for future NLP extraction
+        }
+    
+    def _save_insights_to_db(self, run_id: str, insights: Dict, context: Dict):
+        """Save fallback insights to database."""
+        for insight_type, content in insights.items():
+            try:
+                self.analysis_service.save_ai_insight(
+                    run_id=run_id,
+                    insight_type=insight_type,
+                    content=content,
+                    context=context,
+                    model='fallback',
+                    status='completed'
+                )
+            except Exception as e:
+                print(f"Error saving {insight_type} to DB: {e}")
     
     def _build_context(
         self,

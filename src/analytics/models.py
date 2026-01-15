@@ -17,6 +17,12 @@ from sqlalchemy.ext.mutable import MutableDict, MutableList
 
 Base = declarative_base()
 
+# Import extended models to ensure they're registered
+from .analysis_models import (
+    AnalysisResult, AIInsight, Recommendation, 
+    BenchmarkComparison, FactorExposure, PerformanceAttribution
+)
+
 
 class Run(Base):
     """Analysis run record."""
