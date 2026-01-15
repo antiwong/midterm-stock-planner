@@ -266,7 +266,7 @@ class RunDataLoader:
             start_date = datetime.now()
             end_date = datetime.now()
         
-        # Get holdings from weights
+        # Get holdings from weights or sector mapping
         holdings = []
         if weights is not None:
             if isinstance(weights, pd.DataFrame):
@@ -275,12 +275,29 @@ class RunDataLoader:
                 holdings = latest_weights[latest_weights > 0].index.tolist()
             else:
                 holdings = weights[weights > 0].index.tolist()
+        elif sector_mapping:
+            holdings = list(sector_mapping.keys())
+        else:
+            # Try to get from portfolio files as fallback
+            portfolio_files = list(self.run_dir.glob("portfolio_*.csv"))
+            for file in portfolio_files:
+                try:
+                    df = pd.read_csv(file)
+                    if 'ticker' in df.columns:
+                        holdings = df['ticker'].unique().tolist()
+                        break
+                except Exception:
+                    continue
+        
+        # Try to get stock returns from redundant sources
+        stock_returns = self.load_stock_returns()
         
         return {
             'returns': returns,
             'weights': weights,
             'holdings': holdings,
             'sector_mapping': sector_mapping,
+            'stock_returns': stock_returns,  # Added from redundant sources
             'start_date': start_date,
             'end_date': end_date,
             'metrics': metrics or {}
