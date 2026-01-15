@@ -115,8 +115,11 @@ class TestBenchmarkDataIntegrity:
             pytest.skip("Benchmark data not available")
         
         assert 'date' in benchmark_data.columns, "Missing 'date' column"
-        assert 'close' in benchmark_data.columns or 'price' in benchmark_data.columns, \
-            "Missing price column (close or price)"
+        # Benchmark can have 'close', 'price', or ticker columns (SPY, etc.)
+        has_price_col = 'close' in benchmark_data.columns or 'price' in benchmark_data.columns
+        has_ticker_col = any(col in benchmark_data.columns for col in ['SPY', 'QQQ', 'DIA', 'IWM'])
+        assert has_price_col or has_ticker_col, \
+            "Missing price column (close, price, or ticker column like SPY)"
     
     def test_benchmark_aligns_with_price_data(self, price_data, benchmark_data):
         """Verify benchmark date range covers price data range."""
