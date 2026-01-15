@@ -557,6 +557,7 @@ MAIN_WORKFLOW = [
     ("🎯 Portfolio Builder", "portfolio_builder"),
     ("📄 Reports", "reports"),
     ("💼 Portfolio Analysis", "portfolio_analysis"),
+    ("📊 Comprehensive Analysis", "comprehensive_analysis"),
     ("🔍 Purchase Triggers", "purchase_triggers"),
     ("📊 Analysis Runs", "analysis_runs"),
     ("🤖 AI Insights", "ai_insights"),

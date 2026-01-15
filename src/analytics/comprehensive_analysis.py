@@ -16,6 +16,8 @@ from .performance_attribution import PerformanceAttributionAnalyzer
 from .benchmark_comparison import BenchmarkComparator
 from .factor_exposure import FactorExposureAnalyzer
 from .ai_insights import AIInsightsGenerator
+from .data_loader import RunDataLoader, load_run_data_for_analysis
+from .data_loader import load_run_data_for_analysis
 
 
 class ComprehensiveAnalysisRunner:
@@ -294,13 +296,23 @@ class ComprehensiveAnalysisRunner:
         stock_data: Optional[pd.DataFrame]
     ) -> Dict:
         """Generate and save AI insights."""
-        # This would integrate with existing AI insights generation
-        # For now, return placeholder
-        return {'status': 'ai_insights_generation_requires_integration'}
+        # AI insights are typically generated separately via the AI Insights page
+        # This method can be used to trigger generation if needed
+        # For now, just check if insights exist
+        insights = self.service.get_all_ai_insights(run_id)
+        return {
+            'status': 'completed' if insights else 'not_generated',
+            'count': len(insights),
+            'types': [i.insight_type for i in insights]
+        }
 
 
 def load_portfolio_data_from_run(run_dir: Path) -> Dict[str, Any]:
     """Load portfolio data from a run directory."""
-    # This would load from run output files
-    # Placeholder implementation
-    return {}
+    from .data_loader import RunDataLoader
+    
+    try:
+        loader = RunDataLoader(run_dir)
+        return loader.load_portfolio_data()
+    except Exception as e:
+        return {'error': str(e)}

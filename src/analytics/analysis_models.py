@@ -14,14 +14,9 @@ from sqlalchemy import (
     Text, ForeignKey, Boolean, Index, JSON
 )
 from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 
-# Import Base from models to ensure consistency
-try:
-    from .models import Base
-except ImportError:
-    # Fallback if models not available
-    Base = declarative_base()
+# Import Base from models - this creates the models first, then we add these
+from .models import Base
 
 
 class AnalysisResult(Base):

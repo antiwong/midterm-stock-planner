@@ -12,6 +12,7 @@ from ..components.cards import render_info_card, render_alert
 from ..data import load_runs, load_run_scores, load_ai_commentary, load_ai_recommendations
 from ..utils import format_percent, format_number, get_run_folder
 from ..config import COLORS
+from src.analytics.analysis_service import AnalysisService
 
 
 def render_ai_insights():
@@ -296,7 +297,7 @@ def _generate_new_insights(run_id: str, gen_commentary: bool, gen_recommendation
             if not st.checkbox("⚠️ Proceed with AI insights generation despite errors (not recommended)", value=False):
                 st.stop()
         
-        generator = AIInsightsGenerator()
+        generator = AIInsightsGenerator(save_to_db=True)  # Enable database saving
         
         # Get run folder for saving files
         run_folder = get_run_folder(run_id)

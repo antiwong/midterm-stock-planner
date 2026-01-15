@@ -13,8 +13,9 @@ from datetime import datetime
 # Add parent to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.analytics.comprehensive_analysis import ComprehensiveAnalysisRunner
+from src.analytics.comprehensive_analysis import ComprehensiveAnalysisRunner, load_run_data_for_analysis
 from src.analytics.models import get_db, Run
+from src.app.dashboard.utils import get_run_folder
 
 
 def main():
@@ -51,13 +52,13 @@ def main():
             'sector_mapping': {}  # Would load from stock data
         }
         
-        # For now, just run what we can
+        # Run comprehensive analysis
         runner = ComprehensiveAnalysisRunner(db_path=args.db_path)
         
         results = runner.run_all_analysis(
             run_id=args.run_id,
             portfolio_data=portfolio_data,
-            stock_data=None,  # Would load from run output
+            stock_data=stock_data,
             save_ai_insights=not args.skip_ai
         )
         

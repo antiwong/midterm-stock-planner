@@ -17,6 +17,7 @@ from .compare_runs import render_compare_runs
 from .settings import render_settings
 from .watchlist_manager import render_watchlist_manager
 from .documentation import render_documentation
+from .comprehensive_analysis import render_comprehensive_analysis
 
 __all__ = [
     'render_overview',
@@ -24,6 +25,7 @@ __all__ = [
     'render_portfolio_builder',
     'render_reports',
     'render_portfolio_analysis',
+    'render_comprehensive_analysis',
     'render_purchase_triggers',
     'render_analysis_runs',
     'render_stock_explorer',
