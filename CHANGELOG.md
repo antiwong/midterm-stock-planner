@@ -2,6 +2,67 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.7.0] - 2026-01-15
+
+### Added
+
+#### Export Capabilities
+- **PDF Export** (`src/app/dashboard/export.py`)
+  - Professional PDF reports with formatted tables
+  - Multiple sections: Performance Attribution, Benchmark Comparison, Factor Exposure, Rebalancing, Style Analysis
+  - Integrated into Comprehensive Analysis page with download buttons
+  - Timestamped filenames
+
+- **Excel Export** (`src/app/dashboard/export.py`)
+  - Multi-sheet Excel workbooks with professional formatting
+  - Separate sheets for each analysis type
+  - Formatted headers, borders, and auto-adjusted column widths
+  - Color-coded headers for better readability
+
+#### Enhanced Visualizations
+- **Attribution Waterfall Charts** (`src/app/dashboard/components/enhanced_charts.py`)
+  - Visual performance attribution decomposition
+  - Shows cumulative contributions from factors, sectors, stock selection, and timing
+  - Color-coded positive/negative contributions
+  - Integrated into Comprehensive Analysis page
+
+- **Factor Exposure Heatmaps** (`src/app/dashboard/components/enhanced_charts.py`)
+  - Visual factor exposure analysis
+  - Shows exposures, return contributions, and risk contributions
+  - Color scale for quick identification of factor strengths
+  - Integrated into Comprehensive Analysis page
+
+- **Comparison Charts** (`src/app/dashboard/components/enhanced_charts.py`)
+  - Multi-run comparison bar charts
+  - Time period comparison line charts
+  - Multi-metric radar/spider charts
+  - Interactive and customizable
+
+#### Advanced Comparison Tools
+- **Advanced Comparison Page** (`src/app/dashboard/pages/advanced_comparison.py`)
+  - **Multiple Runs Comparison**: Side-by-side metrics, interactive charts, holdings overlap analysis
+  - **Time Period Comparison**: Full period, halves, yearly breakdowns with performance metrics
+  - **Factor Weights Comparison**: Compare different factor weight configurations, scatter plots, performance analysis
+  - Added to Standalone Tools section in navigation
+
+### Changed
+- Comprehensive Analysis page now includes waterfall charts and heatmaps
+- Export functionality integrated with format selection (PDF/Excel)
+- Enhanced chart components available throughout dashboard
+
+### Dependencies
+- Added `reportlab>=4.0.0` for PDF export
+- Added `openpyxl>=3.1.0` for Excel export
+
+### Validation
+- All features tested and validated
+- Export functionality verified (PDF: 4,055 bytes, Excel: 8,439 bytes)
+- All enhanced charts created successfully
+- GUI integration confirmed
+- See `docs/export-visualization-validation.md` for full validation results
+
+---
+
 ## [3.6.0] - 2026-01-10
 
 ### Added
