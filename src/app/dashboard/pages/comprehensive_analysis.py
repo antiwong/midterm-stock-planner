@@ -87,6 +87,8 @@ def render_comprehensive_analysis():
         "📈 Performance Attribution",
         "📊 Benchmark Comparison", 
         "🔍 Factor Exposure",
+        "⚖️ Rebalancing",
+        "🎨 Style Analysis",
         "🤖 AI Insights",
         "💡 Recommendations"
     ])
@@ -103,12 +105,20 @@ def render_comprehensive_analysis():
     with tabs[2]:
         _render_factor_tab(service, selected_run_id, analysis_types)
     
-    # AI Insights Tab
+    # Rebalancing Tab
     with tabs[3]:
+        _render_rebalancing_tab(service, selected_run_id, analysis_types)
+    
+    # Style Analysis Tab
+    with tabs[4]:
+        _render_style_tab(service, selected_run_id, analysis_types)
+    
+    # AI Insights Tab
+    with tabs[5]:
         _render_ai_insights_tab(service, selected_run_id)
     
     # Recommendations Tab
-    with tabs[4]:
+    with tabs[6]:
         _render_recommendations_tab(service, selected_run_id)
 
 
@@ -297,6 +307,87 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
         st.markdown("---")
         st.markdown(latest.content)
         st.markdown("---")
+
+
+def _render_rebalancing_tab(service: AnalysisService, run_id: str, analysis_types: set):
+    """Render rebalancing analysis tab."""
+    if 'rebalancing' not in analysis_types:
+        st.info("Rebalancing analysis not yet calculated. Click 'Run All Analyses' to generate.")
+        return
+    
+    result = service.get_analysis_result(run_id, 'rebalancing')
+    if not result:
+        st.warning("Rebalancing data not found.")
+        return
+    
+    rebalancing = result.get_results()
+    
+    # Metrics
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Current Drift", format_percent(rebalancing.get('current_drift', 0)))
+    with col2:
+        st.metric("Avg Turnover", format_percent(rebalancing.get('avg_turnover', 0)))
+    with col3:
+        st.metric("Total Cost", format_percent(rebalancing.get('total_transaction_cost', 0)))
+    with col4:
+        st.metric("Rebalance Events", rebalancing.get('rebalance_events', 0))
+    
+    # Recommendation
+    recommendation = rebalancing.get('recommendation', '')
+    if 'Rebalance now' in recommendation:
+        st.warning(recommendation)
+    else:
+        st.info(recommendation)
+    
+    # Optimal frequency
+    if 'optimal_frequency' in rebalancing:
+        opt_freq = rebalancing['optimal_frequency']
+        st.subheader("Optimal Rebalancing Frequency")
+        st.write(f"**Recommended:** {opt_freq.get('recommended', 'unknown').title()}")
+        
+        if 'frequencies' in opt_freq:
+            freq_df = pd.DataFrame(opt_freq['frequencies']).T
+            st.dataframe(freq_df, use_container_width=True)
+
+
+def _render_style_tab(service: AnalysisService, run_id: str, analysis_types: set):
+    """Render style analysis tab."""
+    if 'style' not in analysis_types:
+        st.info("Style analysis not yet calculated. Click 'Run All Analyses' to generate.")
+        return
+    
+    result = service.get_analysis_result(run_id, 'style')
+    if not result:
+        st.warning("Style analysis data not found.")
+        return
+    
+    style = result.get_results()
+    
+    # Overall style
+    overall = style.get('overall_style', 'Unknown')
+    st.metric("Overall Style", overall)
+    
+    # Growth vs Value
+    if 'growth_value' in style:
+        gv = style['growth_value']
+        st.subheader("Growth vs Value")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write(f"**Classification:** {gv.get('classification', 'unknown').title()}")
+        with col2:
+            if 'portfolio_pe' in gv:
+                st.write(f"**Portfolio PE:** {gv['portfolio_pe']:.2f}")
+                st.write(f"**Market Avg PE:** {gv.get('market_avg_pe', 0):.2f}")
+    
+    # Size
+    if 'size' in style:
+        size = style['size']
+        st.subheader("Size Classification")
+        st.write(f"**Classification:** {size.get('classification', 'unknown').replace('_', ' ').title()}")
+        if 'portfolio_mcap' in size:
+            st.write(f"**Portfolio Market Cap:** ${size['portfolio_mcap']/1e9:.2f}B")
+            st.write(f"**Median Market Cap:** ${size.get('median_mcap', 0)/1e9:.2f}B")
 
 
 def _render_recommendations_tab(service: AnalysisService, run_id: str):

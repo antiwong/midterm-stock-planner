@@ -15,6 +15,8 @@ from .analysis_service import AnalysisService
 from .performance_attribution import PerformanceAttributionAnalyzer
 from .benchmark_comparison import BenchmarkComparator
 from .factor_exposure import FactorExposureAnalyzer
+from .rebalancing_analysis import RebalancingAnalyzer
+from .style_analysis import StyleAnalyzer
 from .ai_insights import AIInsightsGenerator
 from .data_loader import RunDataLoader, load_run_data_for_analysis
 from .data_loader import load_run_data_for_analysis
@@ -28,6 +30,8 @@ class ComprehensiveAnalysisRunner:
         self.attribution_analyzer = PerformanceAttributionAnalyzer()
         self.benchmark_comparator = BenchmarkComparator()
         self.factor_analyzer = FactorExposureAnalyzer()
+        self.rebalancing_analyzer = RebalancingAnalyzer()
+        self.style_analyzer = StyleAnalyzer()
         self.ai_generator = AIInsightsGenerator()
     
     def run_all_analysis(
@@ -93,10 +97,32 @@ class ComprehensiveAnalysisRunner:
             print(f"Error in factor exposure: {e}")
             results['analyses']['factor_exposure'] = {'error': str(e)}
         
-        # 4. AI Insights (if requested)
+        # 4. Rebalancing Analysis
+        try:
+            print(f"[{run_id}] Running rebalancing analysis...")
+            rebalancing_results = self._run_rebalancing_analysis(
+                run_id, portfolio_data
+            )
+            results['analyses']['rebalancing'] = rebalancing_results
+        except Exception as e:
+            print(f"Error in rebalancing analysis: {e}")
+            results['analyses']['rebalancing'] = {'error': str(e)}
+        
+        # 5. Style Analysis
+        try:
+            print(f"[{run_id}] Running style analysis...")
+            style_results = self._run_style_analysis(
+                run_id, portfolio_data, stock_data
+            )
+            results['analyses']['style'] = style_results
+        except Exception as e:
+            print(f"Error in style analysis: {e}")
+            results['analyses']['style'] = {'error': str(e)}
+        
+        # 6. AI Insights (if requested)
         if save_ai_insights:
             try:
-                print(f"[{run_id}] Generating AI insights...")
+                print(f"[{run_id}] Checking AI insights...")
                 ai_results = self._run_ai_insights(
                     run_id, portfolio_data, stock_data
                 )
@@ -288,6 +314,77 @@ class ComprehensiveAnalysisRunner:
         )
         
         return factor_results
+    
+    def _run_rebalancing_analysis(
+        self,
+        run_id: str,
+        portfolio_data: Dict
+    ) -> Dict:
+        """Run rebalancing analysis."""
+        weights = portfolio_data.get('weights')
+        if weights is None:
+            return {'error': 'Portfolio weights required'}
+        
+        rebalancing = self.rebalancing_analyzer.analyze(
+            portfolio_weights=weights
+        )
+        
+        # Save to database
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='rebalancing',
+            results=rebalancing,
+            summary={
+                'current_drift': rebalancing.get('current_drift', 0),
+                'recommendation': rebalancing.get('recommendation', '')
+            }
+        )
+        
+        return rebalancing
+    
+    def _run_style_analysis(
+        self,
+        run_id: str,
+        portfolio_data: Dict,
+        stock_data: Optional[pd.DataFrame]
+    ) -> Dict:
+        """Run style analysis."""
+        weights = portfolio_data.get('weights')
+        if weights is None:
+            return {'error': 'Portfolio weights required'}
+        
+        # Get current weights
+        if isinstance(weights, pd.DataFrame):
+            current_weights = weights.iloc[-1] if len(weights) > 0 else pd.Series()
+        else:
+            current_weights = weights
+        
+        # Get stock features
+        if stock_data is None:
+            return {'error': 'Stock data required for style analysis'}
+        
+        # Extract features
+        feature_columns = [c for c in stock_data.columns 
+                          if c not in ['date', 'ticker', 'return', 'sector']]
+        stock_features = stock_data.groupby('ticker')[feature_columns].last()
+        
+        style = self.style_analyzer.analyze(
+            portfolio_weights=current_weights,
+            stock_features=stock_features
+        )
+        
+        # Save to database
+        self.service.save_analysis_result(
+            run_id=run_id,
+            analysis_type='style',
+            results=style,
+            summary={
+                'overall_style': style.get('overall_style', 'unknown'),
+                'growth_value': style.get('growth_value', {}).get('classification', 'unknown')
+            }
+        )
+        
+        return style
     
     def _run_ai_insights(
         self,

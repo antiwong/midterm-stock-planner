@@ -19,116 +19,135 @@ class StyleAnalyzer:
     def analyze(
         self,
         portfolio_weights: pd.Series,  # Ticker -> Weight
-        stock_features: pd.DataFrame,  # Ticker x Feature
-        market_cap_data: Optional[pd.Series] = None  # Ticker -> Market Cap
+        stock_features: pd.DataFrame  # Ticker x Features
     ) -> Dict[str, Any]:
         """
         Analyze portfolio style.
         
         Args:
             portfolio_weights: Portfolio weights
-            stock_features: Stock features (PE, PB, growth rates, etc.)
-            market_cap_data: Market capitalization data
+            stock_features: Stock features (PE, market_cap, etc.)
             
         Returns:
             Dictionary with style analysis
         """
         # Align tickers
         common_tickers = portfolio_weights.index.intersection(stock_features.index)
-        if len(common_tickers) == 0:
-            return {'error': 'No common tickers between weights and features'}
-        
         weights_aligned = portfolio_weights.loc[common_tickers]
         features_aligned = stock_features.loc[common_tickers]
         
         # Normalize weights
         weights_aligned = weights_aligned / weights_aligned.sum()
         
-        results = {
-            'growth_value': {},
-            'size': {},
-            'style_consistency': {},
-            'style_drift': None
-        }
-        
         # Growth vs Value
+        growth_value = self._classify_growth_value(weights_aligned, features_aligned)
+        
+        # Size classification
+        size_class = self._classify_size(weights_aligned, features_aligned)
+        
+        # Style consistency
+        consistency = self._calculate_consistency(weights_aligned, features_aligned)
+        
+        return {
+            'growth_value': growth_value,
+            'size': size_class,
+            'consistency': consistency,
+            'overall_style': self._determine_overall_style(growth_value, size_class)
+        }
+    
+    def _classify_growth_value(
+        self,
+        weights: pd.Series,
+        features: pd.DataFrame
+    ) -> Dict[str, Any]:
+        """Classify growth vs value."""
+        # Check for PE ratio
         pe_col = None
         for col in ['pe_ratio', 'pe', 'price_to_earnings']:
-            if col in features_aligned.columns:
+            if col in features.columns:
                 pe_col = col
                 break
         
         if pe_col:
-            pe_values = features_aligned[pe_col].dropna()
+            pe_values = features[pe_col].dropna()
             if len(pe_values) > 0:
                 # Weighted average PE
-                portfolio_pe = (weights_aligned.loc[pe_values.index] * pe_values).sum()
+                portfolio_pe = (weights.loc[pe_values.index] * pe_values).sum()
+                avg_pe = pe_values.mean()
                 
-                # Classify
-                if portfolio_pe > 25:
-                    growth_value_class = 'Growth'
-                elif portfolio_pe < 15:
-                    growth_value_class = 'Value'
+                if portfolio_pe < avg_pe * 0.8:
+                    classification = 'value'
+                    score = 0.3
+                elif portfolio_pe > avg_pe * 1.2:
+                    classification = 'growth'
+                    score = 0.7
                 else:
-                    growth_value_class = 'Blend'
+                    classification = 'blend'
+                    score = 0.5
                 
-                results['growth_value'] = {
-                    'classification': growth_value_class,
+                return {
+                    'classification': classification,
+                    'score': score,
                     'portfolio_pe': float(portfolio_pe),
-                    'weighted_avg_pe': float(portfolio_pe)
+                    'market_avg_pe': float(avg_pe)
                 }
         
-        # Size (Large vs Small)
-        if market_cap_data is not None:
-            market_caps = market_cap_data.loc[common_tickers].dropna()
-            if len(market_caps) > 0:
+        return {'classification': 'unknown', 'score': 0.5}
+    
+    def _classify_size(
+        self,
+        weights: pd.Series,
+        features: pd.DataFrame
+    ) -> Dict[str, Any]:
+        """Classify large vs small cap."""
+        # Check for market cap
+        mcap_col = None
+        for col in ['market_cap', 'marketcap', 'mcap']:
+            if col in features.columns:
+                mcap_col = col
+                break
+        
+        if mcap_col:
+            mcap_values = features[mcap_col].dropna()
+            if len(mcap_values) > 0:
                 # Weighted average market cap
-                portfolio_market_cap = (weights_aligned.loc[market_caps.index] * market_caps).sum()
+                portfolio_mcap = (weights.loc[mcap_values.index] * mcap_values).sum()
+                median_mcap = mcap_values.median()
                 
-                # Classify (billions)
-                if portfolio_market_cap > 50:
-                    size_class = 'Large Cap'
-                elif portfolio_market_cap > 10:
-                    size_class = 'Mid Cap'
+                if portfolio_mcap > median_mcap * 2:
+                    classification = 'large_cap'
+                elif portfolio_mcap < median_mcap * 0.5:
+                    classification = 'small_cap'
                 else:
-                    size_class = 'Small Cap'
+                    classification = 'mid_cap'
                 
-                results['size'] = {
-                    'classification': size_class,
-                    'portfolio_market_cap_billions': float(portfolio_market_cap / 1e9),
-                    'weighted_avg_market_cap': float(portfolio_market_cap)
+                return {
+                    'classification': classification,
+                    'portfolio_mcap': float(portfolio_mcap),
+                    'median_mcap': float(median_mcap)
                 }
-        else:
-            # Try to infer from features
-            mc_col = None
-            for col in ['market_cap', 'market_capitalization']:
-                if col in features_aligned.columns:
-                    mc_col = col
-                    break
-            
-            if mc_col:
-                market_caps = features_aligned[mc_col].dropna()
-                if len(market_caps) > 0:
-                    portfolio_market_cap = (weights_aligned.loc[market_caps.index] * market_caps).sum()
-                    
-                    if portfolio_market_cap > 50e9:
-                        size_class = 'Large Cap'
-                    elif portfolio_market_cap > 10e9:
-                        size_class = 'Mid Cap'
-                    else:
-                        size_class = 'Small Cap'
-                    
-                    results['size'] = {
-                        'classification': size_class,
-                        'portfolio_market_cap_billions': float(portfolio_market_cap / 1e9)
-                    }
         
-        # Style consistency (how consistent is the style over time)
-        # This would require historical data - placeholder for now
-        results['style_consistency'] = {
-            'growth_value_consistency': 'High',  # Would calculate from history
-            'size_consistency': 'High',
-            'overall_consistency': 'High'
+        return {'classification': 'unknown'}
+    
+    def _calculate_consistency(
+        self,
+        weights: pd.Series,
+        features: pd.DataFrame
+    ) -> Dict[str, float]:
+        """Calculate style consistency over time."""
+        # Simplified - would need time series data
+        return {
+            'consistency_score': 0.8,  # Placeholder
+            'style_drift': 0.1
         }
+    
+    def _determine_overall_style(
+        self,
+        growth_value: Dict,
+        size: Dict
+    ) -> str:
+        """Determine overall style."""
+        gv = growth_value.get('classification', 'blend')
+        sz = size.get('classification', 'mid_cap')
         
-        return results
+        return f"{gv.title()} {sz.replace('_', ' ').title()}"
