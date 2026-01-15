@@ -605,7 +605,14 @@ recommendations = service.get_recommendations(run_id=run_id)
 | ❌ | `src/analysis/domain_analysis.py` |
 | ❌ | `src/analysis/gemini_commentary.py` |
 | ❌ | `src/analytics/ai_insights.py` |
-| ❌ | `src/analytics/manager.py` |
+| ❌ | `src/analytics/analysis_service.py` |
+| ❌ | `src/analytics/performance_attribution.py` |
+| ❌ | `src/analytics/benchmark_comparison.py` |
+| ❌ | `src/analytics/factor_exposure.py` |
+| ❌ | `src/analytics/rebalancing_analysis.py` |
+| ❌ | `src/analytics/style_analysis.py` |
+| ❌ | `src/analytics/comprehensive_analysis.py` |
+| ❌ | `src/analytics/data_loader.py` |
 
 ---
 
