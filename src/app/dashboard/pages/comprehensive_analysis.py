@@ -417,7 +417,109 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
     insights = service.get_all_ai_insights(run_id)
     
     if not insights:
-        st.info("No AI insights found. Generate insights from the AI Insights page.")
+        st.info("No AI insights found. Generate insights using one of the methods below.")
+        
+        # Quick generate button
+        st.markdown("### Quick Generate")
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            risk_profile = st.selectbox(
+                "Risk Profile",
+                ["Conservative", "Moderate", "Aggressive"],
+                key="ai_insights_risk_profile"
+            )
+        
+        with col2:
+            if st.button("🚀 Generate AI Insights", type="primary", use_container_width=True):
+                from ..components.loading import loading_spinner
+                from ..components.errors import ErrorHandler
+                
+                with loading_spinner("Generating AI insights... This may take 1-2 minutes.", show_progress=False):
+                    try:
+                        from src.analytics.ai_insights import AIInsightsGenerator
+                        from ..data import load_run_scores
+                        import pandas as pd
+                        
+                        # Load stock data
+                        scores = load_run_scores(run_id)
+                        if not scores:
+                            st.error("No stock data available for this run")
+                            return
+                        
+                        scores_df = pd.DataFrame(scores)
+                        
+                        # Generate insights
+                        generator = AIInsightsGenerator(save_to_db=True)
+                        
+                        if not generator.is_available:
+                            st.error("AI insights not available. Please check GEMINI_API_KEY configuration.")
+                            return
+                        
+                        # Generate commentary
+                        summary = generator.generate_executive_summary(scores_df.to_dict('records'))
+                        sector_analysis = generator.generate_sector_analysis(scores_df.to_dict('records'))
+                        
+                        # Save to database
+                        if summary:
+                            service.save_ai_insight(
+                                run_id=run_id,
+                                insight_type='commentary',
+                                content=summary,
+                                metadata={'section': 'executive_summary'}
+                            )
+                        
+                        if sector_analysis:
+                            service.save_ai_insight(
+                                run_id=run_id,
+                                insight_type='commentary',
+                                content=sector_analysis,
+                                metadata={'section': 'sector_analysis'}
+                            )
+                        
+                        # Generate recommendations
+                        recommendations = generator.generate_recommendations(
+                            scores_df.to_dict('records'),
+                            risk_profile=risk_profile.lower(),
+                            run_id=run_id
+                        )
+                        
+                        if recommendations:
+                            service.save_ai_insight(
+                                run_id=run_id,
+                                insight_type='recommendations',
+                                content=recommendations,
+                                metadata={'risk_profile': risk_profile.lower()}
+                            )
+                        
+                        st.success("✅ AI insights generated successfully!")
+                        st.rerun()
+                        
+                    except Exception as e:
+                        ErrorHandler.render_error(
+                            e,
+                            error_type='ai_generation_error',
+                            show_traceback=True,
+                            custom_actions=[
+                                "Check GEMINI_API_KEY is configured",
+                                "Verify stock data is available",
+                                "Try generating from AI Insights page instead"
+                            ]
+                        )
+        
+        st.markdown("---")
+        st.markdown("### Alternative Methods")
+        st.markdown("""
+        **Method 1: AI Insights Page**
+        - Navigate to **"🤖 AI Insights"** in the sidebar
+        - Select your run
+        - Go to **"🔮 Generate New"** tab
+        - Click **"🚀 Generate AI Insights"**
+        
+        **Method 2: During Comprehensive Analysis**
+        - Click **"🔄 Run All Analyses"** button above
+        - AI insights will be generated automatically (if enabled)
+        """)
         return
     
     # Group by type
