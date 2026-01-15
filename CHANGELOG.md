@@ -2,6 +2,85 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.9.0] - 2026-01-15
+
+### Added
+
+#### Advanced Analytics Modules
+- **Event-Driven Analysis** (`src/analytics/event_analysis.py`)
+  - Analyze portfolio performance around Fed meetings, earnings announcements, and macro data releases
+  - Event impact analysis with configurable lookback/lookforward windows
+  - Benchmark comparison for event periods
+  - Win rate and average return statistics by event type
+
+- **Tax Optimization** (`src/analytics/tax_optimization.py`)
+  - Tax-loss harvesting suggestions with thresholds and portfolio limits
+  - Wash sale detection (30-day window)
+  - Tax-efficient rebalancing recommendations
+  - Tax efficiency scoring based on turnover and holding periods
+
+- **Monte Carlo Simulation** (`src/analytics/monte_carlo.py`)
+  - Portfolio return simulation (bootstrap, normal, t-distribution methods)
+  - Value at Risk (VaR) and Conditional VaR at multiple confidence levels
+  - Confidence intervals (90%, 95%, 99%)
+  - Probability metrics (positive return, exceed thresholds, loss scenarios)
+  - Stress testing scenarios
+
+- **Turnover & Churn Analysis** (`src/analytics/turnover_analysis.py`)
+  - Portfolio turnover calculation (sum of abs changes, one-way, two-way methods)
+  - Churn rate analysis (position change frequency)
+  - Position holding period analysis with distribution
+  - Position stability metrics (top N position changes)
+
+- **Earnings Calendar Integration** (`src/analytics/earnings_calendar.py`)
+  - Fetch earnings dates from yfinance
+  - Portfolio earnings exposure analysis
+  - Earnings impact analysis on individual stocks
+  - Portfolio-wide earnings impact aggregation
+
+- **Real-Time Monitoring** (`src/analytics/realtime_monitoring.py`)
+  - Portfolio alert system (drawdown, price movements, volume spikes, concentration)
+  - Daily portfolio summary with key metrics
+  - Performance metrics tracking (30-day periods)
+  - Benchmark underperformance alerts
+
+#### Dashboard GUI Integration
+- **6 New Dashboard Pages** (`src/app/dashboard/pages/`)
+  - Event Analysis page with event performance charts
+  - Tax Optimization page with harvesting suggestions
+  - Monte Carlo page with risk metrics and VaR
+  - Turnover Analysis page with churn and holding periods
+  - Earnings Calendar page with exposure and impact analysis
+  - Real-Time Monitoring page with alerts and daily summaries
+
+- **Enhanced Dashboard UX** (`src/app/dashboard/components/`)
+  - Loading indicators with progress bars and stage progress
+  - Improved error messages with actionable guidance
+  - Keyboard shortcuts infrastructure (R=refresh, N=new analysis, etc.)
+  - Operation feedback with timing
+  - Styled loading cards and progress indicators
+
+- **Navigation Updates**
+  - New "Advanced Analytics" section in sidebar
+  - All 6 new pages accessible from navigation
+  - Proper routing and state management
+
+#### Integration
+- All modules integrated into `ComprehensiveAnalysisRunner`
+- Results saved to database via `AnalysisService`
+- Error handling and data validation included
+- All modules tested and importing successfully
+
+### Changed
+- Updated `ComprehensiveAnalysisRunner` to include all 6 new analysis modules
+- Enhanced dashboard navigation with Advanced Analytics section
+- Improved error handling throughout dashboard
+
+### Dependencies
+- No new dependencies required (uses existing pandas, numpy, scipy, yfinance)
+
+---
+
 ## [3.8.0] - 2026-01-15
 
 ### Added

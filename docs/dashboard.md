@@ -37,6 +37,19 @@ Independent tools for specific tasks:
 | 📋 **Watchlist Manager** | Create and manage watchlists |
 | 🔎 **Stock Explorer** | Individual stock analysis |
 | 📈 **Compare Runs** | Side-by-side comparison of two runs |
+| 🔀 **Advanced Comparison** | Multiple runs, time periods, factor weights comparison |
+
+### Advanced Analytics (NEW)
+Advanced analysis modules with dedicated pages:
+
+| Page | Description |
+|------|-------------|
+| 📅 **Event Analysis** | Analyze portfolio performance around Fed meetings, earnings, macro data |
+| 💰 **Tax Optimization** | Tax-loss harvesting, wash sale detection, tax-efficient rebalancing |
+| 🎲 **Monte Carlo** | Portfolio risk simulation, VaR, CVaR, confidence intervals |
+| 🔄 **Turnover Analysis** | Portfolio turnover, churn rate, holding periods, position stability |
+| 📅 **Earnings Calendar** | Earnings exposure, upcoming earnings, earnings impact analysis |
+| ⚡ **Real-Time Monitoring** | Portfolio alerts, daily summaries, performance tracking |
 
 ### Utilities
 System utilities and configuration:
