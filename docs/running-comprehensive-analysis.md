@@ -167,8 +167,17 @@ The system automatically validates data before running:
 - Verify the run ID is correct
 - Try specifying `--run-dir` manually
 
-### "Benchmark comparison not yet calculated"
-**Solution**: Click "🔄 Run All Analyses" button in Comprehensive Analysis page
+### "Benchmark comparison not yet calculated" or "Style analysis not yet calculated"
+**Solution**: 
+1. Click "🔄 Run All Analyses" button in Comprehensive Analysis page
+2. If still showing, check data completeness:
+   - **Benchmark**: Requires `benchmark.csv` file
+   - **Style**: Requires fundamental data (PE, PB, market cap)
+3. For missing fundamental data:
+   ```bash
+   python scripts/download_fundamentals.py --watchlist <watchlist>
+   ```
+   Then re-run comprehensive analysis
 
 ### "Data loading error"
 **Solution**:
@@ -176,12 +185,30 @@ The system automatically validates data before running:
 - Check file names match expected format
 - Ensure data covers the required date range
 
-### "Analysis failed"
+### "Analysis failed" or "Analysis skipped"
 **Solution**:
 - Check error message for specific issue
-- Verify data completeness
+- Verify data completeness (see data requirements below)
+- For missing fundamental data:
+  ```bash
+  python scripts/download_fundamentals.py --watchlist <watchlist>
+  python scripts/analyze_portfolio.py --run-id <run_id>
+  ```
 - Try running individual analysis modules
 - Check configuration settings
+
+### Missing Fundamental Data (for Style Analysis)
+**Symptoms**: Style analysis shows "not yet calculated" even after running
+**Solution**:
+1. Download fundamentals:
+   ```bash
+   python scripts/download_fundamentals.py --watchlist jan_26
+   ```
+2. Re-run portfolio enrichment:
+   ```bash
+   python scripts/analyze_portfolio.py --run-id <run_id>
+   ```
+3. Re-run comprehensive analysis from dashboard
 
 ## Advanced Options
 
