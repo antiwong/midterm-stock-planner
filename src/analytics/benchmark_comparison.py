@@ -93,21 +93,26 @@ class BenchmarkComparator:
             return {'error': 'No overlapping dates between portfolio and benchmark'}
         
         # Align both series to common dates
-        # Create mappings from normalized dates to original indices
-        portfolio_date_map = pd.Series(portfolio_index, index=portfolio_index_norm)
-        benchmark_date_map = pd.Series(benchmark_index, index=benchmark_index_norm)
+        # Find which original indices correspond to common normalized dates
+        portfolio_mask = portfolio_index_norm.isin(common_dates_norm)
+        benchmark_mask = benchmark_index_norm.isin(common_dates_norm)
         
-        # Get original indices for common dates
-        portfolio_common_orig = portfolio_date_map.loc[common_dates_norm].values
-        benchmark_common_orig = benchmark_date_map.loc[common_dates_norm].values
+        # Get the data using original indices
+        portfolio_aligned = portfolio_returns.loc[portfolio_mask].copy()
+        benchmark_aligned = benchmark_returns.loc[benchmark_mask].copy()
         
-        # Align using original indices, then set normalized index
-        portfolio_aligned = portfolio_returns.loc[portfolio_common_orig].copy()
-        benchmark_aligned = benchmark_returns.loc[benchmark_common_orig].copy()
+        # Get the normalized dates for the aligned data
+        portfolio_aligned_norm_dates = portfolio_index_norm[portfolio_mask]
+        benchmark_aligned_norm_dates = benchmark_index_norm[benchmark_mask]
         
-        # Set both to use normalized (timezone-naive) common dates
-        portfolio_aligned.index = common_dates_norm
-        benchmark_aligned.index = common_dates_norm
+        # Create a mapping to align both to the same common dates
+        # Use the normalized dates as the new index
+        portfolio_aligned.index = portfolio_aligned_norm_dates
+        benchmark_aligned.index = benchmark_aligned_norm_dates
+        
+        # Reindex both to common_dates_norm to ensure exact alignment
+        portfolio_aligned = portfolio_aligned.reindex(common_dates_norm)
+        benchmark_aligned = benchmark_aligned.reindex(common_dates_norm)
         
         common_dates = common_dates_norm
         
