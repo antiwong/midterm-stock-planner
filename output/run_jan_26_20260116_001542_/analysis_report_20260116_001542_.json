@@ -1,9 +1,9 @@
 {
   "run_id": "20260116_001542_454cf07a",
   "run_name": "jan 2026 - Backtest 2026-01-16 00:15",
-  "generated_at": "2026-01-16T00:15:57.153706",
+  "generated_at": "2026-01-16T09:05:16.541993",
   "workflow_steps": {
-    "data_validation": true,
+    "data_validation": false,
     "portfolio_enrichment": true,
     "vertical_analysis": true,
     "horizontal_analysis": true
@@ -82,20 +82,7 @@
       "Consumer Cyclical",
       "Energy"
     ],
-    "generated_at": "2026-01-16T00:15:56.502641"
-  },
-  "data_validation": {
-    "status": "FAILED",
-    "coverage_pct": 75.0,
-    "available_tickers": 6,
-    "missing_tickers": 2,
-    "errors": [
-      "2 tickers missing from price data"
-    ],
-    "warnings": [
-      "Data starts at 2015-01-02, but 2015-01-01 was requested",
-      "Data ends at 2025-12-30, but 2026-01-16 was requested"
-    ]
+    "generated_at": "2026-01-16T09:05:15.819217"
   },
   "portfolio": {
     "n_holdings": 6,

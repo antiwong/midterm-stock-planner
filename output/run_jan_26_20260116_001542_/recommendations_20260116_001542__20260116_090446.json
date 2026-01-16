@@ -1,0 +1,162 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "STEM",
+          "weight": 30,
+          "rationale": "High domain score and quality score in the Utilities sector, a defensive sector. Lowest volatility of all candidates."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 25,
+          "rationale": "Precious Metals provides diversification and acts as a safe haven asset. Very low volatility."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 20,
+          "rationale": "Energy with positive domain score and relatively low volatility compared to tech and consumer discretionary."
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 15,
+          "rationale": "Communication Services sector with positive domain and relatively low volatility.  Provides some growth potential."
+        },
+        {
+          "ticker": "AMD",
+          "weight": 10,
+          "rationale": "Technology sector with positive domain and relatively low volatility.  Provides some growth potential."
+        }
+      ],
+      "expected_return": {
+        "low": 5,
+        "mid": 8,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "8-12%",
+        "max_drawdown": "5-10%",
+        "key_risks": [
+          "Unexpected downturn in utilities sector",
+          "Sharp drop in precious metals prices",
+          "Interest rate hikes negatively impacting defensive stocks"
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "15-20%",
+      "holdings": [
+        {
+          "ticker": "STEM",
+          "weight": 20,
+          "rationale": "Utilities sector anchor for stability."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 15,
+          "rationale": "Precious Metals for diversification and inflation hedge."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 15,
+          "rationale": "Energy sector exposure."
+        },
+        {
+          "ticker": "AMD",
+          "weight": 20,
+          "rationale": "Technology sector growth exposure."
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 15,
+          "rationale": "Communication Services sector with moderate growth potential."
+        },
+        {
+          "ticker": "AMZN",
+          "weight": 15,
+          "rationale": "Consumer Cyclical sector for exposure to economic growth."
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 16
+      },
+      "risk_assessment": {
+        "volatility": "15-20%",
+        "max_drawdown": "15-25%",
+        "key_risks": [
+          "Economic slowdown impacting cyclical sectors",
+          "Technology sector underperformance",
+          "Inflation eroding returns"
+        ]
+      },
+      "rebalance_frequency": "Semi-Annually"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "25-30%",
+      "holdings": [
+        {
+          "ticker": "AMD",
+          "weight": 30,
+          "rationale": "Highest growth potential among the available Technology stocks."
+        },
+        {
+          "ticker": "AMZN",
+          "weight": 25,
+          "rationale": "High growth potential in the Consumer Cyclical sector."
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 20,
+          "rationale": "Communication Services sector, solid growth and potential."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 10,
+          "rationale": "Energy sector exposure, high reward with the risk of higher volatility."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 10,
+          "rationale": "Precious Metals as a small hedge against market downturns."
+        },
+        {
+          "ticker": "STEM",
+          "weight": 5,
+          "rationale": "Utilities for minimal downside dampening. This is a very small allocation"
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 18,
+        "high": 25
+      },
+      "risk_assessment": {
+        "volatility": "20-30%",
+        "max_drawdown": "30-40%",
+        "key_risks": [
+          "Market corrections",
+          "Interest rate risk",
+          "Unexpected technology sector disruption",
+          "Geopolitical risks negatively affecting high-growth stocks"
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "overall_assessment": "The portfolio recommendations are based on the limited data provided. The historical backtest data is unreliable due to 0 volatility, this will be important to verify the true volatility when implemented. The risk assessments are estimates and could vary based on real market conditions. Investors should carefully consider their own risk tolerance and financial goals before making any investment decisions."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"STEM\", \"weight\": 30, \"rationale\": \"High domain score and quality score in the Utilities sector, a defensive sector. Lowest volatility of all candidates.\"},\n      {\"ticker\": \"SLV\", \"weight\": 25, \"rationale\": \"Precious Metals provides diversification and acts as a safe haven asset. Very low volatility.\"},\n      {\"ticker\": \"NLR\", \"weight\": 20, \"rationale\": \"Energy with positive domain score and relatively low volatility compared to tech and consumer discretionary.\"},\n      {\"ticker\": \"GOOG\", \"weight\": 15, \"rationale\": \"Communication Services sector with positive domain and relatively low volatility.  Provides some growth potential.\"},\n      {\"ticker\": \"AMD\", \"weight\": 10, \"rationale\": \"Technology sector with positive domain and relatively low volatility.  Provides some growth potential.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 5,\n      \"mid\": 8,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"8-12%\",\n      \"max_drawdown\": \"5-10%\",\n      \"key_risks\": [\"Unexpected downturn in utilities sector\", \"Sharp drop in precious metals prices\", \"Interest rate hikes negatively impacting defensive stocks\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"15-20%\",\n    \"holdings\": [\n      {\"ticker\": \"STEM\", \"weight\": 20, \"rationale\": \"Utilities sector anchor for stability.\"},\n      {\"ticker\": \"SLV\", \"weight\": 15, \"rationale\": \"Precious Metals for diversification and inflation hedge.\"},\n      {\"ticker\": \"NLR\", \"weight\": 15, \"rationale\": \"Energy sector exposure.\"},\n      {\"ticker\": \"AMD\", \"weight\": 20, \"rationale\": \"Technology sector growth exposure.\"},\n      {\"ticker\": \"GOOG\", \"weight\": 15, \"rationale\": \"Communication Services sector with moderate growth potential.\"},\n      {\"ticker\": \"AMZN\", \"weight\": 15, \"rationale\": \"Consumer Cyclical sector for exposure to economic growth.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 16\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"15-20%\",\n      \"max_drawdown\": \"15-25%\",\n      \"key_risks\": [\"Economic slowdown impacting cyclical sectors\", \"Technology sector underperformance\", \"Inflation eroding returns\"]\n    },\n    \"rebalance_frequency\": \"Semi-Annually\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"25-30%\",\n    \"holdings\": [\n      {\"ticker\": \"AMD\", \"weight\": 30, \"rationale\": \"Highest growth potential among the available Technology stocks.\"},\n      {\"ticker\": \"AMZN\", \"weight\": 25, \"rationale\": \"High growth potential in the Consumer Cyclical sector.\"},\n      {\"ticker\": \"GOOG\", \"weight\": 20, \"rationale\": \"Communication Services sector, solid growth and potential.\"},\n      {\"ticker\": \"NLR\", \"weight\": 10, \"rationale\": \"Energy sector exposure, high reward with the risk of higher volatility.\"},\n      {\"ticker\": \"SLV\", \"weight\": 10, \"rationale\": \"Precious Metals as a small hedge against market downturns.\"},\n      {\"ticker\": \"STEM\", \"weight\": 5, \"rationale\": \"Utilities for minimal downside dampening. This is a very small allocation\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 18,\n      \"high\": 25\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"20-30%\",\n      \"max_drawdown\": \"30-40%\",\n      \"key_risks\": [\"Market corrections\", \"Interest rate risk\", \"Unexpected technology sector disruption\", \"Geopolitical risks negatively affecting high-growth stocks\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"overall_assessment\": \"The portfolio recommendations are based on the limited data provided. The historical backtest data is unreliable due to 0 volatility, this will be important to verify the true volatility when implemented. The risk assessments are estimates and could vary based on real market conditions. Investors should carefully consider their own risk tolerance and financial goals before making any investment decisions.\"\n}\n```",
+  "generated_at": "2026-01-16T09:04:46.306286"
+}
