@@ -2,6 +2,51 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.5] - 2026-01-17
+
+### Added
+
+#### Watchlist Management
+- **Automated Validation & Auto-Fix**: New "Validate & Fix" tab in Watchlist Manager
+  - Validates all symbols in watchlists
+  - Automatically fixes format issues (BRK.B → BRK-B)
+  - Removes delisted/acquired symbols (ATVI, SPLK, PXD)
+  - Removes invalid symbols with no data
+  - One-click auto-fix with detailed results
+- **Enhanced Tooltips**: Added tooltips to Stock Explorer and AI Insights pages
+  - Tooltips for search, filters, score ranges
+  - Tooltips for AI generation buttons and risk profiles
+  - Comprehensive tooltip system now covers all major pages
+
+#### Scheduled Updates
+- **Scheduled Updates Tab**: New tab in Settings for automated data updates
+  - Configure automatic price data updates (Daily/Weekly/Monthly)
+  - Configure automatic benchmark updates
+  - Set preferred update time
+  - Manual update buttons for immediate updates
+  - Reminder about application needing to be running
+
+#### Export Enhancements
+- **Enhanced Export Options**: Improved export functionality
+  - Option to include/exclude charts in exports
+  - Better formatting and customization
+  - Additional tooltips for export options
+
+#### UI Polish
+- **Quick Navigation**: Added "Go to Watchlist Manager" button from failed symbols display
+- **Better Guidance**: Enhanced validation tool with step-by-step instructions
+- **Improved Tooltips**: Added tooltips for scheduled updates, validation, and export customization
+
+### Changed
+
+#### Watchlist Manager
+- **Validation Tab**: New dedicated tab for watchlist validation and auto-fix
+- **Better Instructions**: Clear step-by-step guidance for validation process
+
+#### Settings Page
+- **New Tab**: Added "Scheduled Updates" tab for automated data management
+- **Manual Updates**: Quick access to manual price and benchmark updates
+
 ## [3.10.4] - 2026-01-17
 
 ### Added
