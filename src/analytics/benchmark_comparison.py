@@ -72,28 +72,28 @@ class BenchmarkComparator:
         benchmark_returns = self.get_benchmark_data(benchmark_symbol, start_date, end_date)
         
         # Normalize timezones before alignment
-        # Portfolio returns may be timezone-naive, benchmark may be timezone-aware
+        # Portfolio returns may be timezone-naive, benchmark may be timezone-aware (from yfinance)
         portfolio_index = portfolio_returns.index
         benchmark_index = benchmark_returns.index
         
-        # Remove timezone from both indices for comparison
+        # Normalize both indices to timezone-naive for comparison
         if hasattr(portfolio_index, 'tz') and portfolio_index.tz is not None:
-            portfolio_index_normalized = portfolio_index.tz_localize(None)
+            portfolio_index_norm = portfolio_index.tz_localize(None)
         else:
-            portfolio_index_normalized = portfolio_index
+            portfolio_index_norm = portfolio_index
         
         if hasattr(benchmark_index, 'tz') and benchmark_index.tz is not None:
-            benchmark_index_normalized = benchmark_index.tz_localize(None)
+            benchmark_index_norm = benchmark_index.tz_localize(None)
         else:
-            benchmark_index_normalized = benchmark_index
+            benchmark_index_norm = benchmark_index
         
-        # Align dates using normalized indices
-        common_dates_normalized = portfolio_index_normalized.intersection(benchmark_index_normalized)
-        if len(common_dates_normalized) == 0:
+        # Find common dates using normalized indices
+        common_dates_norm = portfolio_index_norm.intersection(benchmark_index_norm)
+        if len(common_dates_norm) == 0:
             return {'error': 'No overlapping dates between portfolio and benchmark'}
         
         # Align both series to common dates
-        # Create a mapping from normalized dates to original portfolio indices
+        # Create mappings from normalized dates to original indices
         portfolio_date_map = pd.Series(portfolio_index, index=portfolio_index_norm)
         benchmark_date_map = pd.Series(benchmark_index, index=benchmark_index_norm)
         
