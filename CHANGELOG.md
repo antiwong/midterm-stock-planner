@@ -2,6 +2,93 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.11.0] - 2026-01-17
+
+### Added
+
+#### Performance & Reliability
+- **Retry Logic System**: Comprehensive retry utilities for transient failures
+  - `retry_on_failure` decorator with exponential backoff
+  - Pre-configured retry strategies (network, API, database)
+  - Context manager for retryable operations
+  - Integrated into price downloads
+- **Enhanced Data Validation**: Pre-flight checks and quality metrics
+  - `DataQualityChecker` class for comprehensive data quality assessment
+  - Price, benchmark, and fundamentals data quality checks
+  - Overall quality scoring
+  - `validate_before_analysis` pre-flight validation
+- **Data Quality Dashboard**: New dedicated page for data quality monitoring
+  - Overall quality score display
+  - Detailed breakdown by data type (price, benchmark, fundamentals)
+  - Issue tracking and actionable suggestions
+  - Quick action buttons for data updates
+
+#### User Experience Enhancements
+- **Global Search**: Search across all pages from sidebar
+  - Search runs, stocks, and watchlists
+  - Quick navigation to results
+  - Real-time search results
+- **Notification System**: In-app notifications with bell icon
+  - Notification center page
+  - Notification categories (info, success, warning, error)
+  - Mark as read/unread functionality
+  - Notification history
+  - Bell icon in sidebar with unread count
+- **Enhanced Keyboard Shortcuts**: Expanded from 9 to 17 shortcuts
+  - New shortcuts: C (Comprehensive Analysis), I (AI Insights), E (Stock Explorer)
+  - New shortcuts: T (Purchase Triggers), M (Portfolio Analysis)
+  - New shortcuts: X (Export), F (Filter), U (Update), V (Validate)
+  - Enhanced shortcut help documentation
+- **Dashboard Customization**: Customizable dashboard layout
+  - 4 presets: Analyst, Executive, Trader, Custom
+  - Widget selection and ordering
+  - Save and restore configurations
+  - Integrated into Settings page
+
+#### Advanced Features
+- **Multi-Portfolio Comparison Enhancements**:
+  - Performance attribution comparison
+  - Enhanced benchmarking capabilities
+  - Export comparison results
+- **Bulk Export Capabilities**:
+  - Select multiple runs for export
+  - ZIP export with all run files
+  - Enhanced export options (ZIP with all formats)
+  - Chart inclusion toggle
+- **Report Scheduling**: Schedule automatic report generation
+  - Daily/weekly/monthly scheduling
+  - Time selection
+  - Schedule management in report templates
+
+#### Performance Monitoring
+- **Query Performance Tracking**: Real-time database query timing
+  - Actual query performance measurement
+  - Slow query detection and recommendations
+  - Performance status indicators
+- **Performance Trends**: Track performance over time
+  - Page load time tracking
+  - Execution time trends
+  - Database performance trends
+
+### Changed
+
+#### Performance
+- **Price Downloads**: Integrated retry logic for network failures
+- **Database Queries**: Enhanced performance monitoring with actual timing
+- **Data Validation**: Pre-flight checks before analysis execution
+
+#### User Interface
+- **Sidebar**: Added global search and notification bell
+- **Export Options**: Enhanced with ZIP format and chart inclusion toggle
+- **Settings Page**: Added Dashboard Customization tab
+
+### Fixed
+
+#### UI/UX
+- Fixed duplicate element key error in Watchlist Manager
+- Improved error categorization in price downloads
+- Enhanced error messages with actionable guidance
+
 ## [3.10.6] - 2026-01-17
 
 ### Fixed
