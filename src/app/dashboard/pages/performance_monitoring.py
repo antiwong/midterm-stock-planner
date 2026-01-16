@@ -231,21 +231,60 @@ def _render_database_performance():
                 stats_df = pd.DataFrame(table_stats)
                 st.dataframe(stats_df, use_container_width=True, hide_index=True)
         
-        # Query performance (example)
+        # Query performance tracking
         st.markdown("---")
         st.markdown("### Query Performance")
         st.info("💡 Database queries are typically fast (< 100ms). If queries are slow, consider adding indexes.")
         
-        # Example query times
-        example_queries = [
-            {"query": "SELECT runs", "duration_ms": 15.2, "rows": 25},
-            {"query": "SELECT analysis_results", "duration_ms": 45.8, "rows": 120},
-            {"query": "SELECT ai_insights", "duration_ms": 32.1, "rows": 45},
+        # Track actual query performance
+        query_times = []
+        
+        # Test common queries
+        import time
+        from src.analytics.models import Run, StockScore
+        
+        test_queries = [
+            ("Load Runs", lambda: db.get_session().query(Run).limit(100).all()),
+            ("Load Scores", lambda: db.get_session().query(StockScore).limit(100).all()),
+            ("Count Runs", lambda: db.get_session().query(Run).count()),
+            ("Count Scores", lambda: db.get_session().query(StockScore).count()),
         ]
         
-        queries_df = pd.DataFrame(example_queries)
-        queries_df.columns = ['Query', 'Duration (ms)', 'Rows Returned']
-        st.dataframe(queries_df, use_container_width=True, hide_index=True)
+        for query_name, query_func in test_queries:
+            try:
+                start = time.time()
+                result = query_func()
+                duration_ms = (time.time() - start) * 1000
+                
+                if hasattr(result, '__len__'):
+                    rows = len(result)
+                elif isinstance(result, (int, float)):
+                    rows = result
+                else:
+                    rows = 1
+                
+                query_times.append({
+                    "Query": query_name,
+                    "Duration (ms)": f"{duration_ms:.2f}",
+                    "Rows": rows,
+                    "Status": "✅ Fast" if duration_ms < 100 else "⚠️ Slow" if duration_ms < 500 else "❌ Very Slow"
+                })
+            except Exception as e:
+                query_times.append({
+                    "Query": query_name,
+                    "Duration (ms)": "Error",
+                    "Rows": 0,
+                    "Status": f"❌ {str(e)[:30]}"
+                })
+        
+        if query_times:
+            queries_df = pd.DataFrame(query_times)
+            st.dataframe(queries_df, use_container_width=True, hide_index=True)
+            
+            # Performance recommendations
+            slow_queries = [q for q in query_times if "Slow" in q.get("Status", "")]
+            if slow_queries:
+                st.warning(f"⚠️ {len(slow_queries)} queries are slow. Consider optimizing database indexes.")
         
     except Exception as e:
         st.error(f"Error accessing database: {e}")

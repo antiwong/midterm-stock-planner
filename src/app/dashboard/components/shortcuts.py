@@ -10,6 +10,7 @@ from typing import Dict, Callable, Optional
 
 # Define keyboard shortcuts
 SHORTCUTS = {
+    # Navigation
     'r': 'Refresh page',
     'n': 'New analysis',
     'o': 'Overview',
@@ -18,7 +19,17 @@ SHORTCUTS = {
     'w': 'Watchlist manager',
     'd': 'Documentation',
     's': 'Settings',
+    'c': 'Comprehensive Analysis',
+    'i': 'AI Insights',
+    'e': 'Stock Explorer',
+    't': 'Purchase Triggers',
+    'm': 'Portfolio Analysis',
     '?': 'Show shortcuts',
+    # Actions
+    'x': 'Export data',
+    'f': 'Filter/Search',
+    'u': 'Update data',
+    'v': 'Validate data',
 }
 
 
@@ -33,6 +44,11 @@ def render_shortcuts_help():
     | `A` | Run Analysis |
     | `P` | Portfolio Builder |
     | `W` | Watchlist Manager |
+    | `C` | Comprehensive Analysis |
+    | `I` | AI Insights |
+    | `E` | Stock Explorer |
+    | `T` | Purchase Triggers |
+    | `M` | Portfolio Analysis |
     | `D` | Documentation |
     | `S` | Settings |
     
@@ -41,6 +57,10 @@ def render_shortcuts_help():
     |-----|--------|
     | `R` | Refresh current page |
     | `N` | Start new analysis |
+    | `X` | Export data |
+    | `F` | Open filter/search |
+    | `U` | Update data |
+    | `V` | Validate data |
     | `?` | Show this help dialog |
     
     **Tips:**
@@ -69,6 +89,11 @@ def handle_shortcut(key: str) -> Optional[str]:
         'a': 'run_analysis',
         'p': 'portfolio_builder',
         'w': 'watchlist_manager',
+        'c': 'comprehensive_analysis',
+        'i': 'ai_insights',
+        'e': 'stock_explorer',
+        't': 'purchase_triggers',
+        'm': 'portfolio_analysis',
         'd': 'documentation',
         's': 'settings',
     }
@@ -105,7 +130,7 @@ def inject_shortcuts_script():
         }
         
         const key = e.key.toLowerCase();
-        const shortcuts = ['r', 'n', 'o', 'a', 'p', 'w', 'd', 's', '?'];
+        const shortcuts = ['r', 'n', 'o', 'a', 'p', 'w', 'c', 'i', 'e', 't', 'm', 'd', 's', 'x', 'f', 'u', 'v', '?'];
         
         if (shortcuts.includes(key)) {
             // Store in session storage for Python to read
