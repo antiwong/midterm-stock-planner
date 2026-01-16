@@ -726,13 +726,13 @@ def inject_custom_css():
     
     .stTabs [aria-selected="true"] {{
         background: {COLORS['primary']} !important;
-        color: {COLORS['dark']} !important;
+        color: {text_color if dark_mode else COLORS['dark']} !important;
     }}
     
     /* Metrics */
     [data-testid="stMetricValue"] {{
         font-weight: 700;
-        color: {COLORS['dark']};
+        color: {text_color};
     }}
     
     [data-testid="stMetricDelta"] svg {{
@@ -743,27 +743,288 @@ def inject_custom_css():
     .stCodeBlock {{
         font-family: 'JetBrains Mono', monospace;
         border-radius: 8px;
+        background-color: {card_bg if dark_mode else '#f8f9fa'} !important;
+        color: {text_color} !important;
+        border: 1px solid {card_border} !important;
     }}
     
     /* Alerts */
     .stAlert {{
         border-radius: 10px;
         border-left-width: 4px;
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
     }}
     
-    /* Selectbox */
-    .stSelectbox > div > div {{
+    /* Info boxes */
+    div[data-testid="stAlert"]:has([data-baseweb="icon"] svg[data-testid="InfoIcon"]) {{
+        background-color: {card_bg if dark_mode else '#e8f4f8'} !important;
+    }}
+    
+    /* Success boxes */
+    div[data-testid="stAlert"]:has([data-baseweb="icon"] svg[data-testid="CheckCircleIcon"]) {{
+        background-color: {card_bg if dark_mode else '#d4edda'} !important;
+    }}
+    
+    /* Warning boxes */
+    div[data-testid="stAlert"]:has([data-baseweb="icon"] svg[data-testid="WarningIcon"]) {{
+        background-color: {card_bg if dark_mode else '#fff3cd'} !important;
+    }}
+    
+    /* Error boxes */
+    div[data-testid="stAlert"]:has([data-baseweb="icon"] svg[data-testid="ErrorIcon"]) {{
+        background-color: {card_bg if dark_mode else '#f8d7da'} !important;
+    }}
+    
+    /* Input Widgets - Dark Mode Support */
+    {"/* Dark mode input styling */" if dark_mode else "/* Light mode input styling */"}
+    
+    /* Text Input */
+    .stTextInput > div > div > input {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
         border-radius: 8px;
+    }}
+    
+    .stTextInput > div > div > input:focus {{
+        border-color: {primary_color} !important;
+        box-shadow: 0 0 0 2px {primary_color}33 !important;
+    }}
+    
+    /* Text Area */
+    .stTextArea > div > div > textarea {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    .stTextArea > div > div > textarea:focus {{
+        border-color: {primary_color} !important;
+        box-shadow: 0 0 0 2px {primary_color}33 !important;
     }}
     
     /* Number Input */
     .stNumberInput > div > div > input {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    .stNumberInput > div > div > input:focus {{
+        border-color: {primary_color} !important;
+        box-shadow: 0 0 0 2px {primary_color}33 !important;
+    }}
+    
+    /* Selectbox */
+    .stSelectbox > div > div {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    .stSelectbox > div > div:focus-within {{
+        border-color: {primary_color} !important;
+        box-shadow: 0 0 0 2px {primary_color}33 !important;
+    }}
+    
+    /* Selectbox dropdown */
+    .stSelectbox [data-baseweb="select"] {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* Multiselect */
+    .stMultiSelect > div > div {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    /* Date Input */
+    .stDateInput > div > div > input {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    /* Time Input */
+    .stTimeInput > div > div > input {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
         border-radius: 8px;
     }}
     
     /* Slider */
     .stSlider > div > div > div {{
-        background: {COLORS['primary']};
+        background: {primary_color};
+    }}
+    
+    /* Slider track and thumb */
+    .stSlider > div > div > div[data-testid="stThumbValue"] {{
+        color: {text_color} !important;
+    }}
+    
+    /* Checkbox */
+    .stCheckbox > label {{
+        color: {text_color} !important;
+    }}
+    
+    /* Radio buttons */
+    .stRadio > label {{
+        color: {text_color} !important;
+    }}
+    
+    /* Toggle/Switch */
+    .stToggle > label {{
+        color: {text_color} !important;
+    }}
+    
+    /* File Uploader */
+    .stFileUploader > div {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        border-color: {card_border} !important;
+        border-radius: 8px;
+    }}
+    
+    /* All input labels */
+    label {{
+        color: {text_color} !important;
+    }}
+    
+    /* Small input fields - ensure they're not colored */
+    input[type="text"][size],
+    input[type="number"][size],
+    input[type="text"].small,
+    input[type="number"].small {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+    }}
+    
+    /* All input elements - catch any we missed (except buttons and checkboxes) */
+    input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="file"]):not([type="range"]) {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+        border-color: {card_border} !important;
+    }}
+    
+    /* BaseWeb input containers - more specific targeting */
+    div[data-baseweb="input"] input,
+    div[data-baseweb="input"] textarea,
+    div[data-baseweb="input"] > div > input {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* Select dropdown options */
+    ul[role="listbox"],
+    li[role="option"],
+    div[data-baseweb="popover"] {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* Dataframe/Table styling */
+    .stDataFrame {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+    }}
+    
+    .stDataFrame table {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame th {{
+        background-color: {card_bg if dark_mode else '#f8f9fa'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame td {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame tr:hover {{
+        background-color: {card_bg if dark_mode else '#f8f9fa'} !important;
+    }}
+    
+    /* Expander content */
+    .streamlit-expanderContent {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame table {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame th {{
+        background-color: {card_bg if dark_mode else '#f8f9fa'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .stDataFrame td {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* Expander */
+    .streamlit-expanderHeader {{
+        background-color: {card_bg if dark_mode else '#ffffff'} !important;
+        color: {text_color} !important;
+    }}
+    
+    .streamlit-expanderContent {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+    
+    /* Tabs */
+    .stTabs [data-baseweb="tab"] {{
+        color: {text_color} !important;
+    }}
+    
+    .stTabs [aria-selected="true"] {{
+        color: {primary_color} !important;
+        border-bottom-color: {primary_color} !important;
+    }}
+    
+    /* Markdown text */
+    .stMarkdown {{
+        color: {text_color} !important;
+    }}
+    
+    .stMarkdown p, .stMarkdown li, .stMarkdown td, .stMarkdown th {{
+        color: {text_color} !important;
+    }}
+    
+    /* Metric labels and values */
+    [data-testid="stMetricLabel"] {{
+        color: {muted_color} !important;
+    }}
+    
+    [data-testid="stMetricValue"] {{
+        color: {text_color} !important;
+    }}
+    
+    [data-testid="stMetricDelta"] {{
+        color: {text_color} !important;
+    }}
+    
+    /* Divider */
+    hr {{
+        border: none;
+        height: 1px;
+        background: {card_border};
+        margin: 1.25rem 0;
     }}
     
     /* Divider */
@@ -781,17 +1042,17 @@ def inject_custom_css():
     }}
     
     ::-webkit-scrollbar-track {{
-        background: {COLORS['light']};
+        background: {bg_color};
         border-radius: 4px;
     }}
     
     ::-webkit-scrollbar-thumb {{
-        background: {COLORS['muted']};
+        background: {muted_color};
         border-radius: 4px;
     }}
     
     ::-webkit-scrollbar-thumb:hover {{
-        background: {COLORS['primary']};
+        background: {primary_color};
     }}
     
     /* Animation */
