@@ -48,27 +48,33 @@ class EarningsCalendarAnalyzer:
             
             try:
                 stock = yf.Ticker(ticker)
-                info = stock.info
                 
                 # Try to get earnings dates from info
-                if 'earningsDates' in info:
-                    dates = info['earningsDates']
-                    if isinstance(dates, list):
-                        earnings_dates[ticker] = [
-                            pd.to_datetime(d) for d in dates
-                            if (start_date is None or pd.to_datetime(d) >= start_date) and
-                               (end_date is None or pd.to_datetime(d) <= end_date)
-                        ]
+                try:
+                    info = stock.info
+                    if info and 'earningsDates' in info:
+                        dates = info['earningsDates']
+                        if isinstance(dates, list):
+                            earnings_dates[ticker] = [
+                                pd.to_datetime(d) for d in dates
+                                if (start_date is None or pd.to_datetime(d) >= start_date) and
+                                   (end_date is None or pd.to_datetime(d) <= end_date)
+                            ]
+                        else:
+                            earnings_dates[ticker] = []
                     else:
                         earnings_dates[ticker] = []
-                else:
-                    # Fallback: try calendar
+                except Exception as info_error:
+                    # If info fetch fails (e.g., 404), try calendar as fallback
                     try:
                         calendar = stock.calendar
                         if calendar is not None and len(calendar) > 0:
                             # Extract earnings date from calendar
                             earnings_dates[ticker] = []
-                    except:
+                        else:
+                            earnings_dates[ticker] = []
+                    except Exception as calendar_error:
+                        # Both methods failed, return empty list
                         earnings_dates[ticker] = []
                 
                 # Cache result
@@ -76,7 +82,11 @@ class EarningsCalendarAnalyzer:
                     self.earnings_cache[cache_key] = earnings_dates.get(ticker, [])
                     
             except Exception as e:
-                print(f"Warning: Could not fetch earnings for {ticker}: {e}")
+                # Silently handle errors (404, network issues, etc.)
+                # Don't print warnings for expected failures like 404
+                if '404' not in str(e).upper():
+                    import warnings
+                    warnings.warn(f"Could not fetch earnings for {ticker}: {e}", UserWarning)
                 earnings_dates[ticker] = []
         
         return earnings_dates
