@@ -2,6 +2,88 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.0] - 2026-01-16
+
+### Added
+
+#### Alert System (NEW)
+- **Alert Configuration**: Create and manage alert configurations for portfolio monitoring
+  - Support for multiple alert types: drawdown, price change, position change, volume spike, rebalancing, benchmark divergence
+  - Configurable thresholds per alert type
+  - Multiple notification channels: email, SMS (placeholder), in-app
+  - Minimum interval controls to prevent alert spam
+  - Run-specific or global alert configurations
+  
+- **Alert Service**: Core alert management and notification system
+  - `AlertService` class for managing alerts
+  - Email notifications via SMTP (configurable)
+  - SMS notifications (placeholder for future integration)
+  - Alert history tracking in database
+  - Integration with real-time monitoring
+  
+- **Alert Management GUI**: Complete dashboard interface for alerts
+  - Alert configuration management page
+  - Alert history viewer with filtering
+  - Create/edit/delete alert configurations
+  - Real-time alert status monitoring
+  - Located in Utilities section: "🚨 Alert Management"
+
+- **Real-Time Monitoring Integration**: Alerts automatically sent from monitoring
+  - Real-time monitoring now sends alerts via AlertService
+  - Automatic alert generation for drawdown, price changes, position changes, etc.
+  - Configurable alert thresholds per run
+
+#### Custom Report Templates (NEW)
+- **Template System**: User-configurable report generation
+  - Create custom report templates with configurable sections
+  - Support for multiple formats: PDF, Excel, CSV, JSON, HTML
+  - Section-based template configuration
+  - Template management (create, update, delete)
+  - Template history and versioning
+  
+- **Report Template Engine**: Core template processing system
+  - `ReportTemplateEngine` class for template management
+  - Integration with existing export functions
+  - Automatic report generation from templates
+  - Report generation history tracking
+  
+- **Report Templates GUI**: Complete dashboard interface for reports
+  - Template list and management page
+  - Template creation wizard
+  - Report generation interface
+  - Report history viewer
+  - Located in Utilities section: "📄 Report Templates"
+
+- **Database Models**: New tables for alerts and reports
+  - `alert_configs` - Alert configuration storage
+  - `alert_history` - Alert delivery history
+  - `report_templates` - Template definitions
+  - `report_generations` - Report generation records
+  - Migration script: `scripts/migrate_alert_report_tables.py`
+
+#### Analysis Validation (NEW)
+- **Detailed Validation Scripts**: Comprehensive analysis validation
+  - `scripts/validate_analysis_detailed.py` - Creates test watchlists and validates new runs
+  - `scripts/validate_existing_runs.py` - Validates existing runs in detail
+  - 10+ validation checks per run (scores, sectors, data completeness, etc.)
+  - Detailed validation reports with JSON export
+  - All 4 existing runs validated successfully (100% pass rate)
+
+### Changed
+
+#### Real-Time Monitoring
+- **Alert Integration**: Real-time monitoring now sends alerts via AlertService
+  - Automatic alert generation for detected conditions
+  - Configurable alert thresholds
+  - Alert history tracking
+
+### Documentation
+- Added `docs/alert-system-guide.md` - User guide for alert system
+- Added `docs/report-templates-guide.md` - User guide for report templates
+- Added `scripts/test_alert_and_reports.py` - Comprehensive feature testing script
+- Updated `CHANGELOG.md` with all new features
+- Updated `README.md` with alert and report template features
+
 ## [3.9.3] - 2026-01-16
 
 ### Added

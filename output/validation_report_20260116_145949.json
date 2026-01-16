@@ -1,0 +1,162 @@
+{
+  "summary": {
+    "total": 4,
+    "passed": 4,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "validations": [
+    {
+      "run_id": "20260116_001542_454cf07a",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "checks": {
+        "run_exists": true,
+        "run_status": "completed",
+        "run_type": "backtest",
+        "watchlist": "jan_26",
+        "created_at": "2026-01-16T00:15:42.071920",
+        "num_scores": 6,
+        "score_mean": -0.038091795074828724,
+        "score_std": 0.18357797076091795,
+        "score_min": -0.23341609692793291,
+        "score_max": 0.3005763684204243,
+        "score_range": 0.5339924653483572,
+        "score_range_valid": true,
+        "score_type": "normalized",
+        "sectors": {
+          "Utilities": 1,
+          "Precious Metals": 1,
+          "Energy": 1,
+          "Technology": 1,
+          "Communication Services": 1,
+          "Consumer Cyclical": 1
+        },
+        "num_sectors": 6,
+        "attribution_exists": true,
+        "benchmark_comparison_exists": true,
+        "factor_exposure_exists": true,
+        "data_completeness": 1.0,
+        "rank_score_correlation": -0.9486261125859744
+      }
+    },
+    {
+      "run_id": "20260115_185037_e08e49ae",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "checks": {
+        "run_exists": true,
+        "run_status": "completed",
+        "run_type": "backtest",
+        "watchlist": "jan_26",
+        "created_at": "2026-01-15T18:50:37.429866",
+        "num_scores": 6,
+        "score_mean": -0.038091795074828724,
+        "score_std": 0.18357797076091795,
+        "score_min": -0.23341609692793291,
+        "score_max": 0.3005763684204243,
+        "score_range": 0.5339924653483572,
+        "score_range_valid": true,
+        "score_type": "normalized",
+        "sectors": {
+          "Utilities": 1,
+          "Precious Metals": 1,
+          "Energy": 1,
+          "Technology": 1,
+          "Communication Services": 1,
+          "Consumer Cyclical": 1
+        },
+        "num_sectors": 6,
+        "attribution_exists": true,
+        "benchmark_comparison_exists": true,
+        "factor_exposure_exists": true,
+        "data_completeness": 1.0,
+        "rank_score_correlation": -0.9486261125859744
+      }
+    },
+    {
+      "run_id": "20260109_144437_72eb46cd",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "Analysis result 'attribution' not found (optional)",
+        "Analysis result 'benchmark_comparison' not found (optional)",
+        "Analysis result 'factor_exposure' not found (optional)"
+      ],
+      "checks": {
+        "run_exists": true,
+        "run_status": "completed",
+        "run_type": "backtest",
+        "watchlist": "my_combined_list_1",
+        "created_at": "2026-01-09T14:44:37.001534",
+        "num_scores": 319,
+        "score_mean": -0.048157665868732796,
+        "score_std": 0.05545643514857003,
+        "score_min": -0.2966303898661408,
+        "score_max": 0.3744356754476934,
+        "score_range": 0.6710660653138343,
+        "score_range_valid": true,
+        "score_type": "normalized",
+        "sectors": {
+          "Technology": 55,
+          "Healthcare": 37,
+          "Industrials": 32,
+          "Consumer Cyclical": 31,
+          "Financial Services": 30,
+          "Basic Materials": 27,
+          "Energy": 22,
+          "Consumer Defensive": 21,
+          "Utilities": 18,
+          "Communication Services": 14,
+          "Real Estate": 11,
+          "Precious Metals": 11,
+          "ETF - Other": 6,
+          "Broad Market ETF": 3,
+          "Other": 1
+        },
+        "num_sectors": 15,
+        "data_completeness": 1.0,
+        "rank_score_correlation": -0.7300750490510842
+      }
+    },
+    {
+      "run_id": "20260102_165833_82e7b997",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "Analysis result 'attribution' not found (optional)",
+        "Analysis result 'benchmark_comparison' not found (optional)",
+        "Analysis result 'factor_exposure' not found (optional)"
+      ],
+      "checks": {
+        "run_exists": true,
+        "run_status": "completed",
+        "run_type": "backtest",
+        "watchlist": "nasdaq_100",
+        "created_at": "2026-01-02T16:58:33.497292",
+        "num_scores": 88,
+        "score_mean": 0.15818894310207046,
+        "score_std": 0.1771891025891019,
+        "score_min": -0.15716411923067952,
+        "score_max": 0.6246118710419848,
+        "score_range": 0.7817759902726643,
+        "score_range_valid": true,
+        "score_type": "normalized",
+        "sectors": {
+          "Technology": 32,
+          "Consumer Cyclical": 15,
+          "Healthcare": 12,
+          "Communication Services": 11,
+          "Industrials": 8,
+          "Consumer Defensive": 7,
+          "Utilities": 3
+        },
+        "num_sectors": 7,
+        "data_completeness": 1.0,
+        "rank_score_correlation": -0.9715007748251823
+      }
+    }
+  ]
+}

@@ -47,6 +47,9 @@ from src.app.dashboard.pages import (
     render_turnover_analysis,
     render_earnings_calendar,
     render_realtime_monitoring,
+    render_recommendation_tracking,
+    render_alert_management,
+    render_report_templates,
 )
 
 
@@ -95,6 +98,9 @@ def main():
         "🔄 Turnover Analysis": render_turnover_analysis,
         "📅 Earnings Calendar": render_earnings_calendar,
         "⚡ Real-Time Monitoring": render_realtime_monitoring,
+        "📊 Recommendation Tracking": render_recommendation_tracking,
+        "🚨 Alert Management": render_alert_management,
+        "📄 Report Templates": render_report_templates,
         "📚 Documentation": render_documentation,
         "⚙️ Settings": render_settings,
     }

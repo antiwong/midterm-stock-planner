@@ -226,53 +226,40 @@ class DataCompletenessChecker:
         
         elif requirement == DataRequirement.FUNDAMENTAL_DATA:
             # Check if fundamental data is available (PE ratios, etc.)
+            # Must have valid (non-zero, non-null) values, not just column names
+            fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
+            
             if isinstance(stock_data, dict):
-                # Check for fundamental fields in features DataFrame
-                fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
-                
                 # Check in features DataFrame (most common location)
                 if isinstance(stock_data.get('features'), pd.DataFrame):
                     df = stock_data['features']
-                    has_fundamentals = any(field in df.columns for field in fundamental_fields)
-                    if has_fundamentals:
-                        # Check if we have valid (non-null, non-zero) values
-                        for field in fundamental_fields:
-                            if field in df.columns:
-                                valid_values = df[field].dropna()
-                                if len(valid_values) > 0:
-                                    # Check if any are positive (valid fundamental data)
-                                    if (valid_values > 0).any():
-                                        return True
+                    for field in fundamental_fields:
+                        if field in df.columns:
+                            valid_values = df[field].dropna()
+                            if len(valid_values) > 0:
+                                # Check if any are positive (valid fundamental data)
+                                if (valid_values > 0).any():
+                                    return True
                 
                 # Check in data DataFrame
                 if isinstance(stock_data.get('data'), pd.DataFrame):
                     df = stock_data['data']
-                    has_fundamentals = any(field in df.columns for field in fundamental_fields)
-                    if has_fundamentals:
-                        for field in fundamental_fields:
-                            if field in df.columns:
-                                valid_values = df[field].dropna()
-                                if len(valid_values) > 0 and (valid_values > 0).any():
+                    for field in fundamental_fields:
+                        if field in df.columns:
+                            valid_values = df[field].dropna()
+                            if len(valid_values) > 0:
+                                # Check if any are positive (valid fundamental data)
+                                if (valid_values > 0).any():
                                     return True
-                
-                # Check for fundamental fields directly in dict
-                has_fundamentals = any(
-                    field in stock_data or 
-                    (isinstance(stock_data.get('data'), pd.DataFrame) and field in stock_data['data'].columns)
-                    for field in fundamental_fields
-                )
-                if has_fundamentals:
-                    return True
             
             # Also check if stock_data is a DataFrame directly
             elif isinstance(stock_data, pd.DataFrame):
-                fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
-                has_fundamentals = any(field in stock_data.columns for field in fundamental_fields)
-                if has_fundamentals:
-                    for field in fundamental_fields:
-                        if field in stock_data.columns:
-                            valid_values = stock_data[field].dropna()
-                            if len(valid_values) > 0 and (valid_values > 0).any():
+                for field in fundamental_fields:
+                    if field in stock_data.columns:
+                        valid_values = stock_data[field].dropna()
+                        if len(valid_values) > 0:
+                            # Check if any are positive (valid fundamental data)
+                            if (valid_values > 0).any():
                                 return True
             
             return False

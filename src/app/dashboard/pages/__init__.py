@@ -25,6 +25,9 @@ from .monte_carlo import render_monte_carlo
 from .turnover_analysis import render_turnover_analysis
 from .earnings_calendar import render_earnings_calendar
 from .realtime_monitoring import render_realtime_monitoring
+from .recommendation_tracking import render_recommendation_tracking
+from .alert_management import render_alert_management
+from .report_templates import render_report_templates
 
 __all__ = [
     'render_overview',
@@ -48,4 +51,7 @@ __all__ = [
     'render_turnover_analysis',
     'render_earnings_calendar',
     'render_realtime_monitoring',
+    'render_recommendation_tracking',
+    'render_alert_management',
+    'render_report_templates',
 ]

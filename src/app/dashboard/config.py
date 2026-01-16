@@ -579,10 +579,13 @@ ADVANCED_ANALYTICS = [
     ("🔄 Turnover Analysis", "turnover_analysis"),
     ("📅 Earnings Calendar", "earnings_calendar"),
     ("⚡ Real-Time Monitoring", "realtime_monitoring"),
+    ("📊 Recommendation Tracking", "recommendation_tracking"),
 ]
 
 # Utilities
 UTILITIES = [
+    ("🚨 Alert Management", "alert_management"),
+    ("📄 Report Templates", "report_templates"),
     ("📚 Documentation", "documentation"),
     ("⚙️ Settings", "settings"),
 ]

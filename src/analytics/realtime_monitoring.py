@@ -10,6 +10,13 @@ from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime, timedelta
 from enum import Enum
 
+# Import alert system
+try:
+    from .alert_system import AlertService
+    ALERT_SYSTEM_AVAILABLE = True
+except ImportError:
+    ALERT_SYSTEM_AVAILABLE = False
+
 
 class AlertLevel(Enum):
     """Alert severity levels."""
@@ -25,7 +32,9 @@ class RealTimeMonitor:
         self,
         price_change_threshold: float = 0.05,
         volume_spike_threshold: float = 2.0,
-        drawdown_threshold: float = -0.10
+        drawdown_threshold: float = -0.10,
+        alert_service: Optional[Any] = None,
+        run_id: Optional[str] = None
     ):
         """
         Initialize real-time monitor.
@@ -34,11 +43,15 @@ class RealTimeMonitor:
             price_change_threshold: Threshold for price change alerts (default 5%)
             volume_spike_threshold: Threshold for volume spike (default 2x)
             drawdown_threshold: Threshold for drawdown alerts (default -10%)
+            alert_service: Optional AlertService instance for sending notifications
+            run_id: Optional run ID for alert tracking
         """
         self.price_change_threshold = price_change_threshold
         self.volume_spike_threshold = volume_spike_threshold
         self.drawdown_threshold = drawdown_threshold
         self.alerts = []
+        self.alert_service = alert_service
+        self.run_id = run_id
     
     def check_portfolio_alerts(
         self,
@@ -163,6 +176,28 @@ class RealTimeMonitor:
                     'concentration': float(top_5_concentration),
                     'timestamp': datetime.now().isoformat()
                 })
+        
+        # Store alerts
+        self.alerts = alerts
+        
+        # Send alerts via alert service if available
+        if self.alert_service and self.run_id and ALERT_SYSTEM_AVAILABLE:
+            for alert in alerts:
+                try:
+                    self.alert_service.check_and_send_alerts(
+                        self.run_id,
+                        {
+                            'type': alert.get('type', 'custom'),
+                            'level': alert.get('level', 'info'),
+                            'message': alert.get('message', ''),
+                            'value': alert.get('value'),
+                            'data': {k: v for k, v in alert.items() if k not in ['type', 'level', 'message', 'value']}
+                        }
+                    )
+                except Exception as e:
+                    # Log but don't fail monitoring
+                    import logging
+                    logging.warning(f"Error sending alert: {e}")
         
         return alerts
     

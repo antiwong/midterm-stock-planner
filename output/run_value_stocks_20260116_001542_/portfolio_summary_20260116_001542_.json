@@ -1,0 +1,69 @@
+{
+  "run_id": "20260116_001542_454cf07a",
+  "run_name": "jan 2026 - Backtest 2026-01-16 00:15",
+  "n_stocks": 6,
+  "n_sectors": 6,
+  "diversification": {
+    "stock_level_ew": 0.8333333333333333,
+    "stock_level_rp": 0.8072675631352779,
+    "sector_level_ew": 0.8333333333333333,
+    "sector_level_rp": 0.8072675631352779,
+    "effective_n_ew": 5.999999999999999,
+    "effective_n_rp": 5.1885402180739035
+  },
+  "score_distributions": {
+    "Value Score": {
+      "mean": 50.0,
+      "std": 0.0,
+      "min": 50.0,
+      "max": 50.0,
+      "median": 50.0
+    },
+    "Quality Score": {
+      "mean": 50.0,
+      "std": 0.0,
+      "min": 50.0,
+      "max": 50.0,
+      "median": 50.0
+    },
+    "Tech Score": {
+      "mean": 100.0,
+      "std": 0.0,
+      "min": 100.0,
+      "max": 100.0,
+      "median": 100.0
+    }
+  },
+  "sector_breakdown": {
+    "count": {
+      "Communication Services": 1,
+      "Consumer Cyclical": 1,
+      "Energy": 1,
+      "Precious Metals": 1,
+      "Technology": 1,
+      "Utilities": 1
+    },
+    "ew_pct": {
+      "Communication Services": 16.666666666666664,
+      "Consumer Cyclical": 16.666666666666664,
+      "Energy": 16.666666666666664,
+      "Precious Metals": 16.666666666666664,
+      "Technology": 16.666666666666664,
+      "Utilities": 16.666666666666664
+    },
+    "rp_pct": {
+      "Communication Services": 22.427665167310764,
+      "Consumer Cyclical": 20.813490458216847,
+      "Energy": 17.862097307473125,
+      "Precious Metals": 22.640488552144898,
+      "Technology": 11.825669398088435,
+      "Utilities": 4.4305891167659395
+    }
+  },
+  "top_sectors": [
+    "Communication Services",
+    "Consumer Cyclical",
+    "Energy"
+  ],
+  "generated_at": "2026-01-16T14:58:18.960539"
+}
