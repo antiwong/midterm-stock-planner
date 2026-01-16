@@ -22,7 +22,7 @@ def render_settings():
         "Configure dashboard and manage data"
     )
     
-    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "⌨️ Shortcuts", "⏰ Scheduled Updates", "ℹ️ About"])
+    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "⌨️ Shortcuts", "⏰ Scheduled Updates", "📊 Dashboard", "ℹ️ About"])
     
     with tabs[0]:
         _render_api_keys_tab()
@@ -41,8 +41,11 @@ def render_settings():
     
     with tabs[5]:
         _render_scheduled_updates_tab()
-
+    
     with tabs[6]:
+        _render_dashboard_customization_tab()
+
+    with tabs[7]:
         _render_about_tab()
 
 
@@ -344,6 +347,12 @@ def _render_shortcuts_tab():
     - Some shortcuts may require page refresh to take effect
     - Navigation shortcuts (O, A, P, W, D, S) work from any page
     """)
+
+
+def _render_dashboard_customization_tab():
+    """Render dashboard customization tab."""
+    from ..components.dashboard_customizer import render_dashboard_customizer
+    render_dashboard_customizer()
 
 
 def _render_scheduled_updates_tab():

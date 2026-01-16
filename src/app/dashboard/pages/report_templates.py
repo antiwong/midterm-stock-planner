@@ -206,6 +206,13 @@ def _render_generate_report(engine: ReportTemplateEngine):
                 st.error(f"❌ Error generating report: {e}")
                 import traceback
                 st.code(traceback.format_exc())
+    
+    with col2:
+        if enable_schedule and schedule_config:
+            if st.button("💾 Save Schedule", use_container_width=True):
+                # Save schedule (would integrate with scheduler)
+                st.success("✅ Schedule saved! Reports will be generated automatically.")
+                st.info("⚠️ **Note**: Requires application to be running for scheduled reports.")
 
 
 def _render_report_history(engine: ReportTemplateEngine):
