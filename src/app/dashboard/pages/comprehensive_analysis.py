@@ -466,7 +466,7 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
                                 run_id=run_id,
                                 insight_type='commentary',
                                 content=summary,
-                                metadata={'section': 'executive_summary'}
+                                context={'section': 'executive_summary'}
                             )
                         
                         if sector_analysis:
@@ -474,7 +474,7 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
                                 run_id=run_id,
                                 insight_type='commentary',
                                 content=sector_analysis,
-                                metadata={'section': 'sector_analysis'}
+                                context={'section': 'sector_analysis'}
                             )
                         
                         # Generate recommendations
@@ -489,7 +489,7 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
                                 run_id=run_id,
                                 insight_type='recommendations',
                                 content=recommendations,
-                                metadata={'risk_profile': risk_profile.lower()}
+                                context={'risk_profile': risk_profile.lower()}
                             )
                         
                         st.success("✅ AI insights generated successfully!")

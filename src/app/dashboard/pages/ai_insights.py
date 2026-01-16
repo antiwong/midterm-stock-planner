@@ -100,10 +100,12 @@ def _render_recommendations_tab(run_id: str):
             recommendations = json.loads(latest.content) if latest.content else None
         except:
             # If not JSON, create a simple dict structure
+            # Get risk profile from context if available
+            context = latest.get_context() if hasattr(latest, 'get_context') else {}
             recommendations = {
                 'summary': latest.content,
                 'generated_at': latest.created_at.isoformat(),
-                'risk_profile': latest.metadata.get('risk_profile', 'moderate') if latest.metadata else 'moderate'
+                'risk_profile': context.get('risk_profile', 'moderate')
             }
     
     if not recommendations:
@@ -164,7 +166,7 @@ def _render_recommendations_tab(run_id: str):
                                 run_id=run_id,
                                 insight_type='recommendations',
                                 content=recommendations_text,
-                                metadata={'risk_profile': risk_profile.lower()}
+                                context={'risk_profile': risk_profile.lower()}
                             )
                             
                             # Also save to file for compatibility
