@@ -2,6 +2,24 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.6] - 2026-01-17
+
+### Fixed
+
+#### UI/UX
+- **Duplicate Element Key Error**: Fixed `StreamlitDuplicateElementKey` error in Watchlist Manager
+  - Added `key_prefix` parameter to `_render_symbols_grid` function
+  - Generate unique keys for "Fetch Sectors" button using context (watchlist ID, tab name)
+  - Prevents errors when function is called from multiple places (overview, quick edit, create)
+
+#### Price Download
+- **Error Handling**: Improved price download error categorization and handling
+  - Automatic format fixes (BRK.B → BRK-B)
+  - Categorized errors: delisted, timeout, format issues, other
+  - Track failed reasons for each symbol
+  - Enhanced error display with grouped categories
+  - Better user guidance for fixing issues
+
 ## [3.10.5] - 2026-01-17
 
 ### Added
