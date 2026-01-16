@@ -237,15 +237,18 @@ The dashboard is organized into four main sections:
 **Purpose**: Analyze portfolio churn and holding periods.
 
 1. **Run Analysis**
-   - Go to "🔄 Turnover Analysis"
+   - Go to "Turnover & Churn Analysis" (under Advanced Analytics)
    - Select a run
-   - Click "Analyze Turnover"
+   - Analysis runs automatically if comprehensive analysis has been completed
 
 2. **Review Metrics**
-   - Portfolio turnover rate
+   - Portfolio turnover rate (multiple calculation methods)
+   - Churn rate (position change frequency)
    - Average holding period
-   - Buy/sell frequency
-   - Churn by period
+   - Position stability metrics
+   - Buy/sell frequency breakdown
+
+**For detailed information**, see: [`docs/turnover-churn-analysis-guide.md`](turnover-churn-analysis-guide.md)
 
 ### Earnings Calendar
 
