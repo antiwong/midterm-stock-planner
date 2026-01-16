@@ -283,7 +283,7 @@ def _render_watchlists_overview():
                 symbols = wl.get('symbols', [])
                 if symbols:
                     st.markdown("**Symbols:**")
-                    _render_symbols_grid(symbols)
+                    _render_symbols_grid(symbols, key_prefix=f"watchlist_{wl['watchlist_id']}")
             
             with col2:
                 # Action buttons
@@ -423,7 +423,7 @@ def _render_combine_watchlists_form():
         
         preview_symbols = sorted(all_symbols)
         st.markdown(f"**Total unique symbols:** {len(preview_symbols)}")
-        _render_symbols_grid(preview_symbols[:50])  # Show first 50
+        _render_symbols_grid(preview_symbols[:50], key_prefix="preview")  # Show first 50
         if len(preview_symbols) > 50:
             st.caption(f"... and {len(preview_symbols) - 50} more")
     
@@ -531,7 +531,7 @@ def _render_manual_entry_form():
             
             if valid_symbols:
                 st.success(f"✅ {len(valid_symbols)} valid symbols")
-                _render_symbols_grid(valid_symbols)
+                _render_symbols_grid(valid_symbols, key_prefix="create_watchlist")
             
             # Update symbols to only valid ones
             symbols = valid_symbols
@@ -628,7 +628,7 @@ def _render_quick_edit():
     # Current symbols
     st.markdown("---")
     st.markdown(f"### Current Symbols ({watchlist['count']})")
-    _render_symbols_grid(watchlist.get('symbols', []))
+    _render_symbols_grid(watchlist.get('symbols', []), key_prefix=f"quick_edit_{watchlist.get('watchlist_id', 'unknown')}")
 
 
 def _render_edit_watchlist(watchlist_id: str):
@@ -706,7 +706,7 @@ def _render_edit_watchlist(watchlist_id: str):
             st.rerun()
 
 
-def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch: bool = False):
+def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch: bool = False, key_prefix: str = ""):
     """
     Render symbols in a grid layout with color coding by sector.
     
@@ -799,7 +799,17 @@ def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch:
         with col1:
             st.markdown(f"**Other/Unknown** ({len(unknown_sector)})")
         with col2:
-            if st.button("🔍 Fetch Sectors", key=f"fetch_sectors_{hash(tuple(unknown_sector))}", 
+            # Create unique key using prefix and sorted symbols (limit length to avoid issues)
+            if key_prefix:
+                # Use prefix + first few symbols to create unique key
+                symbol_str = '_'.join(sorted(unknown_sector[:5]))[:50]  # Limit length
+                unique_key = f"fetch_sectors_{key_prefix}_{symbol_str}"
+            else:
+                # Fallback: use hash of sorted symbols
+                symbol_str = '_'.join(sorted(unknown_sector))[:100]
+                unique_key = f"fetch_sectors_{abs(hash(symbol_str))}"
+            
+            if st.button("🔍 Fetch Sectors", key=unique_key, 
                         help="Fetch sector data for unknown stocks from Yahoo Finance"):
                 with st.spinner(f"Fetching sector data for {len(unknown_sector)} stocks..."):
                     fetched_count = 0
