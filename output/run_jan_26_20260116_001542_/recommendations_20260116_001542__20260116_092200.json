@@ -1,0 +1,150 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "STEM",
+          "weight": 35,
+          "rationale": "Highest domain score, defensive utilities sector, and relatively low volatility (10.2%). Provides stability and income."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 25,
+          "rationale": "Defensive asset, very low volatility (2.0%). Acts as a hedge against market downturns. Good value and quality scores."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 20,
+          "rationale": "Another defensive asset with low volatility (2.5%) with good value and quality scores. Exposure to the energy sector provides some diversification."
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 10,
+          "rationale": "Lower allocation to Communication Services provides some growth potential with relatively low volatility (2.0%)"
+        },
+        {
+          "ticker": "AMZN",
+          "weight": 10,
+          "rationale": "Lower allocation to Consumer Cyclical provides some growth potential with relatively low volatility (2.2%)"
+        }
+      ],
+      "expected_return": {
+        "low": 5,
+        "mid": 8,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "Approximated at 10-13% based on weighted average of individual volatilities.",
+        "max_drawdown": "Estimated at 10-15% based on historical data of similar low-volatility portfolios.",
+        "key_risks": [
+          "Interest rate risk (affecting Utilities), Commodity price risk (affecting Precious Metals and Energy), and general market downturn."
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "17-20%",
+      "holdings": [
+        {
+          "ticker": "STEM",
+          "weight": 20,
+          "rationale": "Provides a solid base with defensive utilities sector and relatively low volatility."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 15,
+          "rationale": "Hedge against market volatility and inflation. Offers diversification."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 15,
+          "rationale": "Energy sector exposure. Balances the portfolio with a different asset class."
+        },
+        {
+          "ticker": "AMD",
+          "weight": 15,
+          "rationale": "Technology sector exposure with growth potential.  "
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 15,
+          "rationale": "Communication Services offers stability and moderate growth."
+        },
+        {
+          "ticker": "AMZN",
+          "weight": 20,
+          "rationale": "Consumer Cyclical exposure for growth, capitalizing on consumer spending."
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 16
+      },
+      "risk_assessment": {
+        "volatility": "Estimated at 17-20% based on the horizontal analysis.",
+        "max_drawdown": "Estimated at 20-25% based on historical data and sector allocations.",
+        "key_risks": [
+          "Market volatility, sector-specific risks (e.g., technology slowdown), and inflation affecting consumer spending."
+        ]
+      },
+      "rebalance_frequency": "Semi-Annually"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "25-30%",
+      "holdings": [
+        {
+          "ticker": "AMD",
+          "weight": 30,
+          "rationale": "Highest growth potential among the candidates, aggressive growth in the technology sector."
+        },
+        {
+          "ticker": "AMZN",
+          "weight": 30,
+          "rationale": "High growth potential in the consumer cyclical sector. Capitalizes on consumer spending and e-commerce trends."
+        },
+        {
+          "ticker": "GOOG",
+          "weight": 20,
+          "rationale": "Growth and Innovation within the communication services sector. A technology adjacent to AMD."
+        },
+        {
+          "ticker": "NLR",
+          "weight": 10,
+          "rationale": "Energy sector exposure for diversification, with potential upside from energy demand."
+        },
+        {
+          "ticker": "SLV",
+          "weight": 10,
+          "rationale": "Small allocation as a hedge against broader market downturns. Precious Metals provide diversification."
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 18,
+        "high": 25
+      },
+      "risk_assessment": {
+        "volatility": "Estimated at 25-30% based on sector allocations and historical data.",
+        "max_drawdown": "Estimated at 35-45% considering the high growth focus and sector concentrations.",
+        "key_risks": [
+          "Technology sector downturn, competition, regulatory changes, and overall economic recession."
+        ]
+      },
+      "rebalance_frequency": "Annually"
+    },
+    "overall_assessment": "These portfolios are constructed based on the provided vertical and horizontal analysis, along with backtesting data. The conservative portfolio prioritizes capital preservation, the balanced portfolio aims for growth with moderate risk, and the aggressive portfolio seeks maximum returns with higher risk tolerance.  It is important to note that backtesting results are not indicative of future performance, and investors should carefully consider their own risk tolerance and investment objectives before making any investment decisions. Rebalancing is crucial to maintain the target asset allocation and risk profile."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"STEM\", \"weight\": 35, \"rationale\": \"Highest domain score, defensive utilities sector, and relatively low volatility (10.2%). Provides stability and income.\"},\n      {\"ticker\": \"SLV\", \"weight\": 25, \"rationale\": \"Defensive asset, very low volatility (2.0%). Acts as a hedge against market downturns. Good value and quality scores.\"},\n      {\"ticker\": \"NLR\", \"weight\": 20, \"rationale\": \"Another defensive asset with low volatility (2.5%) with good value and quality scores. Exposure to the energy sector provides some diversification.\"},\n      {\"ticker\": \"GOOG\", \"weight\": 10, \"rationale\": \"Lower allocation to Communication Services provides some growth potential with relatively low volatility (2.0%)\"},\n      {\"ticker\": \"AMZN\", \"weight\": 10, \"rationale\": \"Lower allocation to Consumer Cyclical provides some growth potential with relatively low volatility (2.2%)\"}\n    ],\n    \"expected_return\": {\n      \"low\": 5,\n      \"mid\": 8,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"Approximated at 10-13% based on weighted average of individual volatilities.\",\n      \"max_drawdown\": \"Estimated at 10-15% based on historical data of similar low-volatility portfolios.\",\n      \"key_risks\": [\"Interest rate risk (affecting Utilities), Commodity price risk (affecting Precious Metals and Energy), and general market downturn.\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"17-20%\",\n    \"holdings\": [\n      {\"ticker\": \"STEM\", \"weight\": 20, \"rationale\": \"Provides a solid base with defensive utilities sector and relatively low volatility.\"},\n      {\"ticker\": \"SLV\", \"weight\": 15, \"rationale\": \"Hedge against market volatility and inflation. Offers diversification.\"},\n      {\"ticker\": \"NLR\", \"weight\": 15, \"rationale\": \"Energy sector exposure. Balances the portfolio with a different asset class.\"},\n      {\"ticker\": \"AMD\", \"weight\": 15, \"rationale\": \"Technology sector exposure with growth potential.  \"},\n      {\"ticker\": \"GOOG\", \"weight\": 15, \"rationale\": \"Communication Services offers stability and moderate growth.\"},\n      {\"ticker\": \"AMZN\", \"weight\": 20, \"rationale\": \"Consumer Cyclical exposure for growth, capitalizing on consumer spending.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 16\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"Estimated at 17-20% based on the horizontal analysis.\",\n      \"max_drawdown\": \"Estimated at 20-25% based on historical data and sector allocations.\",\n      \"key_risks\": [\"Market volatility, sector-specific risks (e.g., technology slowdown), and inflation affecting consumer spending.\"]\n    },\n    \"rebalance_frequency\": \"Semi-Annually\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"25-30%\",\n    \"holdings\": [\n      {\"ticker\": \"AMD\", \"weight\": 30, \"rationale\": \"Highest growth potential among the candidates, aggressive growth in the technology sector.\"},\n      {\"ticker\": \"AMZN\", \"weight\": 30, \"rationale\": \"High growth potential in the consumer cyclical sector. Capitalizes on consumer spending and e-commerce trends.\"},\n      {\"ticker\": \"GOOG\", \"weight\": 20, \"rationale\": \"Growth and Innovation within the communication services sector. A technology adjacent to AMD.\"},\n      {\"ticker\": \"NLR\", \"weight\": 10, \"rationale\": \"Energy sector exposure for diversification, with potential upside from energy demand.\"},\n      {\"ticker\": \"SLV\", \"weight\": 10, \"rationale\": \"Small allocation as a hedge against broader market downturns. Precious Metals provide diversification.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 18,\n      \"high\": 25\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"Estimated at 25-30% based on sector allocations and historical data.\",\n      \"max_drawdown\": \"Estimated at 35-45% considering the high growth focus and sector concentrations.\",\n      \"key_risks\": [\"Technology sector downturn, competition, regulatory changes, and overall economic recession.\"]\n    },\n    \"rebalance_frequency\": \"Annually\"\n  },\n  \"overall_assessment\": \"These portfolios are constructed based on the provided vertical and horizontal analysis, along with backtesting data. The conservative portfolio prioritizes capital preservation, the balanced portfolio aims for growth with moderate risk, and the aggressive portfolio seeks maximum returns with higher risk tolerance.  It is important to note that backtesting results are not indicative of future performance, and investors should carefully consider their own risk tolerance and investment objectives before making any investment decisions. Rebalancing is crucial to maintain the target asset allocation and risk profile.\"\n}\n```",
+  "generated_at": "2026-01-16T09:22:00.762413"
+}

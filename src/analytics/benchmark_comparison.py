@@ -71,13 +71,40 @@ class BenchmarkComparator:
         # Get benchmark returns
         benchmark_returns = self.get_benchmark_data(benchmark_symbol, start_date, end_date)
         
-        # Align dates
-        common_dates = portfolio_returns.index.intersection(benchmark_returns.index)
-        if len(common_dates) == 0:
+        # Normalize timezones before alignment
+        # Portfolio returns may be timezone-naive, benchmark may be timezone-aware
+        portfolio_index = portfolio_returns.index
+        benchmark_index = benchmark_returns.index
+        
+        # Remove timezone from both indices for comparison
+        if hasattr(portfolio_index, 'tz') and portfolio_index.tz is not None:
+            portfolio_index_normalized = portfolio_index.tz_localize(None)
+        else:
+            portfolio_index_normalized = portfolio_index
+        
+        if hasattr(benchmark_index, 'tz') and benchmark_index.tz is not None:
+            benchmark_index_normalized = benchmark_index.tz_localize(None)
+        else:
+            benchmark_index_normalized = benchmark_index
+        
+        # Align dates using normalized indices
+        common_dates_normalized = portfolio_index_normalized.intersection(benchmark_index_normalized)
+        if len(common_dates_normalized) == 0:
             return {'error': 'No overlapping dates between portfolio and benchmark'}
         
-        portfolio_aligned = portfolio_returns.loc[common_dates]
-        benchmark_aligned = benchmark_returns.loc[common_dates]
+        # Use normalized dates to align both series
+        # Map normalized dates back to original indices
+        portfolio_aligned = portfolio_returns.loc[portfolio_index_normalized.isin(common_dates_normalized)]
+        benchmark_aligned = benchmark_returns.loc[benchmark_index_normalized.isin(common_dates_normalized)]
+        
+        # Reindex both to common dates (using normalized dates)
+        portfolio_aligned.index = portfolio_aligned.index.tz_localize(None) if hasattr(portfolio_aligned.index, 'tz') and portfolio_aligned.index.tz is not None else portfolio_aligned.index
+        benchmark_aligned.index = benchmark_aligned.index.tz_localize(None) if hasattr(benchmark_aligned.index, 'tz') and benchmark_aligned.index.tz is not None else benchmark_aligned.index
+        
+        # Ensure both have same index for alignment
+        common_dates = common_dates_normalized
+        portfolio_aligned = portfolio_aligned.reindex(common_dates)
+        benchmark_aligned = benchmark_aligned.reindex(common_dates)
         
         # Calculate metrics
         portfolio_metrics = self._calculate_metrics(portfolio_aligned)

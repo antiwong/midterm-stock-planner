@@ -1,7 +1,7 @@
 {
   "run_id": "20260116_001542_454cf07a",
   "run_name": "jan 2026 - Backtest 2026-01-16 00:15",
-  "generated_at": "2026-01-16T09:05:16.541993",
+  "generated_at": "2026-01-16T09:21:45.685835",
   "workflow_steps": {
     "data_validation": false,
     "portfolio_enrichment": true,
@@ -82,7 +82,7 @@
       "Consumer Cyclical",
       "Energy"
     ],
-    "generated_at": "2026-01-16T09:05:15.819217"
+    "generated_at": "2026-01-16T09:21:45.035184"
   },
   "portfolio": {
     "n_holdings": 6,
