@@ -58,6 +58,9 @@ def load_api_keys() -> Dict[str, Optional[str]]:
         "GEMINI_API_KEY", 
         "OPENAI_API_KEY",
         "ALPHA_VANTAGE_API_KEY",
+        "MASSIVE_API_KEY",  # Formerly Polygon.io
+        "POLYGON_API_KEY",  # Keep for backward compatibility
+        "FINNHUB_API_KEY",
     ]
     
     for name in key_names:

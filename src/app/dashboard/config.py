@@ -586,6 +586,7 @@ ADVANCED_ANALYTICS = [
 UTILITIES = [
     ("🚨 Alert Management", "alert_management"),
     ("📄 Report Templates", "report_templates"),
+    ("📊 Fundamentals Status", "fundamentals_status"),
     ("📚 Documentation", "documentation"),
     ("⚙️ Settings", "settings"),
 ]

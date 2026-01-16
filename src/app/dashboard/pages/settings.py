@@ -11,7 +11,7 @@ from pathlib import Path
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_info_card, render_alert
 from ..data import load_runs, delete_run, get_database
-from ..utils import get_project_root
+from ..utils import get_project_root, get_version
 from ..config import COLORS
 
 
@@ -206,10 +206,13 @@ def _render_about_tab():
     """Render about information tab."""
     render_section_header("About", "ℹ️")
     
-    st.markdown("""
+    # Get version from README
+    version = get_version()
+    
+    st.markdown(f"""
     ## Mid-term Stock Planner
     
-    **Version:** 3.0.0
+    **Version:** {version}
     
     ML-powered stock analysis and portfolio optimization platform.
     

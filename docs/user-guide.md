@@ -295,6 +295,8 @@ The dashboard is organized into four main sections:
    - Use descriptive watchlist names
    - Keep watchlists focused (20-50 stocks ideal)
    - Validate symbols before adding
+   - Use "Update Sectors" tab to automatically assign sectors to stocks
+   - Stocks are color-coded by sector for easy identification
 
 ### Analysis Workflow
 

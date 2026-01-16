@@ -16,7 +16,7 @@ from ..components.metrics import render_metric_card, render_kpi_summary
 from ..components.charts import (
     create_sector_pie, create_weight_bar, create_equity_curve,
     create_returns_chart, create_score_distribution, create_drawdown_chart,
-    create_scatter_plot, create_performance_bar
+    create_scatter_plot, create_performance_bar, get_chart_template
 )
 from ..components.tables import render_portfolio_table
 from ..components.cards import render_info_card, render_stock_card
@@ -280,6 +280,200 @@ def _render_overview_tab(run: dict, run_id: str):
     else:
         # Lazy load charts
         _render_lazy_charts(returns_df, scores_df, run, run_id)
+
+
+def _render_all_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: dict, run_id: str):
+    """Render all charts immediately."""
+    
+    if returns_df is None or returns_df.empty:
+        st.info("No returns data available for charts")
+        return
+    
+    if scores_df.empty:
+        st.info("No scores data available for charts")
+        return
+    
+    # Prepare returns data
+    returns_df = returns_df.copy()
+    if 'date' in returns_df.columns:
+        returns_df['date'] = pd.to_datetime(returns_df['date'])
+    if 'portfolio_return' in returns_df.columns:
+        returns_df['cumulative'] = (1 + returns_df['portfolio_return']).cumprod()
+    
+    # Row 1: Equity Curve and Sector Allocation
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown('<div class="section-title">Equity Curve</div>', unsafe_allow_html=True)
+        if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
+            dates = returns_df['date'].tolist()
+            values = returns_df['cumulative'].tolist() if 'cumulative' in returns_df.columns else (1 + returns_df['portfolio_return']).cumprod().tolist()
+            fig = create_equity_curve(dates, values)
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("equity_curve", returns_df, scores_df, run)
+    
+    with col2:
+        st.markdown('<div class="section-title">Sector Allocation</div>', unsafe_allow_html=True)
+        if 'sector' in scores_df.columns:
+            sector_counts = scores_df['sector'].value_counts().to_dict()
+            fig = create_sector_pie(sector_counts)
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("sector_allocation", returns_df, scores_df, run)
+    
+    st.markdown("---")
+    
+    # Row 2: Score Distribution and Top Performers
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown('<div class="section-title">Score Distribution</div>', unsafe_allow_html=True)
+        if 'score' in scores_df.columns:
+            fig = create_score_distribution(scores_df['score'].dropna().tolist())
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("score_distribution", returns_df, scores_df, run)
+    
+    with col2:
+        st.markdown('<div class="section-title">Top Performers</div>', unsafe_allow_html=True)
+        if 'score' in scores_df.columns:
+            top10 = scores_df.nlargest(10, 'score')
+            if 'ticker' in top10.columns and 'score' in top10.columns:
+                # Create a simple bar chart for top performers
+                fig = go.Figure(data=[go.Bar(
+                    x=top10['ticker'].tolist(),
+                    y=top10['score'].tolist(),
+                    marker_color=CHART_COLORS['primary'],
+                    text=[f"{s:.1f}" for s in top10['score'].tolist()],
+                    textposition='outside'
+                )])
+                fig.update_layout(
+                    title="Top 10 Stocks by Score",
+                    xaxis_title="Ticker",
+                    yaxis_title="Score",
+                    height=350,
+                    **get_chart_template()['layout']
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                _render_chart_insight("top_performers", returns_df, scores_df, run)
+    
+    st.markdown("---")
+    
+    # Row 3: Drawdown Chart
+    if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
+        st.markdown('<div class="section-title">Drawdown Analysis</div>', unsafe_allow_html=True)
+        # Calculate drawdown
+        cumulative = (1 + returns_df['portfolio_return']).cumprod()
+        running_max = cumulative.expanding().max()
+        drawdown = (cumulative / running_max - 1) * 100
+        
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=returns_df['date'],
+            y=drawdown,
+            fill='tozeroy',
+            fillcolor='rgba(239, 68, 68, 0.3)',
+            line=dict(color=CHART_COLORS['danger'], width=2),
+            name='Drawdown'
+        ))
+        fig.update_layout(
+            title="Portfolio Drawdown",
+            xaxis_title="Date",
+            yaxis_title="Drawdown (%)",
+            height=350,
+            **get_chart_template()['layout']
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        _render_chart_insight("drawdown", returns_df, scores_df, run)
+
+
+def _render_lazy_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: dict, run_id: str):
+    """Render charts with lazy loading (in expanders)."""
+    
+    if returns_df is None or returns_df.empty:
+        st.info("No returns data available for charts")
+        return
+    
+    if scores_df.empty:
+        st.info("No scores data available for charts")
+        return
+    
+    # Prepare returns data
+    returns_df = returns_df.copy()
+    if 'date' in returns_df.columns:
+        returns_df['date'] = pd.to_datetime(returns_df['date'])
+    if 'portfolio_return' in returns_df.columns:
+        returns_df['cumulative'] = (1 + returns_df['portfolio_return']).cumprod()
+    
+    # Equity Curve
+    with st.expander("📈 Equity Curve", expanded=True):
+        if 'portfolio_return' in returns_df.columns:
+            fig = create_equity_curve(returns_df['portfolio_return'].tolist())
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("equity_curve", returns_df, scores_df, run)
+    
+    # Sector Allocation
+    with st.expander("🏭 Sector Allocation", expanded=False):
+        if 'sector' in scores_df.columns:
+            sector_counts = scores_df['sector'].value_counts().to_dict()
+            fig = create_sector_pie(sector_counts)
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("sector_allocation", returns_df, scores_df, run)
+    
+    # Score Distribution
+    with st.expander("📊 Score Distribution", expanded=False):
+        if 'score' in scores_df.columns:
+            fig = create_score_distribution(scores_df['score'].dropna().tolist())
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("score_distribution", returns_df, scores_df, run)
+    
+    # Top Performers
+    with st.expander("⭐ Top Performers", expanded=False):
+        if 'score' in scores_df.columns:
+            top10 = scores_df.nlargest(10, 'score')
+            if 'ticker' in top10.columns and 'score' in top10.columns:
+                # Create a simple bar chart for top performers
+                fig = go.Figure(data=[go.Bar(
+                    x=top10['ticker'].tolist(),
+                    y=top10['score'].tolist(),
+                    marker_color=CHART_COLORS['primary'],
+                    text=[f"{s:.1f}" for s in top10['score'].tolist()],
+                    textposition='outside'
+                )])
+                fig.update_layout(
+                    title="Top 10 Stocks by Score",
+                    xaxis_title="Ticker",
+                    yaxis_title="Score",
+                    height=350,
+                    **get_chart_template()['layout']
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                _render_chart_insight("top_performers", returns_df, scores_df, run)
+    
+    # Drawdown Chart
+    with st.expander("📉 Drawdown Analysis", expanded=False):
+        if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
+            # Calculate drawdown
+            cumulative = (1 + returns_df['portfolio_return']).cumprod()
+            running_max = cumulative.expanding().max()
+            drawdown = (cumulative / running_max - 1) * 100
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(
+                x=returns_df['date'],
+                y=drawdown,
+                fill='tozeroy',
+                fillcolor='rgba(239, 68, 68, 0.3)',
+                line=dict(color=CHART_COLORS['danger'], width=2),
+                name='Drawdown'
+            ))
+            fig.update_layout(
+                title="Portfolio Drawdown",
+                xaxis_title="Date",
+                yaxis_title="Drawdown (%)",
+                height=350,
+                **get_chart_template()['layout']
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            _render_chart_insight("drawdown", returns_df, scores_df, run)
     
     # ==========================================
     # AI SUMMARY (Optional - requires API)
@@ -892,7 +1086,22 @@ def _render_ai_tab(run_id: str):
         """)
         return
     
+    # Handle different data formats
     profiles = recommendations_data.get('recommendations') or recommendations_data.get('profiles', {})
+    
+    # If profiles is a string, try to parse it as JSON
+    if isinstance(profiles, str):
+        try:
+            import json
+            profiles = json.loads(profiles)
+        except (json.JSONDecodeError, TypeError):
+            # If it's not JSON, treat as plain text and create a simple structure
+            profiles = {}
+    
+    # Ensure profiles is a dict before calling .items()
+    if not isinstance(profiles, dict):
+        profiles = {}
+    
     portfolio_profiles = {k: v for k, v in profiles.items() if isinstance(v, dict)}
     
     if not portfolio_profiles:

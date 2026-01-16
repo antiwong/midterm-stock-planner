@@ -2,6 +2,69 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.1] - 2026-01-16
+
+### Added
+
+#### Watchlist Manager Enhancements
+- **Sector Color Coding**: Stocks in watchlists are now color-coded by sector
+  - Distinct colors for each sector (Technology: Blue, Healthcare: Red, etc.)
+  - Symbols grouped by sector for better organization
+  - Sector labels with counts displayed
+  - 12+ sector color schemes implemented
+  
+- **Automatic Sector Assignment**: Automatic sector fetching for unknown stocks
+  - "Fetch Sectors" button for unknown stocks
+  - Fetches sector data from Yahoo Finance using yfinance
+  - Updates `data/sectors.json` cache automatically
+  - Smart ETF classification by ticker/name patterns
+  - Progress tracking and results display
+
+- **Sector Update Section**: New dedicated tab in Watchlist Manager
+  - Statistics dashboard (total stocks, classified vs unclassified)
+  - Watchlist breakdown with completeness counts
+  - "Update All Stocks" button (fetches missing sectors only)
+  - "Force Refresh All" button (re-fetches all stocks)
+  - Real-time progress bar and status updates
+  - Sector distribution visualization
+  - Results summary with success/failure counts
+
+#### Version Management System
+- **Centralized Version**: Version now stored in README.md
+  - Single source of truth for version information
+  - `get_version()` utility function reads from README
+  - Settings/About page dynamically displays version
+  - No more hardcoded version numbers
+
+#### Documentation
+- **Run vs Comprehensive Analysis Guide**: New comparison document
+  - Detailed comparison of Run Analysis vs Comprehensive Analysis
+  - Use cases and workflow diagrams
+  - Feature breakdown tables
+  - Located at `docs/run-vs-comprehensive-analysis.md`
+
+### Changed
+
+#### Watchlist Manager
+- **Symbol Display**: Replaced HTML/CSS with native Streamlit components
+  - Fixed CSS code being displayed as text
+  - Cleaner, more maintainable code
+  - Better compatibility with Streamlit
+  - Consistent styling with rest of dashboard
+
+#### Settings Page
+- **About Tab**: Now reads version from README.md dynamically
+  - Removed hardcoded "3.0.0" version
+  - Automatic version synchronization
+  - Consistent version across application
+
+### Fixed
+
+#### Watchlist Manager
+- **CSS Display Issue**: Fixed CSS code being displayed as text instead of rendering
+  - Replaced raw HTML with Streamlit components
+  - Symbols now display correctly with color coding
+
 ## [3.10.0] - 2026-01-16
 
 ### Added

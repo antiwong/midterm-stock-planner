@@ -29,6 +29,13 @@ except ImportError:
     print("⚠️  Warning: src.fundamental.data_fetcher not available. Using yfinance directly.")
 
 try:
+    from src.fundamental.multi_source_fetcher import MultiSourceFundamentalsFetcher
+    MULTI_SOURCE_AVAILABLE = True
+except ImportError:
+    MULTI_SOURCE_AVAILABLE = False
+    print("⚠️  Warning: Multi-source fetcher not available. Using yfinance directly.")
+
+try:
     import yfinance as yf
     YFINANCE_AVAILABLE = True
 except ImportError:
@@ -37,7 +44,35 @@ except ImportError:
 
 
 def load_watchlist_tickers(watchlist_name: Optional[str] = None) -> List[str]:
-    """Load tickers from watchlist."""
+    """Load tickers from watchlist (YAML file or database)."""
+    # First try using WatchlistManager which handles both YAML and database
+    try:
+        from src.data.watchlists import WatchlistManager
+        manager = WatchlistManager.from_config_dir("config", include_custom=True)
+        
+        if watchlist_name:
+            watchlist = manager.get_watchlist(watchlist_name)
+            if watchlist:
+                return [str(s).upper() for s in watchlist.symbols if s]
+            else:
+                # List available watchlists
+                all_watchlists = manager.list_watchlists()
+                available = [wl['key'] for wl in all_watchlists]
+                print(f"❌ Watchlist '{watchlist_name}' not found")
+                print(f"Available watchlists: {', '.join(available)}")
+                return []
+        else:
+            # Use default watchlist
+            default_symbols = manager.get_default_symbols()
+            if default_symbols:
+                print(f"📋 Using default watchlist: {manager.default_watchlist}")
+                return default_symbols
+            return []
+    except ImportError:
+        # Fallback to YAML-only loading
+        pass
+    
+    # Fallback: Load from YAML only
     watchlist_path = Path("config/watchlists.yaml")
     
     if not watchlist_path.exists():
@@ -45,22 +80,46 @@ def load_watchlist_tickers(watchlist_name: Optional[str] = None) -> List[str]:
         return []
     
     with open(watchlist_path) as f:
-        watchlists = yaml.safe_load(f)
+        watchlists_data = yaml.safe_load(f)
+    
+    # Handle different YAML structures
+    if isinstance(watchlists_data, dict) and 'watchlists' in watchlists_data:
+        watchlists = watchlists_data['watchlists']
+    else:
+        watchlists = watchlists_data or {}
     
     if watchlist_name:
         if watchlist_name not in watchlists:
             print(f"❌ Watchlist '{watchlist_name}' not found")
             print(f"Available watchlists: {', '.join(watchlists.keys())}")
             return []
+        
         data = watchlists[watchlist_name]
-        # Support both 'tickers' and 'symbols' keys
-        return data.get('tickers', data.get('symbols', []))
+        
+        # Handle different data formats
+        if isinstance(data, list):
+            return [str(s).upper() for s in data if s]
+        elif isinstance(data, dict):
+            tickers = data.get('tickers', data.get('symbols', []))
+            return [str(s).upper() for s in tickers if s] if isinstance(tickers, list) else []
+        elif isinstance(data, str):
+            return [data.upper()]
+        else:
+            return []
     else:
-        # Use first watchlist or combine all
+        # Use first watchlist
         if watchlists:
-            # Try to find a default watchlist
             for name, data in watchlists.items():
-                tickers = data.get('tickers', data.get('symbols', []))
+                if isinstance(data, list):
+                    tickers = [str(s).upper() for s in data if s]
+                elif isinstance(data, dict):
+                    tickers = data.get('tickers', data.get('symbols', []))
+                    tickers = [str(s).upper() for s in tickers if s] if isinstance(tickers, list) else []
+                elif isinstance(data, str):
+                    tickers = [data.upper()]
+                else:
+                    tickers = []
+                
                 if tickers:
                     print(f"📋 Using watchlist: {name}")
                     return tickers
@@ -132,6 +191,19 @@ def download_fundamentals(
     print(f"   Output: {output_path}")
     print()
     
+    # Try multi-source fetcher first (best coverage)
+    if MULTI_SOURCE_AVAILABLE:
+        print("📥 Using multi-source fetcher (yfinance + Alpha Vantage + others)...")
+        fetcher = MultiSourceFundamentalsFetcher()
+        available_sources = fetcher._get_available_sources()
+        print(f"   Available sources: {', '.join(available_sources)}")
+        print()
+        
+        df = fetcher.fetch_batch(tickers, delay=delay)
+        if not df.empty:
+            return df
+    
+    # Fallback to single-source methods
     results = []
     failed = []
     

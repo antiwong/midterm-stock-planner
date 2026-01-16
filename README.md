@@ -1,4 +1,6 @@
 # Mid-term Stock Planner
+**Version:** 3.10.0
+
 
 An interpretable stock ranking and backtesting system for mid-term investors (3-month horizon) with monthly rebalancing.
 
@@ -49,11 +51,12 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 ### AI-Powered Insights
 - **Executive Summaries**: Gemini-generated analysis overview
 - **Top Picks Analysis**: Detailed stock-by-stock explanations
-- **Sector Analysis**: Rotation and allocation guidance
+- **Sector Analysis**: Rotation and allocation guidance with accurate sector scores
 - **Risk Assessment**: Automated warning generation
-- **Investment Recommendations**: Actionable buy/sell suggestions
+- **Investment Recommendations**: Actionable buy/sell suggestions with data quality validation
 - **Portfolio Commentary**: Natural-language explanation of portfolio characteristics
 - **Historical Tracking**: All AI insights stored in database with deduplication
+- **Data Quality Checks**: Automatic validation prevents misleading recommendations from bad data
 
 ### Comprehensive Analysis System
 - **Performance Attribution**: Decompose returns into factor, sector, stock selection, and timing components
@@ -64,12 +67,28 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Recommendation Tracking**: Track recommendation performance over time
 - **Database Storage**: All analysis results stored permanently for historical comparison
 
+### Advanced Analytics (NEW)
+- **Event-Driven Analysis**: Analyze portfolio performance around Fed meetings, earnings announcements, and macro data releases
+- **Tax Optimization**: Tax-loss harvesting suggestions, wash sale detection, tax-efficient rebalancing recommendations
+- **Monte Carlo Simulation**: Portfolio risk analysis with VaR, CVaR, confidence intervals, and probability metrics
+- **Turnover & Churn Analysis**: Detailed turnover metrics, churn rate, holding period analysis, position stability
+- **Earnings Calendar**: Portfolio earnings exposure, upcoming earnings tracking, earnings impact analysis
+- **Real-Time Monitoring**: Portfolio alerts, daily summaries, performance tracking, benchmark underperformance detection
+- **Alert System**: Email/SMS notifications for portfolio changes, drawdown warnings, price alerts (v3.10.0)
+- **Custom Report Templates**: User-configurable report generation with multiple formats (v3.10.0)
+
 ### Interactive Dashboard
 - **Analysis Pipeline**: Clear 4-stage workflow with guards and status indicators
 - **Portfolio Builder**: Interactive UI for personalized portfolio construction
 - **Comprehensive Analysis**: Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis
-- **Run Browser**: Filter and explore analysis history
-- **Stock Explorer**: Search, filter, and analyze individual stocks
+- **Advanced Analytics Pages**: 6 new dedicated pages for event analysis, tax optimization, Monte Carlo, turnover, earnings, and real-time monitoring
+- **Alert Management**: Configure and manage portfolio alerts with email/SMS notifications (v3.10.0)
+- **Report Templates**: Create custom report templates and generate reports on-demand (v3.10.0)
+- **Enhanced UX**: Loading indicators, improved error messages with actionable guidance, keyboard shortcuts
+- **Performance Optimizations**: Data caching, database indexes, lazy chart loading, pagination (v3.9.3)
+- **Export Capabilities**: CSV, JSON, PDF, Excel export on all major pages (v3.9.3)
+- **Run Browser**: Filter and explore analysis history with pagination
+- **Stock Explorer**: Search, filter, and analyze individual stocks with pagination
 - **AI Insights Tab**: Generate and view AI analysis with data validation
 - **Documentation Browser**: Browse and view all project documentation in the GUI
 - **Run Comparison**: Side-by-side comparison of two runs
@@ -392,7 +411,7 @@ analysis:
 
 ## Testing
 
-The project includes a comprehensive test suite with **100+ automated test cases** covering all major components.
+The project includes a comprehensive test suite with **208+ automated test cases** covering all major components.
 
 ### Test Coverage
 
@@ -403,6 +422,14 @@ The project includes a comprehensive test suite with **100+ automated test cases
 - **Export Functionality** - Tests for PDF and Excel export
 - **Enhanced Visualizations** - Tests for all chart types
 - **Integration Tests** - End-to-end pipeline tests
+- **Advanced Analytics** (NEW) - 57 comprehensive tests for all 6 advanced analytics modules:
+  - Event-Driven Analysis (10 tests)
+  - Tax Optimization (9 tests)
+  - Monte Carlo Simulation (10 tests)
+  - Turnover & Churn Analysis (10 tests)
+  - Earnings Calendar Integration (6 tests)
+  - Real-Time Monitoring (10 tests)
+  - Integration tests (2 tests)
 
 ### Running Tests
 
@@ -425,16 +452,18 @@ pytest tests/ --lf
 
 ### Test Documentation
 
-- [Test Suite Documentation](docs/test-suite-documentation.md) - Comprehensive test documentation
+- [Test Suite Documentation](docs/test-suite-documentation.md) - Comprehensive test documentation (8 test files, 208+ tests)
 - [Test Results Summary](docs/test-results-summary.md) - Test execution results and validation
-- [Test Execution Results](docs/test-execution-results.md) - Latest test run results (95% pass rate)
+- [Test Execution Results](docs/test-execution-results.md) - Latest test run results (100% pass rate)
 
 ### Test Status
 
-- **Current Pass Rate:** 100% (148/148 tests passing, 3 skipped) ✅
-- **New Comprehensive Suite:** ✅ 74/74 tests passing
+- **Current Pass Rate:** 100% (205/205 tests passing, 3 skipped) ✅
+- **New Comprehensive Suite:** ✅ 131/131 tests passing
+  - Core tests: 74/74 ✅
+  - Advanced Analytics: 57/57 ✅
 - **Older Test Files:** ✅ 75/78 tests passing (3 skipped - database tests)
-- **Coverage:** All major components tested
+- **Coverage:** All major components tested including all 6 advanced analytics modules
 - **Status:** ✅ Ready for continuous integration
 
 ## Documentation
@@ -462,9 +491,18 @@ pytest tests/ --lf
   - Conscience filters
   - Sizing recommendations
 
-## Recent Changes (v3.5)
+## Recent Changes
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+**v3.9.2 Highlights (2026-01-16):**
+- ✅ **Sector Score Display Fix**: Fixed critical bug where all sectors showed 0.000 in AI insights - now correctly displays actual sector scores
+- ✅ **Factor Risk Contribution**: Fixed unrealistic momentum risk contribution (114,390%) - now shows realistic values (0-50%)
+- ✅ **Data Serialization**: Fixed Timestamp key errors in tax optimization and turnover analysis
+- ✅ **Style Analysis**: Fixed dict.columns error when loading stock features
+- ✅ **Benchmark Comparison**: Fixed timezone mismatch errors with SPY and QQQ
+- ✅ **Fundamental Data Integration**: Enhanced data loader to automatically merge PE, PB, ROE from fundamentals.csv
+- ✅ **AI Insights Button**: Restored generate button in comprehensive analysis page (always visible)
 
 **v3.5.0 Highlights (2026-01-09):**
 - ✅ **Data Validation for AI Insights**: Automatic validation before generating AI recommendations

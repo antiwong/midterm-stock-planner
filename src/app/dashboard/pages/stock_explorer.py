@@ -7,6 +7,7 @@ Explore individual stock scores and analysis.
 import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.charts import create_score_distribution, create_scatter_plot

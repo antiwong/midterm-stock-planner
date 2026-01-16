@@ -6,7 +6,9 @@ Create, edit, and delete custom watchlists.
 
 import streamlit as st
 import re
-from typing import List, Dict, Any
+import json
+from pathlib import Path
+from typing import List, Dict, Any, Optional
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_alert
@@ -26,6 +28,166 @@ from ..data import (
 from ..config import COLORS
 
 
+# Sector color scheme - distinct colors for each sector
+SECTOR_COLORS = {
+    'Technology': '#3b82f6',              # Blue
+    'Financial Services': '#10b981',      # Green
+    'Healthcare': '#ef4444',              # Red
+    'Consumer Cyclical': '#f59e0b',      # Amber
+    'Consumer Defensive': '#8b5cf6',      # Purple
+    'Communication Services': '#06b6d4',  # Cyan
+    'Energy': '#f97316',                  # Orange
+    'Utilities': '#14b8a6',              # Teal
+    'Industrials': '#6366f1',             # Indigo
+    'Basic Materials': '#84cc16',          # Lime
+    'Real Estate': '#ec4899',             # Pink
+    'ETF - Other': '#64748b',             # Slate
+    'Other': '#94a3b8',                   # Light Slate
+}
+
+
+@st.cache_data(ttl=3600)  # Cache for 1 hour
+def _load_sector_mapping() -> Dict[str, str]:
+    """
+    Load sector mapping for stocks.
+    
+    Priority:
+    1. Cached sector data from data/sectors.json
+    2. Fallback hardcoded mapping for common tickers
+    
+    Returns:
+        Dictionary mapping ticker -> sector
+    """
+    # Fallback mapping for common tickers
+    fallback_mapping = {
+        'AAPL': 'Technology', 'MSFT': 'Technology', 'GOOGL': 'Technology', 
+        'AMZN': 'Consumer Cyclical', 'META': 'Technology', 'NVDA': 'Technology',
+        'TSLA': 'Consumer Cyclical', 'AMD': 'Technology', 'INTC': 'Technology',
+        'CRM': 'Technology', 'ADBE': 'Technology', 'NFLX': 'Communication Services',
+        'JPM': 'Financial Services', 'BAC': 'Financial Services', 'WFC': 'Financial Services',
+        'GS': 'Financial Services', 'MS': 'Financial Services', 'C': 'Financial Services',
+        'V': 'Financial Services', 'MA': 'Financial Services', 'AXP': 'Financial Services',
+        'JNJ': 'Healthcare', 'PFE': 'Healthcare', 'UNH': 'Healthcare',
+        'MRK': 'Healthcare', 'ABBV': 'Healthcare', 'LLY': 'Healthcare',
+        'PG': 'Consumer Defensive', 'KO': 'Consumer Defensive', 'PEP': 'Consumer Defensive',
+        'WMT': 'Consumer Defensive', 'COST': 'Consumer Defensive', 'TGT': 'Consumer Cyclical',
+        'HD': 'Consumer Cyclical', 'NKE': 'Consumer Cyclical', 'MCD': 'Consumer Cyclical',
+        'DIS': 'Communication Services', 'CMCSA': 'Communication Services',
+        'XOM': 'Energy', 'CVX': 'Energy', 'COP': 'Energy',
+        'NEE': 'Utilities', 'DUK': 'Utilities', 'SO': 'Utilities',
+        'BA': 'Industrials', 'CAT': 'Industrials', 'GE': 'Industrials',
+        'MMM': 'Industrials', 'HON': 'Industrials', 'UPS': 'Industrials',
+    }
+    
+    # Try to load cached sector data
+    project_root = Path(__file__).parent.parent.parent.parent
+    sector_cache_path = project_root / "data" / "sectors.json"
+    
+    if sector_cache_path.exists():
+        try:
+            with open(sector_cache_path, 'r') as f:
+                cached_mapping = json.load(f)
+            # Merge: cached data takes precedence over fallback
+            merged = {**fallback_mapping, **cached_mapping}
+            return merged
+        except Exception:
+            pass
+    
+    return fallback_mapping
+
+
+def _fetch_sector_for_ticker(ticker: str) -> Optional[str]:
+    """
+    Fetch sector for a single ticker using yfinance.
+    
+    Returns:
+        Sector name or None if not found
+    """
+    try:
+        import yfinance as yf
+        stock = yf.Ticker(ticker)
+        info = stock.info
+        sector = info.get('sector', '')
+        
+        # Handle ETFs
+        if info.get('quoteType') == 'ETF' and not sector:
+            # Try to classify ETF
+            name = info.get('shortName', info.get('longName', ''))
+            ticker_upper = ticker.upper()
+            name_lower = (name or '').lower()
+            
+            # Precious metals
+            if any(x in ticker_upper for x in ['GLD', 'SLV', 'GOLD', 'PALL', 'PPLT']):
+                return 'Precious Metals'
+            if any(x in name_lower for x in ['gold', 'silver', 'platinum', 'palladium']):
+                return 'Precious Metals'
+            
+            # Energy/Uranium
+            if any(x in ticker_upper for x in ['URA', 'URNM', 'NLR', 'XLE', 'OIH']):
+                return 'Energy'
+            
+            # Technology
+            if any(x in ticker_upper for x in ['QQQ', 'XLK', 'VGT', 'ARKK', 'ARKW']):
+                return 'Technology'
+            
+            # Financials
+            if any(x in ticker_upper for x in ['XLF', 'VFH', 'KRE']):
+                return 'Financial Services'
+            
+            # Healthcare
+            if any(x in ticker_upper for x in ['XLV', 'VHT', 'IBB', 'XBI']):
+                return 'Healthcare'
+            
+            # Real Estate
+            if any(x in ticker_upper for x in ['VNQ', 'XLRE', 'IYR']):
+                return 'Real Estate'
+            
+            return 'ETF - Other'
+        
+        return sector if sector else None
+    except Exception:
+        return None
+
+
+def _update_sector_cache(ticker: str, sector: str):
+    """
+    Update the sector cache file with a new ticker-sector mapping.
+    """
+    try:
+        project_root = Path(__file__).parent.parent.parent.parent
+        sector_cache_path = project_root / "data" / "sectors.json"
+        
+        # Load existing cache
+        if sector_cache_path.exists():
+            with open(sector_cache_path, 'r') as f:
+                cache = json.load(f)
+        else:
+            cache = {}
+        
+        # Update cache
+        cache[ticker.upper()] = sector
+        
+        # Save cache
+        sector_cache_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(sector_cache_path, 'w') as f:
+            json.dump(cache, f, indent=2)
+        
+        # Clear the cached function to reload (if using Streamlit cache)
+        try:
+            _load_sector_mapping.clear()
+        except:
+            pass
+    except Exception:
+        pass  # Silently fail if cache update fails
+
+
+def _get_sector_color(sector: Optional[str]) -> str:
+    """Get color for a sector."""
+    if not sector:
+        return SECTOR_COLORS.get('Other', '#94a3b8')
+    return SECTOR_COLORS.get(sector, SECTOR_COLORS.get('Other', '#94a3b8'))
+
+
 def render_watchlist_manager():
     """Render the watchlist manager page."""
     render_page_header(
@@ -43,7 +205,7 @@ def render_watchlist_manager():
             del st.session_state['watchlist_created_name']
     
     # Tabs for different actions
-    tab1, tab2, tab3 = st.tabs(["📋 My Watchlists", "➕ Create New", "🔧 Quick Edit"])
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 My Watchlists", "➕ Create New", "🔧 Quick Edit", "🔄 Update Sectors"])
     
     with tab1:
         _render_watchlists_overview()
@@ -53,6 +215,9 @@ def render_watchlist_manager():
     
     with tab3:
         _render_quick_edit()
+    
+    with tab4:
+        _render_update_sectors()
 
 
 def _render_watchlists_overview():
@@ -141,13 +306,10 @@ def _render_standard_watchlists_grid():
         for i, wl_id in enumerate(wl_ids):
             wl = watchlists.get(wl_id, {})
             with cols[i % 4]:
-                st.markdown(f"""
-                <div style="background: {COLORS['light']}; padding: 0.5rem; 
-                            border-radius: 8px; margin-bottom: 0.5rem; font-size: 0.85rem;">
-                    <strong>{wl.get('name', wl_id)}</strong><br>
-                    <span style="color: {COLORS['muted']};">{wl.get('count', 0)} stocks</span>
-                </div>
-                """, unsafe_allow_html=True)
+                # Use Streamlit components instead of raw HTML to avoid CSS display issues
+                with st.container():
+                    st.markdown(f"**{wl.get('name', wl_id)}**")
+                    st.caption(f"{wl.get('count', 0)} stocks")
 
 
 def _render_create_watchlist():
@@ -515,20 +677,316 @@ def _render_edit_watchlist(watchlist_id: str):
             st.rerun()
 
 
-def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10):
-    """Render symbols in a grid layout."""
+def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch: bool = False):
+    """
+    Render symbols in a grid layout with color coding by sector.
+    
+    Args:
+        symbols: List of stock symbols
+        cols_per_row: Number of columns per row
+        auto_fetch: If True, automatically fetch sectors for unknown stocks using yfinance
+    """
     if not symbols:
         return
     
-    # Create HTML grid
-    html_parts = ['<div style="display: flex; flex-wrap: wrap; gap: 0.25rem;">']
-    for symbol in symbols:
-        html_parts.append(f'''
-            <span style="background: {COLORS['light']}; padding: 0.2rem 0.5rem; 
-                         border-radius: 4px; font-family: monospace; font-size: 0.8rem;">
-                {symbol}
-            </span>
-        ''')
-    html_parts.append('</div>')
+    # Load sector mapping
+    sector_mapping = _load_sector_mapping()
     
-    st.markdown(''.join(html_parts), unsafe_allow_html=True)
+    # Group symbols by sector for better organization
+    symbols_by_sector: Dict[str, List[str]] = {}
+    unknown_sector = []
+    symbols_to_fetch = []
+    
+    for symbol in symbols:
+        sector = sector_mapping.get(symbol.upper())
+        if sector:
+            if sector not in symbols_by_sector:
+                symbols_by_sector[sector] = []
+            symbols_by_sector[sector].append(symbol)
+        else:
+            unknown_sector.append(symbol)
+            if auto_fetch:
+                symbols_to_fetch.append(symbol)
+    
+    # Auto-fetch sectors for unknown stocks
+    if auto_fetch and symbols_to_fetch:
+        # Limit to first 20 to avoid rate limiting
+        symbols_to_fetch = symbols_to_fetch[:20]
+        
+        with st.spinner(f"Fetching sector data for {len(symbols_to_fetch)} stocks..."):
+            fetched_count = 0
+            for symbol in symbols_to_fetch:
+                sector = _fetch_sector_for_ticker(symbol)
+                if sector:
+                    # Update cache
+                    _update_sector_cache(symbol, sector)
+                    
+                    # Add to sector group
+                    if sector not in symbols_by_sector:
+                        symbols_by_sector[sector] = []
+                    symbols_by_sector[sector].append(symbol)
+                    
+                    # Remove from unknown
+                    if symbol in unknown_sector:
+                        unknown_sector.remove(symbol)
+                    
+                    fetched_count += 1
+        
+        if fetched_count > 0:
+            st.success(f"✅ Fetched sector data for {fetched_count} stocks")
+            # Reload sector mapping
+            sector_mapping = _load_sector_mapping()
+            st.rerun()
+    
+    # Render symbols grouped by sector
+    if symbols_by_sector:
+        for sector, sector_symbols in sorted(symbols_by_sector.items()):
+            sector_color = _get_sector_color(sector)
+            st.markdown(f"**{sector}** ({len(sector_symbols)})")
+            
+            # Render symbols in grid for this sector
+            num_rows = (len(sector_symbols) + cols_per_row - 1) // cols_per_row
+            
+            for row in range(num_rows):
+                cols = st.columns(cols_per_row)
+                start_idx = row * cols_per_row
+                end_idx = min(start_idx + cols_per_row, len(sector_symbols))
+                
+                for i, symbol in enumerate(sector_symbols[start_idx:end_idx]):
+                    with cols[i]:
+                        # Use HTML badge with sector color
+                        st.markdown(
+                            f'<span style="display: inline-block; background: {sector_color}; '
+                            f'color: white; padding: 0.2rem 0.5rem; border-radius: 4px; '
+                            f'font-family: monospace; font-size: 0.8rem; font-weight: 600;">{symbol}</span>',
+                            unsafe_allow_html=True
+                        )
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+    
+    # Render unknown sector symbols if any
+    if unknown_sector:
+        col1, col2 = st.columns([3, 1])
+        with col1:
+            st.markdown(f"**Other/Unknown** ({len(unknown_sector)})")
+        with col2:
+            if st.button("🔍 Fetch Sectors", key=f"fetch_sectors_{hash(tuple(unknown_sector))}", 
+                        help="Fetch sector data for unknown stocks from Yahoo Finance"):
+                with st.spinner(f"Fetching sector data for {len(unknown_sector)} stocks..."):
+                    fetched_count = 0
+                    failed = []
+                    for symbol in unknown_sector:
+                        sector = _fetch_sector_for_ticker(symbol)
+                        if sector:
+                            _update_sector_cache(symbol, sector)
+                            fetched_count += 1
+                        else:
+                            failed.append(symbol)
+                        # Small delay to avoid rate limiting
+                        import time
+                        time.sleep(0.2)
+                    
+                    if fetched_count > 0:
+                        st.success(f"✅ Fetched sector data for {fetched_count} stocks")
+                        if failed:
+                            st.warning(f"⚠️ Could not fetch data for {len(failed)} stocks: {', '.join(failed[:10])}")
+                        # Clear cache and rerun
+                        try:
+                            _load_sector_mapping.clear()
+                        except:
+                            pass
+                        st.rerun()
+                    else:
+                        st.error("❌ Could not fetch sector data. Please try again or run `python scripts/fetch_sector_data.py`")
+        
+        if len(unknown_sector) > 0:
+            st.info(f"💡 {len(unknown_sector)} stocks without sector data. Click 'Fetch Sectors' to assign them automatically.")
+        
+        other_color = _get_sector_color('Other')
+        num_rows = (len(unknown_sector) + cols_per_row - 1) // cols_per_row
+        
+        for row in range(num_rows):
+            cols = st.columns(cols_per_row)
+            start_idx = row * cols_per_row
+            end_idx = min(start_idx + cols_per_row, len(unknown_sector))
+            
+            for i, symbol in enumerate(unknown_sector[start_idx:end_idx]):
+                with cols[i]:
+                    st.markdown(
+                        f'<span style="display: inline-block; background: {other_color}; '
+                        f'color: white; padding: 0.2rem 0.5rem; border-radius: 4px; '
+                        f'font-family: monospace; font-size: 0.8rem; font-weight: 600;">{symbol}</span>',
+                        unsafe_allow_html=True
+                    )
+
+
+def _render_update_sectors():
+    """Render the sector update section."""
+    render_section_header("Update Sector Data", "🔄")
+    
+    st.markdown("""
+    This tool fetches and updates sector classifications for all stocks in your watchlists.
+    Sector data is fetched from Yahoo Finance and cached for faster access.
+    """)
+    
+    # Get all unique tickers from all watchlists
+    all_watchlists = get_all_available_watchlists()
+    all_tickers = set()
+    watchlist_counts = {}
+    
+    for wl_id, wl in all_watchlists.items():
+        symbols = wl.get('symbols', [])
+        all_tickers.update(s.upper() for s in symbols)
+        watchlist_counts[wl_id] = len(symbols)
+    
+    total_tickers = len(all_tickers)
+    
+    # Load current sector mapping
+    sector_mapping = _load_sector_mapping()
+    classified_count = sum(1 for t in all_tickers if t in sector_mapping)
+    unclassified_count = total_tickers - classified_count
+    
+    # Display statistics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Stocks", total_tickers)
+    with col2:
+        st.metric("Classified", classified_count, delta=f"{classified_count/total_tickers*100:.1f}%" if total_tickers > 0 else "0%")
+    with col3:
+        st.metric("Unclassified", unclassified_count, delta=f"-{unclassified_count}" if unclassified_count > 0 else "0", delta_color="inverse")
+    
+    st.markdown("---")
+    
+    # Show watchlist breakdown
+    with st.expander("📊 Watchlist Breakdown", expanded=False):
+        st.markdown("**Stocks by Watchlist:**")
+        for wl_id, wl in sorted(all_watchlists.items()):
+            symbols = wl.get('symbols', [])
+            classified = sum(1 for s in symbols if s.upper() in sector_mapping)
+            unclassified = len(symbols) - classified
+            st.markdown(f"• **{wl.get('name', wl_id)}**: {len(symbols)} stocks ({classified} classified, {unclassified} unclassified)")
+    
+    st.markdown("---")
+    
+    # Update options
+    st.markdown("### Update Options")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        update_all = st.button(
+            "🔄 Update All Stocks",
+            type="primary",
+            use_container_width=True,
+            help="Fetch sector data for all stocks in all watchlists"
+        )
+    
+    with col2:
+        force_refresh = st.button(
+            "🔄 Force Refresh All",
+            use_container_width=True,
+            help="Re-fetch sector data even for already classified stocks"
+        )
+    
+    if update_all or force_refresh:
+        # Get all tickers
+        tickers_to_fetch = list(all_tickers) if force_refresh else [t for t in all_tickers if t not in sector_mapping]
+        
+        if not tickers_to_fetch:
+            st.success("✅ All stocks are already classified!")
+        else:
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            results_area = st.empty()
+            
+            fetched_count = 0
+            failed = []
+            updated = []
+            
+            for i, ticker in enumerate(tickers_to_fetch):
+                progress = (i + 1) / len(tickers_to_fetch)
+                progress_bar.progress(progress)
+                status_text.text(f"Fetching sector data... {i+1}/{len(tickers_to_fetch)} ({ticker})")
+                
+                sector = _fetch_sector_for_ticker(ticker)
+                if sector:
+                    _update_sector_cache(ticker, sector)
+                    fetched_count += 1
+                    updated.append(ticker)
+                else:
+                    failed.append(ticker)
+                
+                # Small delay to avoid rate limiting
+                import time
+                time.sleep(0.2)
+                
+                # Update results every 10 stocks
+                if (i + 1) % 10 == 0 or i == len(tickers_to_fetch) - 1:
+                    with results_area.container():
+                        st.markdown(f"**Progress:** {i+1}/{len(tickers_to_fetch)} stocks processed")
+                        st.markdown(f"✅ Fetched: {fetched_count} | ❌ Failed: {len(failed)}")
+            
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Final results
+            st.markdown("---")
+            st.markdown("### Update Results")
+            
+            if fetched_count > 0:
+                st.success(f"✅ Successfully fetched sector data for {fetched_count} stocks!")
+                
+                # Show updated stocks
+                if len(updated) <= 20:
+                    st.markdown(f"**Updated stocks:** {', '.join(updated)}")
+                else:
+                    with st.expander(f"View all {len(updated)} updated stocks"):
+                        st.markdown(', '.join(updated))
+                
+                # Clear cache and show refresh message
+                try:
+                    _load_sector_mapping.clear()
+                except:
+                    pass
+                
+                st.info("💡 The page will refresh to show updated sector classifications.")
+                st.rerun()
+            
+            if failed:
+                st.warning(f"⚠️ Could not fetch sector data for {len(failed)} stocks:")
+                if len(failed) <= 20:
+                    st.code(', '.join(failed))
+                else:
+                    st.code(', '.join(failed[:20]) + f" ... and {len(failed) - 20} more")
+                st.info("💡 These stocks may be invalid tickers or may require manual classification.")
+    
+    st.markdown("---")
+    
+    # Show current sector distribution
+    st.markdown("### Current Sector Distribution")
+    
+    # Count stocks by sector
+    sector_counts = {}
+    for ticker in all_tickers:
+        sector = sector_mapping.get(ticker, 'Other/Unknown')
+        sector_counts[sector] = sector_counts.get(sector, 0) + 1
+    
+    if sector_counts:
+        # Display as columns
+        sectors_sorted = sorted(sector_counts.items(), key=lambda x: x[1], reverse=True)
+        num_cols = 3
+        cols = st.columns(num_cols)
+        
+        for i, (sector, count) in enumerate(sectors_sorted):
+            with cols[i % num_cols]:
+                sector_color = _get_sector_color(sector)
+                st.markdown(
+                    f'<div style="background: {sector_color}20; padding: 0.5rem; border-radius: 8px; '
+                    f'border-left: 4px solid {sector_color}; margin-bottom: 0.5rem;">'
+                    f'<strong>{sector}</strong><br>'
+                    f'<span style="font-size: 1.2rem; font-weight: 700;">{count}</span> stocks'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
+    else:
+        st.info("No sector data available. Click 'Update All Stocks' to fetch sector classifications.")

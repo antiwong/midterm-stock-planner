@@ -50,6 +50,7 @@ from src.app.dashboard.pages import (
     render_recommendation_tracking,
     render_alert_management,
     render_report_templates,
+    render_fundamentals_status,
 )
 
 
@@ -101,6 +102,7 @@ def main():
         "📊 Recommendation Tracking": render_recommendation_tracking,
         "🚨 Alert Management": render_alert_management,
         "📄 Report Templates": render_report_templates,
+        "📊 Fundamentals Status": render_fundamentals_status,
         "📚 Documentation": render_documentation,
         "⚙️ Settings": render_settings,
     }

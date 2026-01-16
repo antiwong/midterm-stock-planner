@@ -93,6 +93,11 @@ You can create custom watchlists in "📋 Watchlist Manager".
 
 Or edit `config/watchlists.yaml` directly.
 
+**New Features (v3.10.1):**
+- Stocks are automatically color-coded by sector
+- Use "Update Sectors" tab to fetch sector data for unknown stocks
+- One-click sector assignment from Yahoo Finance
+
 ### What's the difference between Portfolio Builder and Run Analysis?
 
 - **Run Analysis**: Analyzes an existing watchlist and ranks stocks

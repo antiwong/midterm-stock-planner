@@ -370,3 +370,31 @@ def create_progress_step_html(step: int, label: str, status: str = "pending") ->
         <div class="step-label">{label}</div>
     </div>
     """
+
+
+def get_version() -> str:
+    """Get the application version from README.md.
+    
+    Returns:
+        Version string (e.g., "3.10.0") or "Unknown" if not found
+    """
+    try:
+        readme_path = get_project_root() / "README.md"
+        if readme_path.exists():
+            with open(readme_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    # Look for "**Version:** X.X.X" pattern
+                    if "**Version:**" in line:
+                        # Extract version after "**Version:**"
+                        parts = line.split("**Version:**")
+                        if len(parts) > 1:
+                            version = parts[1].strip()
+                            # Remove any trailing markdown, asterisks, or whitespace
+                            version = version.strip().rstrip('*').strip()
+                            # Remove quotes if present
+                            version = version.strip('"').strip("'").strip()
+                            if version:
+                                return version
+        return "Unknown"
+    except Exception:
+        return "Unknown"
