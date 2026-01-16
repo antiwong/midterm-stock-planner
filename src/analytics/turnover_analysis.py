@@ -68,11 +68,22 @@ class TurnoverAnalyzer:
         else:
             turnover_series = turnover['total'] if 'total' in turnover.columns else turnover.iloc[:, 0]
         
+        # Convert turnover series to dict with string keys (for JSON serialization)
+        def convert_to_string_keys(series):
+            """Convert series to dict with string keys."""
+            result = {}
+            for k, v in series.to_dict().items():
+                # Convert Timestamp/datetime keys to ISO format strings
+                if isinstance(k, (pd.Timestamp, datetime)):
+                    key_str = k.isoformat() if hasattr(k, 'isoformat') else str(k)
+                else:
+                    key_str = str(k)
+                result[key_str] = float(v) if not pd.isna(v) else 0.0
+            return result
+        
         results = {
             'method': method,
-            'turnover_by_period': turnover_series.to_dict() if isinstance(turnover_series.index[0], datetime) else {
-                str(k): float(v) for k, v in turnover_series.to_dict().items()
-            },
+            'turnover_by_period': convert_to_string_keys(turnover_series),
             'statistics': {
                 'mean': float(turnover_series.mean()),
                 'median': float(turnover_series.median()),
@@ -95,8 +106,8 @@ class TurnoverAnalyzer:
         
         # Add breakdown if one-way method
         if isinstance(turnover, pd.DataFrame) and 'buys' in turnover.columns:
-            results['buys'] = turnover['buys'].to_dict()
-            results['sells'] = turnover['sells'].to_dict()
+            results['buys'] = convert_to_string_keys(turnover['buys'])
+            results['sells'] = convert_to_string_keys(turnover['sells'])
         
         return results
     
