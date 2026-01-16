@@ -13,6 +13,7 @@ from ..components.sidebar import render_page_header, render_section_header
 from ..components.charts import create_score_distribution, create_scatter_plot
 from ..components.tables import render_score_table
 from ..components.cards import render_stock_card, render_info_card
+from ..components.tooltips import get_tooltip
 from ..data import load_runs, load_run_scores, get_all_tickers, get_all_sectors
 from ..utils import format_percent, format_number
 from ..config import COLORS
@@ -39,7 +40,8 @@ def render_stock_explorer():
         selected_run_id = st.selectbox(
             "Select Analysis Run",
             options=[r['run_id'] for r in completed_runs],
-            format_func=lambda x: f"{x[:12]}... - {next((r.get('name') or 'Unnamed' for r in completed_runs if r['run_id'] == x), 'Unknown')}"
+            format_func=lambda x: f"{x[:12]}... - {next((r.get('name') or 'Unnamed' for r in completed_runs if r['run_id'] == x), 'Unknown')}",
+            help=get_tooltip('select_run') or "Choose a completed run to explore"
         )
     
     with col2:
@@ -67,7 +69,12 @@ def render_stock_explorer():
     
     with col1:
         sectors = ['All'] + sorted(scores_df['sector'].dropna().unique().tolist())
-        sector_filter = st.selectbox("Sector", sectors, key="stock_sector_filter")
+        sector_filter = st.selectbox(
+            "Sector", 
+            sectors, 
+            key="stock_sector_filter",
+            help=get_tooltip('sector_filter') or "Filter stocks by sector"
+        )
     
     with col2:
         score_range = st.slider(
@@ -75,7 +82,8 @@ def render_stock_explorer():
             0.0, 
             float(scores_df['score'].max()) if len(scores_df) > 0 else 100.0,
             (0.0, float(scores_df['score'].max()) if len(scores_df) > 0 else 100.0),
-            key="stock_score_range"
+            key="stock_score_range",
+            help=get_tooltip('score_range') or "Filter stocks by score range"
         )
         score_min, score_max = score_range
     
@@ -83,7 +91,8 @@ def render_stock_explorer():
         ticker_search = st.text_input(
             "🔍 Search Ticker",
             placeholder="Enter ticker symbol...",
-            key="stock_ticker_search"
+            key="stock_ticker_search",
+            help=get_tooltip('stock_search') or "Search by ticker symbol"
         )
     
     with col4:

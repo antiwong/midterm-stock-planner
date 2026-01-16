@@ -456,6 +456,12 @@ def _update_prices():
                     
                     # Show link to guide
                     st.info("📖 See `docs/failed-symbols-guide.md` for detailed recommendations")
+                    
+                    # Quick fix button
+                    if st.button("🔧 Go to Watchlist Manager", use_container_width=True,
+                                help="Open Watchlist Manager to fix invalid symbols"):
+                        st.session_state['page'] = 'Watchlist Manager'
+                        st.rerun()
         
         st.info("💡 The data age will refresh after you reload the page.")
         

@@ -68,6 +68,15 @@ def get_tooltip(key: str) -> Optional[str]:
         
         # Export
         'export_format': "Choose export format: PDF for reports, Excel for data analysis, CSV for simple data, JSON for programmatic access.",
+        'export_customize': "Customize export: include charts, select specific analysis modules, choose date ranges.",
+        
+        # Scheduled Updates
+        'scheduled_updates': "Automatically update price and benchmark data on a schedule. Requires application to be running.",
+        'update_frequency': "How often to update: Daily (most current), Weekly (balanced), Monthly (less frequent).",
+        
+        # Watchlist Validation
+        'validate_watchlist': "Check all symbols in a watchlist for validity. Automatically fixes format issues and removes invalid symbols.",
+        'auto_fix': "Automatically apply fixes: format corrections (BRK.B → BRK-B), remove delisted symbols, remove invalid symbols.",
         
         # General
         'refresh': "Refresh the current page to load latest data.",

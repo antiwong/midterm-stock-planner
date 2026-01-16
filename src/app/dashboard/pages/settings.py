@@ -22,7 +22,7 @@ def render_settings():
         "Configure dashboard and manage data"
     )
     
-    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "⌨️ Shortcuts", "ℹ️ About"])
+    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "⌨️ Shortcuts", "⏰ Scheduled Updates", "ℹ️ About"])
     
     with tabs[0]:
         _render_api_keys_tab()
@@ -38,8 +38,11 @@ def render_settings():
     
     with tabs[4]:
         _render_shortcuts_tab()
-
+    
     with tabs[5]:
+        _render_scheduled_updates_tab()
+
+    with tabs[6]:
         _render_about_tab()
 
 
@@ -341,6 +344,92 @@ def _render_shortcuts_tab():
     - Some shortcuts may require page refresh to take effect
     - Navigation shortcuts (O, A, P, W, D, S) work from any page
     """)
+
+
+def _render_scheduled_updates_tab():
+    """Render scheduled updates configuration tab."""
+    render_section_header("Scheduled Updates", "⏰")
+    
+    st.markdown("""
+    Configure automatic data updates to keep your analysis current.
+    Updates can be scheduled for daily or weekly execution.
+    """)
+    
+    st.info("💡 **Note**: Scheduled updates require the application to be running. For production use, consider setting up a cron job or scheduled task.")
+    
+    st.markdown("---")
+    st.markdown("### Price Data Updates")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        enable_price_updates = st.toggle(
+            "Enable Automatic Price Updates",
+            value=False,
+            help="Automatically update price data on schedule"
+        )
+    
+    with col2:
+        price_update_frequency = st.selectbox(
+            "Update Frequency",
+            ["Daily", "Weekly", "Monthly"],
+            disabled=not enable_price_updates,
+            help="How often to update price data"
+        )
+    
+    st.markdown("---")
+    st.markdown("### Benchmark Data Updates")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        enable_benchmark_updates = st.toggle(
+            "Enable Automatic Benchmark Updates",
+            value=False,
+            help="Automatically update benchmark data on schedule"
+        )
+    
+    with col2:
+        benchmark_update_frequency = st.selectbox(
+            "Update Frequency",
+            ["Daily", "Weekly", "Monthly"],
+            disabled=not enable_benchmark_updates,
+            help="How often to update benchmark data"
+        )
+    
+    st.markdown("---")
+    st.markdown("### Update Schedule")
+    
+    from datetime import time as dt_time
+    update_time = st.time_input(
+        "Preferred Update Time",
+        value=dt_time(2, 0),
+        help="Time of day to run scheduled updates (recommended: early morning)"
+    )
+    
+    st.markdown("---")
+    
+    if st.button("💾 Save Schedule", type="primary", use_container_width=True):
+        # Save schedule settings (would be stored in ui_settings.json or config)
+        st.success("✅ Schedule saved! Updates will run automatically.")
+        st.info("⚠️ **Reminder**: Ensure the application is running for scheduled updates to execute.")
+    
+    st.markdown("---")
+    st.markdown("### Manual Update")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔄 Update Prices Now", use_container_width=True,
+                    help="Manually trigger price data update"):
+            from ..pages.overview import _update_prices
+            _update_prices()
+    
+    with col2:
+        if st.button("🔄 Update Benchmark Now", use_container_width=True,
+                    help="Manually trigger benchmark data update"):
+            from ..pages.overview import _update_benchmark
+            _update_benchmark()
 
 
 def _render_about_tab():

@@ -12,6 +12,9 @@ from typing import List, Dict, Any, Optional
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_alert
+from ..components.loading import loading_spinner
+from ..components.errors import ErrorHandler
+from ..components.tooltips import get_tooltip
 from ..data import (
     load_watchlists,
     load_custom_watchlists,
@@ -228,7 +231,7 @@ def render_watchlist_manager():
             del st.session_state['watchlist_created_name']
     
     # Tabs for different actions
-    tab1, tab2, tab3, tab4 = st.tabs(["📋 My Watchlists", "➕ Create New", "🔧 Quick Edit", "🔄 Update Sectors"])
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📋 My Watchlists", "➕ Create New", "🔧 Quick Edit", "🔄 Update Sectors", "✅ Validate & Fix"])
     
     with tab1:
         _render_watchlists_overview()
@@ -241,6 +244,9 @@ def render_watchlist_manager():
     
     with tab4:
         _render_update_sectors()
+    
+    with tab5:
+        _render_validate_and_fix()
 
 
 def _render_watchlists_overview():
@@ -1033,3 +1039,212 @@ def _render_update_sectors():
                 )
     else:
         st.info("No sector data available. Click 'Update All Stocks' to fetch sector classifications.")
+
+
+def _render_validate_and_fix():
+    """Render watchlist validation and auto-fix interface."""
+    render_section_header("Validate & Fix Watchlists", "✅")
+    
+    st.markdown("""
+    This tool validates all symbols in your watchlists and automatically fixes common issues:
+    - **Format fixes**: BRK.B → BRK-B
+    - **Remove delisted**: ATVI, SPLK, PXD (acquired companies)
+    - **Remove invalid**: Symbols that don't exist or have no data
+    """)
+    
+    custom_watchlists = load_custom_watchlists()
+    
+    if not custom_watchlists:
+        st.info("No custom watchlists to validate. Create one first!")
+        return
+    
+    # Select watchlist to validate
+    watchlist_options = {f"{wl['name']} ({wl['count']} stocks)": wl['watchlist_id'] 
+                        for wl in custom_watchlists}
+    
+    selected_label = st.selectbox(
+        "Select Watchlist to Validate",
+        options=list(watchlist_options.keys()),
+        help=get_tooltip('watchlist_select') or "Choose a watchlist to validate and fix"
+    )
+    
+    selected_wl_id = watchlist_options[selected_label]
+    selected_wl = next(wl for wl in custom_watchlists if wl['watchlist_id'] == selected_wl_id)
+    
+    if st.button("🔍 Validate Watchlist", type="primary", use_container_width=True):
+        _run_validation(selected_wl)
+
+
+def _run_validation(watchlist: Dict[str, Any]):
+    """Run validation on a watchlist and show results."""
+    try:
+        import yfinance as yf
+    except ImportError:
+        st.error("❌ yfinance not installed. Install with: `pip install yfinance`")
+        return
+    
+    symbols = watchlist.get('symbols', [])
+    if not symbols:
+        st.warning("Watchlist is empty.")
+        return
+    
+    st.info(f"🔍 Validating {len(symbols)} symbols... This may take a few minutes.")
+    
+    # Known fixes
+    format_fixes = {
+        'BRK.B': 'BRK-B',
+        'BRK.B': 'BRK-B',  # Handle both cases
+    }
+    
+    # Known delisted/acquired
+    delisted_symbols = {
+        'ATVI': 'Acquired by Microsoft (Oct 2023)',
+        'SPLK': 'Acquired by Cisco (Mar 2024)',
+        'PXD': 'Acquired by ExxonMobil (2023)',
+    }
+    
+    results = {
+        'valid': [],
+        'format_fixes': [],
+        'delisted': [],
+        'invalid': [],
+        'no_data': [],
+    }
+    
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    for i, symbol in enumerate(symbols):
+        status_text.text(f"Checking {symbol}... ({i+1}/{len(symbols)})")
+        progress_bar.progress((i + 1) / len(symbols))
+        
+        # Check format fixes first
+        if symbol in format_fixes:
+            results['format_fixes'].append({
+                'original': symbol,
+                'fixed': format_fixes[symbol],
+                'reason': 'Format issue (yfinance uses hyphen, not dot)'
+            })
+            continue
+        
+        # Check delisted
+        if symbol in delisted_symbols:
+            results['delisted'].append({
+                'symbol': symbol,
+                'reason': delisted_symbols[symbol]
+            })
+            continue
+        
+        # Validate symbol
+        try:
+            stock = yf.Ticker(symbol)
+            info = stock.info
+            
+            if info and len(info) > 1:
+                # Check if it has historical data
+                hist = stock.history(period="1mo")
+                if not hist.empty:
+                    results['valid'].append(symbol)
+                else:
+                    results['no_data'].append({
+                        'symbol': symbol,
+                        'reason': 'Symbol exists but has no historical data'
+                    })
+            else:
+                results['invalid'].append({
+                    'symbol': symbol,
+                    'reason': 'Symbol does not exist'
+                })
+        except Exception as e:
+            results['invalid'].append({
+                'symbol': symbol,
+                'reason': f'Error: {str(e)}'
+            })
+    
+    progress_bar.empty()
+    status_text.empty()
+    
+    # Display results
+    st.markdown("---")
+    st.markdown("### Validation Results")
+    
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("✅ Valid", len(results['valid']))
+    with col2:
+        st.metric("🔧 Format Fixes", len(results['format_fixes']))
+    with col3:
+        st.metric("🗑️ Delisted", len(results['delisted']))
+    with col4:
+        st.metric("❌ Invalid", len(results['invalid']))
+    with col5:
+        st.metric("⚠️ No Data", len(results['no_data']))
+    
+    # Show details
+    if results['format_fixes']:
+        with st.expander("🔧 Format Fixes Needed", expanded=True):
+            for fix in results['format_fixes']:
+                st.markdown(f"**{fix['original']}** → **{fix['fixed']}** ({fix['reason']})")
+    
+    if results['delisted']:
+        with st.expander("🗑️ Delisted/Acquired Symbols", expanded=True):
+            for item in results['delisted']:
+                st.markdown(f"**{item['symbol']}**: {item['reason']}")
+    
+    if results['invalid']:
+        with st.expander("❌ Invalid Symbols", expanded=True):
+            for item in results['invalid']:
+                st.markdown(f"**{item['symbol']}**: {item['reason']}")
+    
+    if results['no_data']:
+        with st.expander("⚠️ Symbols with No Data", expanded=False):
+            for item in results['no_data']:
+                st.markdown(f"**{item['symbol']}**: {item['reason']}")
+    
+    # Auto-fix button
+    total_issues = len(results['format_fixes']) + len(results['delisted']) + len(results['invalid'])
+    
+    if total_issues > 0:
+        st.markdown("---")
+        st.markdown("### Auto-Fix")
+        
+        fixes_summary = []
+        if results['format_fixes']:
+            fixes_summary.append(f"{len(results['format_fixes'])} format fixes")
+        if results['delisted']:
+            fixes_summary.append(f"{len(results['delisted'])} delisted symbols removed")
+        if results['invalid']:
+            fixes_summary.append(f"{len(results['invalid'])} invalid symbols removed")
+        
+        st.info(f"**Auto-fix will:** {', '.join(fixes_summary)}")
+        
+        if st.button("🔧 Apply Auto-Fix", type="primary", use_container_width=True):
+            # Apply fixes
+            new_symbols = list(results['valid'])  # Start with valid symbols
+            
+            # Add format-fixed symbols
+            for fix in results['format_fixes']:
+                new_symbols.append(fix['fixed'])
+            
+            # Remove duplicates and sort
+            new_symbols = sorted(set(new_symbols))
+            
+            # Update watchlist
+            try:
+                update_custom_watchlist(
+                    watchlist['watchlist_id'],
+                    symbols=new_symbols
+                )
+                
+                st.success(f"✅ Watchlist updated! {len(new_symbols)} symbols remaining (removed {len(symbols) - len(new_symbols)} invalid/delisted symbols)")
+                st.balloons()
+                st.rerun()
+            except Exception as e:
+                ErrorHandler.render_error(
+                    e,
+                    error_type='validation_error',
+                    custom_message="Failed to update watchlist",
+                    show_traceback=True
+                )
+    else:
+        st.success("✅ All symbols are valid! No fixes needed.")

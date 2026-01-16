@@ -9,6 +9,7 @@ import pandas as pd
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_info_card, render_alert
+from ..components.tooltips import get_tooltip
 from ..data import load_runs, load_run_scores, load_ai_commentary, load_ai_recommendations
 from ..utils import format_percent, format_number, get_run_folder
 from ..config import COLORS
@@ -34,7 +35,7 @@ def render_ai_insights():
         "Select Analysis Run",
         options=[r['run_id'] for r in completed_runs],
         format_func=lambda x: f"{x[:12]}... - {next((r.get('name') or 'Unnamed' for r in completed_runs if r['run_id'] == x), 'Unknown')}",
-        help="Choose a completed run to view AI commentary and recommendations"
+        help=get_tooltip('select_run') or "Choose a completed run to view AI commentary and recommendations"
     )
     
     if not selected_run_id:
@@ -123,11 +124,13 @@ def _render_recommendations_tab(run_id: str):
             risk_profile = st.selectbox(
                 "Risk Profile",
                 ["Conservative", "Moderate", "Aggressive"],
-                key="recommendations_risk_profile"
+                key="recommendations_risk_profile",
+                help=get_tooltip('risk_tolerance') or "Risk tolerance for recommendations"
             )
         
         with col2:
-            if st.button("🚀 Generate Recommendations", type="primary", use_container_width=True):
+            if st.button("🚀 Generate Recommendations", type="primary", use_container_width=True,
+                        help=get_tooltip('generate_recommendations')):
                 from ..components.loading import loading_spinner
                 from ..components.errors import ErrorHandler
                 
@@ -329,7 +332,8 @@ def _render_stock_analysis_tab(run_id: str):
         st.metric("21d Return", f"{ret*100:+.1f}%")
     
     # Generate AI analysis button
-    if st.button("🤖 Generate AI Analysis", key=f"ai_{selected_ticker}"):
+    if st.button("🤖 Generate AI Analysis", key=f"ai_{selected_ticker}",
+                help=get_tooltip('generate_insights')):
         with st.spinner("Generating analysis..."):
             _generate_stock_analysis(selected_ticker, stock_data)
 
@@ -390,11 +394,13 @@ def _render_generate_tab(run_id: str):
     with col2:
         risk_profile = st.selectbox(
             "Risk Profile",
-            ["Conservative", "Moderate", "Aggressive"]
+            ["Conservative", "Moderate", "Aggressive"],
+            help=get_tooltip('risk_tolerance') or "Risk tolerance for AI analysis"
         )
     
     # Generate button
-    if st.button("🚀 Generate AI Insights", type="primary"):
+    if st.button("🚀 Generate AI Insights", type="primary",
+                help=get_tooltip('generate_insights')):
         with st.spinner("Generating AI insights... This may take a minute."):
             _generate_new_insights(run_id, generate_commentary, generate_recommendations, risk_profile)
 
