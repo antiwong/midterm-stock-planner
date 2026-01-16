@@ -310,7 +310,8 @@ class MultiSourceFundamentalsFetcher:
         except (ValueError, TypeError):
             return None
     
-    def fetch_batch(self, tickers: List[str], sources: Optional[List[str]] = None, 
+    def fetch_batch(self, tickers: List[str], sources: Optional[List[str]] = None,
+                    parallel: bool = True, max_workers: int = None, 
                    delay: float = 0.5) -> pd.DataFrame:
         """
         Fetch fundamentals for multiple tickers.
@@ -318,17 +319,65 @@ class MultiSourceFundamentalsFetcher:
         Args:
             tickers: List of ticker symbols
             sources: List of sources to try
-            delay: Delay between tickers (seconds)
+            parallel: Use parallel processing (default: True)
+            max_workers: Maximum parallel workers (default: auto)
+            delay: Delay between tickers/batches (seconds)
         
         Returns:
             DataFrame with fundamental data
         """
-        results = []
-        failed = []
-        
         print(f"📥 Fetching fundamentals from multiple sources for {len(tickers)} tickers...")
         print(f"   Available sources: {', '.join(self._get_available_sources())}")
+        if parallel:
+            print(f"   Using parallel processing (max_workers: {max_workers or 'auto'})")
         print()
+        
+        if parallel and len(tickers) > 1:
+            # Use parallel processing
+            try:
+                from src.app.dashboard.utils.parallel import parallel_download
+                
+                def fetch_single(ticker: str):
+                    """Fetch fundamentals for a single ticker."""
+                    return self.fetch_fundamentals(ticker, sources)
+                
+                # Process in parallel batches
+                batch_results = parallel_download(
+                    tickers,
+                    fetch_single,
+                    batch_size=max(1, max_workers or 10),
+                    max_workers=max_workers,
+                    delay_between_batches=delay
+                )
+                
+                # Separate successes and failures
+                results = []
+                failed = []
+                for ticker, data, error in batch_results:
+                    if error is None and data:
+                        results.append(data)
+                    else:
+                        failed.append(ticker)
+                
+                print()
+                print(f"✅ Successfully fetched: {len(results)}/{len(tickers)}")
+                if failed:
+                    print(f"❌ Failed: {', '.join(failed[:10])}")
+                    if len(failed) > 10:
+                        print(f"   ... and {len(failed) - 10} more")
+                
+                if not results:
+                    return pd.DataFrame()
+                
+                return pd.DataFrame(results)
+            
+            except ImportError:
+                logger.warning("Parallel processing utilities not available, falling back to sequential")
+                parallel = False
+        
+        # Sequential processing (fallback or if parallel=False)
+        results = []
+        failed = []
         
         for i, ticker in enumerate(tickers, 1):
             print(f"[{i}/{len(tickers)}] {ticker}...", end=' ', flush=True)

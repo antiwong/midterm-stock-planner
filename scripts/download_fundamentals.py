@@ -199,7 +199,7 @@ def download_fundamentals(
         print(f"   Available sources: {', '.join(available_sources)}")
         print()
         
-        df = fetcher.fetch_batch(tickers, delay=delay)
+        df = fetcher.fetch_batch(tickers, delay=delay, parallel=True, max_workers=10)
         if not df.empty:
             return df
     
