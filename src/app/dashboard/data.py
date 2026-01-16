@@ -6,6 +6,7 @@ Centralized data access for database queries and file operations.
 
 import pandas as pd
 import json
+import streamlit as st
 from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
@@ -205,8 +206,9 @@ def get_database():
     return get_db(str(db_path))
 
 
+@st.cache_data(ttl=60, show_spinner=False)  # Cache for 60 seconds
 def load_runs() -> List[Dict[str, Any]]:
-    """Load all runs from database (fresh each time).
+    """Load all runs from database (cached for 60 seconds).
     
     Returns:
         List of run dictionaries
@@ -238,8 +240,9 @@ def load_run_by_id(run_id: str) -> Optional[Dict[str, Any]]:
         session.close()
 
 
+@st.cache_data(ttl=300, show_spinner=False)  # Cache for 5 minutes (scores don't change often)
 def load_run_scores(run_id: str) -> List[Dict[str, Any]]:
-    """Load scores for a specific run.
+    """Load scores for a specific run (cached for 5 minutes).
     
     Args:
         run_id: Run ID
@@ -318,8 +321,9 @@ def delete_run(run_id: str) -> bool:
         session.close()
 
 
+@st.cache_data(ttl=120, show_spinner=False)  # Cache for 2 minutes
 def get_runs_with_folders() -> List[Dict[str, Any]]:
-    """Get runs with their folder status.
+    """Get runs with their folder status (cached for 2 minutes).
     
     Returns:
         List of run dictionaries with folder info
@@ -327,26 +331,47 @@ def get_runs_with_folders() -> List[Dict[str, Any]]:
     runs = load_runs()
     output_base = get_project_root() / "output"
     
+    # Batch folder lookups
+    if not output_base.exists():
+        for run in runs:
+            run['has_folder'] = False
+            run['folder_path'] = None
+            run['file_count'] = 0
+        return runs
+    
+    # Pre-build folder mapping for faster lookups
+    existing_folders = {f.name: f for f in output_base.iterdir() if f.is_dir() and f.name.startswith('run_')}
+    
     for run in runs:
         run_id_short = run['run_id'][:16]
         watchlist = run.get('watchlist')
         
         # Try watchlist-prefixed folder first
         if watchlist:
-            run_folder = output_base / f"run_{watchlist}_{run_id_short}"
+            folder_name = f"run_{watchlist}_{run_id_short}"
+            run_folder = existing_folders.get(folder_name)
         else:
-            run_folder = output_base / f"run_{run_id_short}"
+            folder_name = f"run_{run_id_short}"
+            run_folder = existing_folders.get(folder_name)
         
         # If not found, search for any matching folder
-        if not run_folder.exists():
-            for folder in output_base.iterdir():
-                if folder.is_dir() and run_id_short in folder.name:
+        if run_folder is None:
+            for folder_name, folder in existing_folders.items():
+                if run_id_short in folder_name:
                     run_folder = folder
                     break
         
-        run['has_folder'] = run_folder.exists()
-        run['folder_path'] = str(run_folder) if run_folder.exists() else None
-        run['file_count'] = len(list(run_folder.iterdir())) if run_folder.exists() else 0
+        if run_folder:
+            run['has_folder'] = True
+            run['folder_path'] = str(run_folder)
+            try:
+                run['file_count'] = len(list(run_folder.iterdir()))
+            except (OSError, PermissionError):
+                run['file_count'] = 0
+        else:
+            run['has_folder'] = False
+            run['folder_path'] = None
+            run['file_count'] = 0
     
     return runs
 
@@ -677,8 +702,9 @@ def get_run_summary(run_id: str) -> Dict[str, Any]:
     return summary
 
 
+@st.cache_data(ttl=300, show_spinner=False)  # Cache for 5 minutes
 def get_all_tickers() -> List[str]:
-    """Get all unique tickers from the database.
+    """Get all unique tickers from the database (cached for 5 minutes).
     
     Returns:
         List of ticker symbols
@@ -692,6 +718,7 @@ def get_all_tickers() -> List[str]:
         session.close()
 
 
+@st.cache_data(ttl=600, show_spinner=False)  # Cache for 10 minutes (sectors rarely change)
 def get_all_sectors() -> List[str]:
     """Get all unique sectors from the database.
     
@@ -707,8 +734,9 @@ def get_all_sectors() -> List[str]:
         session.close()
 
 
+@st.cache_data(ttl=300, show_spinner=False)  # Cache for 5 minutes
 def load_watchlists() -> Dict[str, Dict[str, Any]]:
-    """Load all available watchlists from config.
+    """Load all available watchlists from config (cached for 5 minutes).
     
     Returns:
         Dictionary of watchlist_id -> watchlist info

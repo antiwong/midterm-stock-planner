@@ -263,83 +263,23 @@ def _render_overview_tab(run: dict, run_id: str):
     st.markdown("---")
     
     # ==========================================
-    # CHARTS WITH INSIGHTS
+    # CHARTS WITH INSIGHTS (Lazy Loaded)
     # ==========================================
     
-    # Row 1: Equity Curve + Sector Sunburst
-    col1, col2 = st.columns(2)
+    # Chart loading mode selector
+    chart_mode = st.radio(
+        "Chart Loading Mode",
+        ["All Charts", "Lazy Load"],
+        horizontal=True,
+        key=f"chart_mode_{run_id}"
+    )
     
-    with col1:
-        st.markdown('<div class="section-title">Portfolio Value</div>', unsafe_allow_html=True)
-        if returns_df is not None and 'portfolio_return' in returns_df.columns:
-            fig = _create_beautiful_equity_curve(returns_df)
-            st.plotly_chart(fig, use_container_width=True)
-            # Chart insight
-            _render_chart_insight(
-                "equity_curve",
-                returns_df,
-                scores_df,
-                run
-            )
-        else:
-            st.info("No returns data available")
-    
-    with col2:
-        st.markdown('<div class="section-title">Sector Allocation</div>', unsafe_allow_html=True)
-        if not scores_df.empty and 'sector' in scores_df.columns:
-            fig = _create_sunburst_chart(scores_df)
-            st.plotly_chart(fig, use_container_width=True)
-            # Chart insight
-            _render_chart_insight(
-                "sector_allocation",
-                returns_df,
-                scores_df,
-                run
-            )
-        else:
-            st.info("No sector data")
-    
-    # Row 2: Score Gauge + Top Performers
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown('<div class="section-title">Score Distribution</div>', unsafe_allow_html=True)
-        if not scores_df.empty:
-            fig = _create_score_violin(scores_df)
-            st.plotly_chart(fig, use_container_width=True)
-            # Chart insight
-            _render_chart_insight(
-                "score_distribution",
-                returns_df,
-                scores_df,
-                run
-            )
-    
-    with col2:
-        st.markdown('<div class="section-title">Top Performers</div>', unsafe_allow_html=True)
-        if not scores_df.empty:
-            fig = _create_top_performers_bar(scores_df)
-            st.plotly_chart(fig, use_container_width=True)
-            # Chart insight
-            _render_chart_insight(
-                "top_performers",
-                returns_df,
-                scores_df,
-                run
-            )
-    
-    # Row 3: Monthly Returns Heatmap (full width)
-    if returns_df is not None and 'portfolio_return' in returns_df.columns:
-        st.markdown('<div class="section-title">Monthly Returns Heatmap</div>', unsafe_allow_html=True)
-        fig = _create_monthly_heatmap(returns_df)
-        st.plotly_chart(fig, use_container_width=True)
-        # Chart insight
-        _render_chart_insight(
-            "monthly_heatmap",
-            returns_df,
-            scores_df,
-            run
-        )
+    if chart_mode == "All Charts":
+        # Load all charts immediately
+        _render_all_charts(returns_df, scores_df, run, run_id)
+    else:
+        # Lazy load charts
+        _render_lazy_charts(returns_df, scores_df, run, run_id)
     
     # ==========================================
     # AI SUMMARY (Optional - requires API)

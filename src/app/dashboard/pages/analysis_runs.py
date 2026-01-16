@@ -29,25 +29,40 @@ def render_analysis_runs():
         st.info("No analysis runs found. Run a backtest first!")
         return
     
-    # Filters
-    col1, col2, col3 = st.columns(3)
+    # Filters and Search
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
     
     with col1:
         status_filter = st.selectbox(
             "Status",
             ["All", "completed", "running", "failed", "pending"],
-            index=0
+            index=0,
+            key="runs_status_filter"
         )
     
     with col2:
         run_type_filter = st.selectbox(
             "Type",
-            ["All"] + list(set(r.get('run_type', 'backtest') for r in runs)),
-            index=0
+            ["All"] + sorted(list(set(r.get('run_type', 'backtest') for r in runs))),
+            index=0,
+            key="runs_type_filter"
         )
     
     with col3:
-        search = st.text_input("Search", placeholder="Run ID or name...")
+        search = st.text_input(
+            "🔍 Search", 
+            placeholder="Run ID, name, or watchlist...",
+            key="runs_search"
+        )
+    
+    with col4:
+        st.markdown("<br>", unsafe_allow_html=True)  # Spacing
+        clear_filters = st.button("Clear", key="clear_runs_filters", use_container_width=True)
+        if clear_filters:
+            st.session_state.runs_status_filter = "All"
+            st.session_state.runs_type_filter = "All"
+            st.session_state.runs_search = ""
+            st.rerun()
     
     # Apply filters
     filtered_runs = runs
@@ -63,19 +78,63 @@ def render_analysis_runs():
         filtered_runs = [
             r for r in filtered_runs
             if search_lower in r['run_id'].lower() or 
-               (r.get('name') and search_lower in r['name'].lower())
+               (r.get('name') and search_lower in r.get('name', '').lower()) or
+               (r.get('watchlist') and search_lower in r.get('watchlist', '').lower())
         ]
     
-    st.markdown(f"**{len(filtered_runs)}** runs found")
+    # Pagination
+    items_per_page = st.slider("Items per page", 10, 100, 25, key="runs_per_page")
+    total_pages = (len(filtered_runs) + items_per_page - 1) // items_per_page if filtered_runs else 1
+    page_num = st.number_input("Page", min_value=1, max_value=max(1, total_pages), value=1, key="runs_page")
+    
+    start_idx = (page_num - 1) * items_per_page
+    end_idx = start_idx + items_per_page
+    paginated_runs = filtered_runs[start_idx:end_idx]
+    
+    # Display summary
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Runs", len(filtered_runs))
+    with col2:
+        st.metric("Showing", f"{start_idx + 1}-{min(end_idx, len(filtered_runs))}")
+    with col3:
+        st.metric("Page", f"{page_num}/{total_pages}")
+    
     st.markdown("---")
     
+    # Export button
+    if filtered_runs:
+        export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
+        with export_col1:
+            if st.button("📥 Export CSV", key="export_runs_csv", use_container_width=True):
+                df_export = pd.DataFrame(filtered_runs)
+                csv = df_export.to_csv(index=False)
+                st.download_button(
+                    label="Download CSV",
+                    data=csv,
+                    file_name=f"runs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    key="download_runs_csv"
+                )
+        with export_col2:
+            if st.button("📥 Export JSON", key="export_runs_json", use_container_width=True):
+                import json
+                json_data = json.dumps(filtered_runs, indent=2, default=str)
+                st.download_button(
+                    label="Download JSON",
+                    data=json_data,
+                    file_name=f"runs_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                    mime="application/json",
+                    key="download_runs_json"
+                )
+    
     # Display runs
-    if not filtered_runs:
+    if not paginated_runs:
         st.info("No runs match your filters")
         return
     
     # Convert to DataFrame for table view
-    df = pd.DataFrame(filtered_runs)
+    df = pd.DataFrame(paginated_runs)
     
     # Select columns
     display_cols = ['run_id', 'name', 'run_type', 'status', 'created_at',

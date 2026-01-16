@@ -354,3 +354,57 @@ def export_to_excel(
     else:
         wb.save(str(output_path))
         return None
+
+
+def export_to_csv(
+    data: pd.DataFrame,
+    output_path: Optional[Path] = None
+) -> bytes:
+    """
+    Export DataFrame to CSV.
+    
+    Args:
+        data: DataFrame to export
+        output_path: Optional path to save CSV (if None, returns bytes)
+        
+    Returns:
+        CSV bytes if output_path is None, otherwise None
+    """
+    if output_path is None:
+        csv_str = data.to_csv(index=False)
+        return csv_str.encode('utf-8')
+    else:
+        data.to_csv(str(output_path), index=False)
+        return None
+
+
+def export_to_json(
+    data: Any,
+    output_path: Optional[Path] = None,
+    indent: int = 2
+) -> bytes:
+    """
+    Export data to JSON.
+    
+    Args:
+        data: Data to export (dict, list, or DataFrame)
+        output_path: Optional path to save JSON (if None, returns bytes)
+        indent: JSON indentation (default: 2)
+        
+    Returns:
+        JSON bytes if output_path is None, otherwise None
+    """
+    # Convert DataFrame to dict if needed
+    if isinstance(data, pd.DataFrame):
+        json_data = data.to_dict('records')
+    else:
+        json_data = data
+    
+    json_str = json.dumps(json_data, indent=indent, default=str)
+    
+    if output_path is None:
+        return json_str.encode('utf-8')
+    else:
+        with open(str(output_path), 'w') as f:
+            f.write(json_str)
+        return None

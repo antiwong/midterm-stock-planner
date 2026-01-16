@@ -9,6 +9,8 @@ import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
 import plotly.express as px
+import io
+import zipfile
 from datetime import datetime
 from pathlib import Path
 
@@ -99,10 +101,10 @@ def render_comprehensive_analysis():
                     )
     
     with col2:
-        export_format = st.selectbox("Export Format", ["PDF", "Excel"], key="export_format")
+        export_format = st.selectbox("Export Format", ["PDF", "Excel", "CSV", "JSON"], key="export_format")
         if st.button("📥 Export Results", use_container_width=True):
             try:
-                from ..export import export_to_pdf, export_to_excel
+                from ..export import export_to_pdf, export_to_excel, export_to_csv, export_to_json
                 
                 # Collect all analysis results
                 all_results = {}
@@ -114,21 +116,55 @@ def render_comprehensive_analysis():
                             'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
                         }
                 
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+                base_filename = f"analysis_{selected_run_id[:16]}_{timestamp}"
+                
                 if export_format == "PDF":
                     pdf_bytes = export_to_pdf(all_results, selected_run)
                     st.download_button(
                         label="📥 Download PDF",
                         data=pdf_bytes,
-                        file_name=f"analysis_{selected_run_id[:16]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        file_name=f"{base_filename}.pdf",
                         mime="application/pdf"
                     )
-                else:
+                elif export_format == "Excel":
                     excel_bytes = export_to_excel(all_results, selected_run)
                     st.download_button(
                         label="📥 Download Excel",
                         data=excel_bytes,
-                        file_name=f"analysis_{selected_run_id[:16]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        file_name=f"{base_filename}.xlsx",
                         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+                elif export_format == "CSV":
+                    # Export each analysis type as separate CSV
+                    csv_files = {}
+                    for analysis_type, data in all_results.items():
+                        if 'results' in data and isinstance(data['results'], dict):
+                            df = pd.json_normalize(data['results'])
+                            csv_bytes = export_to_csv(df)
+                            csv_files[f"{analysis_type}.csv"] = csv_bytes
+                    
+                    if csv_files:
+                        # Create a zip file with all CSVs
+                        zip_buffer = io.BytesIO()
+                        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                            for filename, csv_data in csv_files.items():
+                                zip_file.writestr(filename, csv_data)
+                        zip_buffer.seek(0)
+                        
+                        st.download_button(
+                            label="📥 Download CSV (ZIP)",
+                            data=zip_buffer.read(),
+                            file_name=f"{base_filename}.zip",
+                            mime="application/zip"
+                        )
+                elif export_format == "JSON":
+                    json_bytes = export_to_json(all_results)
+                    st.download_button(
+                        label="📥 Download JSON",
+                        data=json_bytes,
+                        file_name=f"{base_filename}.json",
+                        mime="application/json"
                     )
             except ImportError as e:
                 st.error(f"Export requires additional packages: {e}")

@@ -70,6 +70,8 @@ class Run(Base):
     __table_args__ = (
         Index('idx_run_type_status', 'run_type', 'status'),
         Index('idx_run_created', 'created_at'),
+        Index('idx_run_watchlist', 'watchlist'),  # For watchlist filtering
+        Index('idx_run_status_created', 'status', 'created_at'),  # Common filter combo
     )
     
     def get_tags(self) -> List[str]:
@@ -161,6 +163,8 @@ class StockScore(Base):
     __table_args__ = (
         Index('idx_score_run_ticker', 'run_id', 'ticker'),
         Index('idx_score_rank', 'run_id', 'rank'),
+        Index('idx_score_sector', 'sector'),  # For sector filtering
+        Index('idx_score_score', 'score'),  # For score sorting
     )
     
     def get_features(self) -> Dict:

@@ -60,19 +60,39 @@ def render_stock_explorer():
     
     scores_df = pd.DataFrame(scores)
     
-    # Filters
+    # Filters and Search
     st.markdown("---")
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns([2, 2, 2, 1])
     
     with col1:
         sectors = ['All'] + sorted(scores_df['sector'].dropna().unique().tolist())
-        sector_filter = st.selectbox("Sector", sectors)
+        sector_filter = st.selectbox("Sector", sectors, key="stock_sector_filter")
     
     with col2:
-        score_min = st.slider("Min Score", 0, 100, 0)
+        score_range = st.slider(
+            "Score Range", 
+            0.0, 
+            float(scores_df['score'].max()) if len(scores_df) > 0 else 100.0,
+            (0.0, float(scores_df['score'].max()) if len(scores_df) > 0 else 100.0),
+            key="stock_score_range"
+        )
+        score_min, score_max = score_range
     
     with col3:
-        ticker_search = st.text_input("Search Ticker")
+        ticker_search = st.text_input(
+            "🔍 Search Ticker",
+            placeholder="Enter ticker symbol...",
+            key="stock_ticker_search"
+        )
+    
+    with col4:
+        st.markdown("<br>", unsafe_allow_html=True)  # Spacing
+        clear_filters = st.button("Clear", key="clear_stock_filters", use_container_width=True)
+        if clear_filters:
+            st.session_state.stock_sector_filter = "All"
+            st.session_state.stock_score_range = (0.0, 100.0)
+            st.session_state.stock_ticker_search = ""
+            st.rerun()
     
     # Apply filters
     filtered_df = scores_df.copy()
@@ -80,22 +100,71 @@ def render_stock_explorer():
     if sector_filter != 'All':
         filtered_df = filtered_df[filtered_df['sector'] == sector_filter]
     
-    filtered_df = filtered_df[filtered_df['score'] >= score_min]
+    filtered_df = filtered_df[
+        (filtered_df['score'] >= score_min) & 
+        (filtered_df['score'] <= score_max)
+    ]
     
     if ticker_search:
         filtered_df = filtered_df[
             filtered_df['ticker'].str.contains(ticker_search.upper(), na=False)
         ]
     
-    st.markdown(f"**{len(filtered_df)}** stocks found")
+    # Pagination
+    items_per_page = st.slider("Items per page", 10, 100, 25, key="stocks_per_page")
+    total_pages = (len(filtered_df) + items_per_page - 1) // items_per_page if len(filtered_df) > 0 else 1
+    page_num = st.number_input("Page", min_value=1, max_value=max(1, total_pages), value=1, key="stocks_page")
+    
+    start_idx = (page_num - 1) * items_per_page
+    end_idx = start_idx + items_per_page
+    paginated_df = filtered_df.iloc[start_idx:end_idx]
+    
+    # Display summary
+    col1, col2, col3, col4 = st.columns(4)
+    with col1:
+        st.metric("Total Stocks", len(filtered_df))
+    with col2:
+        st.metric("Showing", f"{start_idx + 1}-{min(end_idx, len(filtered_df))}")
+    with col3:
+        st.metric("Page", f"{page_num}/{total_pages}")
+    with col4:
+        if len(filtered_df) > 0:
+            avg_score = filtered_df['score'].mean()
+            st.metric("Avg Score", f"{avg_score:.2f}")
+    
+    # Export buttons
+    if len(filtered_df) > 0:
+        export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
+        with export_col1:
+            csv = filtered_df.to_csv(index=False)
+            st.download_button(
+                label="📥 Export CSV",
+                data=csv,
+                file_name=f"stocks_{selected_run_id[:12]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv",
+                key="download_stocks_csv",
+                use_container_width=True
+            )
+        with export_col2:
+            import json
+            json_data = json.dumps(filtered_df.to_dict('records'), indent=2, default=str)
+            st.download_button(
+                label="📥 Export JSON",
+                data=json_data,
+                file_name=f"stocks_{selected_run_id[:12]}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json",
+                key="download_stocks_json",
+                use_container_width=True
+            )
+    
     st.markdown("---")
     
     if view_mode == "Table":
-        _render_table_view(filtered_df)
+        _render_table_view(paginated_df)
     elif view_mode == "Cards":
-        _render_cards_view(filtered_df)
+        _render_cards_view(paginated_df)
     else:
-        _render_analysis_view(filtered_df)
+        _render_analysis_view(paginated_df)
 
 
 def _render_table_view(df: pd.DataFrame):
