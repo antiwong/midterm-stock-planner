@@ -562,13 +562,14 @@ Provide a concise investment analysis for this stock (2-3 paragraphs):
         for s in scores:
             sector = s.get('sector', 'Other')
             if sector not in sector_breakdown:
-                sector_breakdown[sector] = {'count': 0, 'avg_score': 0, 'scores': []}
+                sector_breakdown[sector] = {'count': 0, 'score': 0, 'scores': []}
             sector_breakdown[sector]['count'] += 1
             sector_breakdown[sector]['scores'].append(s.get('score', 0))
         
         for sector in sector_breakdown:
             scores_list = sector_breakdown[sector]['scores']
-            sector_breakdown[sector]['avg_score'] = sum(scores_list) / len(scores_list) if scores_list else 0
+            # Use 'score' key to match what _build_context expects
+            sector_breakdown[sector]['score'] = sum(scores_list) / len(scores_list) if scores_list else 0
             del sector_breakdown[sector]['scores']
         
         # Add validation warnings to context if present
