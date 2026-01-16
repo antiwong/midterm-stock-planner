@@ -92,19 +92,24 @@ class BenchmarkComparator:
         if len(common_dates_normalized) == 0:
             return {'error': 'No overlapping dates between portfolio and benchmark'}
         
-        # Use normalized dates to align both series
-        # Map normalized dates back to original indices
-        portfolio_aligned = portfolio_returns.loc[portfolio_index_normalized.isin(common_dates_normalized)]
-        benchmark_aligned = benchmark_returns.loc[benchmark_index_normalized.isin(common_dates_normalized)]
+        # Align both series to common dates
+        # Create a mapping from normalized dates to original portfolio indices
+        portfolio_date_map = pd.Series(portfolio_index, index=portfolio_index_norm)
+        benchmark_date_map = pd.Series(benchmark_index, index=benchmark_index_norm)
         
-        # Reindex both to common dates (using normalized dates)
-        portfolio_aligned.index = portfolio_aligned.index.tz_localize(None) if hasattr(portfolio_aligned.index, 'tz') and portfolio_aligned.index.tz is not None else portfolio_aligned.index
-        benchmark_aligned.index = benchmark_aligned.index.tz_localize(None) if hasattr(benchmark_aligned.index, 'tz') and benchmark_aligned.index.tz is not None else benchmark_aligned.index
+        # Get original indices for common dates
+        portfolio_common_orig = portfolio_date_map.loc[common_dates_norm].values
+        benchmark_common_orig = benchmark_date_map.loc[common_dates_norm].values
         
-        # Ensure both have same index for alignment
-        common_dates = common_dates_normalized
-        portfolio_aligned = portfolio_aligned.reindex(common_dates)
-        benchmark_aligned = benchmark_aligned.reindex(common_dates)
+        # Align using original indices, then set normalized index
+        portfolio_aligned = portfolio_returns.loc[portfolio_common_orig].copy()
+        benchmark_aligned = benchmark_returns.loc[benchmark_common_orig].copy()
+        
+        # Set both to use normalized (timezone-naive) common dates
+        portfolio_aligned.index = common_dates_norm
+        benchmark_aligned.index = common_dates_norm
+        
+        common_dates = common_dates_norm
         
         # Calculate metrics
         portfolio_metrics = self._calculate_metrics(portfolio_aligned)
