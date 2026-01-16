@@ -416,22 +416,24 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
     """Render AI insights tab."""
     insights = service.get_all_ai_insights(run_id)
     
-    if not insights:
-        st.info("No AI insights found. Generate insights using one of the methods below.")
-        
-        # Quick generate button
-        st.markdown("### Quick Generate")
-        col1, col2 = st.columns([2, 1])
-        
-        with col1:
-            risk_profile = st.selectbox(
-                "Risk Profile",
-                ["Conservative", "Moderate", "Aggressive"],
-                key="ai_insights_risk_profile"
-            )
-        
-        with col2:
-            if st.button("🚀 Generate AI Insights", type="primary", use_container_width=True):
+    # Always show generate button at the top
+    st.markdown("### Generate AI Insights")
+    col1, col2, col3 = st.columns([2, 1, 1])
+    
+    with col1:
+        risk_profile = st.selectbox(
+            "Risk Profile",
+            ["Conservative", "Moderate", "Aggressive"],
+            key="ai_insights_risk_profile"
+        )
+    
+    with col2:
+        gen_commentary = st.checkbox("Generate Commentary", value=True, key="comp_ai_gen_commentary")
+    
+    with col3:
+        gen_recommendations = st.checkbox("Generate Recommendations", value=True, key="comp_ai_gen_recommendations")
+    
+    if st.button("🚀 Generate AI Insights", type="primary", use_container_width=True, key="comp_ai_generate_button"):
                 from ..components.loading import loading_spinner
                 from ..components.errors import ErrorHandler
                 
@@ -506,20 +508,12 @@ def _render_ai_insights_tab(service: AnalysisService, run_id: str):
                                 "Try generating from AI Insights page instead"
                             ]
                         )
-        
-        st.markdown("---")
-        st.markdown("### Alternative Methods")
-        st.markdown("""
-        **Method 1: AI Insights Page**
-        - Navigate to **"🤖 AI Insights"** in the sidebar
-        - Select your run
-        - Go to **"🔮 Generate New"** tab
-        - Click **"🚀 Generate AI Insights"**
-        
-        **Method 2: During Comprehensive Analysis**
-        - Click **"🔄 Run All Analyses"** button above
-        - AI insights will be generated automatically (if enabled)
-        """)
+    
+    st.markdown("---")
+    
+    # Display existing insights if available
+    if not insights:
+        st.info("No AI insights found yet. Use the button above to generate insights.")
         return
     
     # Group by type
