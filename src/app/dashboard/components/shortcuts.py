@@ -26,20 +26,30 @@ def render_shortcuts_help():
     """Render a help dialog showing available keyboard shortcuts."""
     st.markdown("### ⌨️ Keyboard Shortcuts")
     st.markdown("""
+    **Navigation:**
     | Key | Action |
     |-----|--------|
-    | `R` | Refresh page |
-    | `N` | New analysis |
     | `O` | Go to Overview |
     | `A` | Run Analysis |
     | `P` | Portfolio Builder |
     | `W` | Watchlist Manager |
     | `D` | Documentation |
     | `S` | Settings |
-    | `?` | Show this help |
+    
+    **Actions:**
+    | Key | Action |
+    |-----|--------|
+    | `R` | Refresh current page |
+    | `N` | Start new analysis |
+    | `?` | Show this help dialog |
+    
+    **Tips:**
+    - Shortcuts work when you're not typing in input fields
+    - Press `?` anytime to see this help
+    - Some shortcuts may require page refresh to take effect
     """)
     
-    st.info("💡 **Tip**: Press `?` anytime to see this help dialog.")
+    st.info("💡 **Tip**: Press `?` anytime to see this help dialog. Shortcuts are most reliable when not focused on input fields.")
 
 
 def handle_shortcut(key: str) -> Optional[str]:

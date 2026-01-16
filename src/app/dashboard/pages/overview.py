@@ -7,13 +7,18 @@ Dashboard home page with summary metrics and recent activity.
 import streamlit as st
 import pandas as pd
 import numpy as np
-from datetime import datetime
+from datetime import datetime, timedelta
+import subprocess
+import sys
+from pathlib import Path
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.metrics import render_metric_card, render_kpi_summary
 from ..components.charts import create_performance_bar, create_returns_chart
 from ..components.tables import render_runs_table
 from ..components.cards import render_run_card, render_info_card
+from ..components.loading import loading_spinner, render_stage_progress
+from ..components.errors import ErrorHandler
 from ..data import load_runs, get_available_run_folders, get_all_available_watchlists
 from ..utils import format_percent, format_number, get_project_root
 from ..config import COLORS
@@ -184,6 +189,11 @@ def _render_data_quality_summary():
             )
         else:
             render_metric_card("Price Data Age", "Missing", "prices.csv not found", icon="⚠️")
+        
+        # Update button
+        if st.button("🔄 Update Prices", key="update_prices_btn", use_container_width=True,
+                    help="Download latest price data for all watchlists"):
+            _update_prices()
 
     with col2:
         if fundamentals_summary and fundamentals_summary.get("total_stocks", 0) > 0:
@@ -209,6 +219,11 @@ def _render_data_quality_summary():
             )
         else:
             render_metric_card("Benchmark Data Age", "Missing", "benchmark.csv not found", icon="⚠️")
+        
+        # Update benchmark button
+        if st.button("🔄 Update Benchmark", key="update_benchmark_btn", use_container_width=True,
+                    help="Download latest benchmark data (SPY/QQQ)"):
+            _update_benchmark()
 
     warnings = []
     if not status.get("prices", {}).get("exists"):
@@ -326,3 +341,195 @@ def _render_performance_chart(runs: list):
     )
     
     st.plotly_chart(fig, use_container_width=True)
+
+
+def _update_prices():
+    """Update price data for all watchlists."""
+    try:
+        import yfinance as yf
+    except ImportError:
+        st.error("❌ yfinance not installed. Install with: `pip install yfinance`")
+        return
+    
+    # Import PriceDownloader from the script
+    project_root = get_project_root()
+    script_path = project_root / "scripts" / "download_prices.py"
+    
+    # Add scripts to path to import PriceDownloader
+    sys.path.insert(0, str(project_root / "scripts"))
+    sys.path.insert(0, str(project_root))
+    
+    try:
+        from scripts.download_prices import PriceDownloader
+    except ImportError:
+        # Fallback: try importing directly
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("download_prices", script_path)
+        download_prices_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(download_prices_module)
+        PriceDownloader = download_prices_module.PriceDownloader
+    
+    # Get all watchlists
+    watchlists = get_all_available_watchlists()
+    if not watchlists:
+        st.warning("No watchlists found. Please configure watchlists first.")
+        return
+    
+    # Collect all unique symbols
+    all_symbols = []
+    for wl in watchlists.values():
+        all_symbols.extend(wl.get("symbols", []))
+    unique_symbols = sorted(set(all_symbols))
+    
+    if not unique_symbols:
+        st.warning("No symbols found in watchlists.")
+        return
+    
+    # Show confirmation
+    st.info(f"📥 Updating prices for {len(unique_symbols)} unique symbols across {len(watchlists)} watchlists...")
+    
+    # Calculate date range (3 years back to today)
+    end_date = datetime.now().strftime('%Y-%m-%d')
+    start_date = (datetime.now() - timedelta(days=3*365)).strftime('%Y-%m-%d')
+    
+    output_path = project_root / "data" / "prices.csv"
+    
+    # Download with progress
+    progress_placeholder = st.empty()
+    status_placeholder = st.empty()
+    
+    try:
+        downloader = PriceDownloader(str(output_path))
+        
+        # Show progress
+        status_placeholder.info(f"🔄 Downloading {len(unique_symbols)} symbols... This may take a few minutes.")
+        
+        # Download data
+        df = downloader.download(
+            tickers=unique_symbols,
+            start_date=start_date,
+            end_date=end_date,
+            merge_existing=True
+        )
+        
+        if df.empty:
+            st.error("❌ No data downloaded. Check your internet connection and try again.")
+            return
+        
+        # Save data
+        downloader.save(df)
+        report = downloader.get_report()
+        
+        # Clear cache to refresh data age
+        st.cache_data.clear()
+        
+        # Show success
+        status_placeholder.success(f"✅ Price data updated successfully!")
+        
+        # Show summary
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("✅ Successful", report.get('successful', 0))
+        with col2:
+            st.metric("❌ Failed", report.get('failed', 0))
+        with col3:
+            st.metric("📊 Total Rows", len(df))
+        
+        if report.get('failed', 0) > 0:
+            st.warning(f"⚠️ {report['failed']} symbols failed to download. Check the details below.")
+            if downloader.failed_tickers:
+                with st.expander("❌ Failed Symbols", expanded=True):
+                    failed_list = ", ".join(downloader.failed_tickers[:50])
+                    st.write(failed_list)
+                    if len(downloader.failed_tickers) > 50:
+                        st.write(f"... and {len(downloader.failed_tickers) - 50} more")
+                    
+                    st.markdown("---")
+                    st.markdown("**Common Issues & Fixes:**")
+                    st.markdown("""
+                    - **BRK.B** → Use **BRK-B** instead (format issue)
+                    - **ATVI, SPLK, PXD** → Remove (acquired/delisted)
+                    - **Others** → May be invalid or temporarily unavailable
+                    
+                    **Action**: Go to **Watchlist Manager** to fix or remove these symbols.
+                    """)
+                    
+                    # Show link to guide
+                    st.info("📖 See `docs/failed-symbols-guide.md` for detailed recommendations")
+        
+        st.info("💡 The data age will refresh after you reload the page.")
+        
+    except Exception as e:
+        ErrorHandler.render_error(
+            e,
+            error_type='data_loading_error',
+            custom_actions=[
+                "Check your internet connection",
+                "Verify yfinance is installed: `pip install yfinance`",
+                "Check the technical details below",
+                "Try running the script manually: `python scripts/download_prices.py --watchlist <watchlist_name>`"
+            ],
+            show_traceback=True
+        )
+
+
+def _update_benchmark():
+    """Update benchmark data (SPY/QQQ)."""
+    project_root = get_project_root()
+    benchmark_path = project_root / "data" / "benchmark.csv"
+    
+    try:
+        import yfinance as yf
+    except ImportError:
+        st.error("❌ yfinance not installed. Install with: `pip install yfinance`")
+        return
+    
+    st.info("📥 Downloading benchmark data (SPY, QQQ)...")
+    
+    with loading_spinner("Downloading benchmark data...", show_progress=False):
+        try:
+            # Calculate date range (3 years back to today)
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=3*365)
+            
+            # Download SPY and QQQ
+            benchmarks = {}
+            for symbol in ['SPY', 'QQQ']:
+                try:
+                    ticker = yf.Ticker(symbol)
+                    data = ticker.history(start=start_date, end=end_date, auto_adjust=True)
+                    
+                    if not data.empty:
+                        data = data.reset_index()
+                        data['ticker'] = symbol
+                        data['date'] = data['Date'].dt.strftime('%Y-%m-%d')
+                        data = data[['date', 'ticker', 'Close']].rename(columns={'Close': 'close'})
+                        benchmarks[symbol] = data
+                except Exception as e:
+                    st.warning(f"⚠️ Failed to download {symbol}: {e}")
+            
+            if benchmarks:
+                # Combine and save
+                all_data = pd.concat(benchmarks.values(), ignore_index=True)
+                all_data.to_csv(benchmark_path, index=False)
+                
+                # Clear cache
+                st.cache_data.clear()
+                
+                st.success(f"✅ Benchmark data updated successfully!")
+                st.info(f"📊 Downloaded {len(all_data)} rows for {len(benchmarks)} benchmarks")
+                st.info("💡 The data age will refresh after you reload the page.")
+            else:
+                st.error("❌ Failed to download any benchmark data")
+                
+        except Exception as e:
+            ErrorHandler.render_error(
+                e,
+                error_type='data_loading_error',
+                custom_actions=[
+                    "Check your internet connection",
+                    "Verify yfinance is installed",
+                    "Check the technical details below"
+                ],
+                show_traceback=True
+            )

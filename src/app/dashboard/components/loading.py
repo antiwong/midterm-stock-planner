@@ -47,28 +47,46 @@ def render_progress_bar(current: int, total: int, label: str = "Progress"):
 
 
 def render_loading_card(message: str, icon: str = "⏳"):
-    """Render a styled loading card.
+    """Render a styled loading card with dark mode support.
     
     Args:
         message: Loading message
         icon: Icon to display
     """
+    from ..utils import load_ui_settings
+    
+    settings = load_ui_settings()
+    dark_mode = settings.get("dark_mode", False)
+    
+    if dark_mode:
+        bg_color = "#2a2a2f"
+        text_color = "#f5f5f7"
+        border_color = "#3a3a3f"
+        spinner_border = "rgba(255, 255, 255, 0.2)"
+        spinner_top = "#f5f5f7"
+    else:
+        bg_color = "#eaf3ff"
+        text_color = "#0b0b0f"
+        border_color = "#d6e6ff"
+        spinner_border = "rgba(255, 255, 255, 0.3)"
+        spinner_top = "white"
+    
     st.markdown(f"""
     <div style="
-        background: #eaf3ff;
+        background: {bg_color};
         padding: 2rem;
         border-radius: 12px;
         text-align: center;
-        color: #0b0b0f;
+        color: {text_color};
         margin: 1rem 0;
-        border: 1px solid #d6e6ff;
+        border: 1px solid {border_color};
     ">
         <div style="font-size: 3rem; margin-bottom: 1rem;">{icon}</div>
         <div style="font-size: 1.2rem; font-weight: 500;">{message}</div>
         <div style="margin-top: 1rem;">
             <div class="spinner" style="
-                border: 4px solid rgba(255, 255, 255, 0.3);
-                border-top: 4px solid white;
+                border: 4px solid {spinner_border};
+                border-top: 4px solid {spinner_top};
                 border-radius: 50%;
                 width: 40px;
                 height: 40px;

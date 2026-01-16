@@ -2,6 +2,81 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.4] - 2026-01-17
+
+### Added
+
+#### Data Management
+- **Update Prices Button**: Added "🔄 Update Prices" button on Overview page
+  - Downloads latest price data for all watchlists
+  - Shows progress and download summary
+  - Displays failed symbols with actionable guidance
+  - Automatically clears cache to refresh data age
+- **Update Benchmark Button**: Added "🔄 Update Benchmark" button on Overview page
+  - Downloads latest SPY and QQQ benchmark data
+  - Shows progress and summary
+- **Failed Symbols Guide**: Created `docs/failed-symbols-guide.md`
+  - Detailed analysis of failed symbols
+  - Recommendations for fixes (format issues, delisted companies)
+  - Prevention tips
+
+#### UI/UX Improvements
+- **Enhanced Error Messages**: Improved failed symbols display with:
+  - Expanded view by default
+  - Common issues and fixes
+  - Link to detailed guide
+- **Price Download Integration**: Direct integration with PriceDownloader class
+  - Better error handling
+  - Real-time progress feedback
+  - Detailed download summaries
+
+### Fixed
+
+#### Data Download
+- **Price Download Error**: Fixed issue where script expected non-existent "everything" watchlist
+  - Now directly uses PriceDownloader class
+  - Automatically combines all watchlists
+  - Better error handling and user feedback
+
+## [3.10.3] - 2026-01-17
+
+### Added
+
+#### UI/UX Improvements
+- **Comprehensive Tooltips**: Added 30+ tooltips across key features with centralized management system
+  - Tooltips for Comprehensive Analysis, Portfolio Builder, Run Analysis, and more
+  - Centralized tooltip definitions in `src/app/dashboard/components/tooltips.py`
+- **Keyboard Shortcuts Tab**: Added dedicated "Shortcuts" tab in Settings page
+  - Enhanced shortcuts help dialog with better organization
+  - Clear navigation and action shortcuts documented
+- **UI Feature Test Suite**: Created `scripts/test_ui_features.py` for automated UI testing
+  - Tests dark mode, mobile responsiveness, performance monitoring, input widgets
+  - All 4 test categories passing
+
+#### Dark Mode Enhancements
+- **Loading Components**: All loading cards, spinners, and progress bars now adapt to dark mode
+- **Error Components**: Error, warning, and info cards dynamically adjust colors based on theme
+- **Input Widgets**: Comprehensive dark mode support verified for all 12 Streamlit input widget types
+
+### Changed
+
+#### UI Polish
+- **Error Messages**: Standardized error styling with actionable guidance
+- **Loading States**: Improved progress feedback with dark mode support
+- **Keyboard Shortcuts**: Enhanced help dialog with better organization and tips
+
+#### Performance
+- **Database Queries**: Verified existing caching optimizations (TTL: 60s-300s)
+- **Chart Rendering**: Confirmed lazy loading implementation for large datasets
+- **Mobile Responsiveness**: Verified responsive breakpoints at 768px and 1024px
+
+### Fixed
+
+#### Dark Mode
+- Fixed loading cards to properly adapt to dark/light themes
+- Fixed error/warning/info cards to use theme-appropriate colors
+- Verified all input widgets correctly adapt to dark mode
+
 ## [3.10.2] - 2026-01-17
 
 ### Fixed

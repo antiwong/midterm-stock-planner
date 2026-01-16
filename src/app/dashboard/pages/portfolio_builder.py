@@ -15,6 +15,7 @@ from ..components.sidebar import render_page_header, render_section_header
 from ..components.metrics import render_metric_card
 from ..components.charts import create_sector_pie, create_weight_bar
 from ..components.cards import render_info_card, render_alert
+from ..components.tooltips import get_tooltip
 from ..data import load_runs, get_run_summary
 from ..utils import get_project_root, format_percent, format_number
 from ..config import COLORS
@@ -160,7 +161,7 @@ def _render_parameter_form(completed_runs: list):
             min_value=5,
             max_value=30,
             value=10,
-            help="Number of stocks in portfolio"
+            help=get_tooltip('portfolio_size') or "Number of stocks in portfolio"
         )
     
     with col2:
@@ -170,7 +171,8 @@ def _render_parameter_form(completed_runs: list):
             max_value=0.25,
             value=0.15,
             step=0.01,
-            format="%.0f%%"
+            format="%.0f%%",
+            help=get_tooltip('max_position') or "Maximum weight for any single stock"
         )
     
     with col3:
@@ -180,7 +182,8 @@ def _render_parameter_form(completed_runs: list):
             max_value=0.50,
             value=0.35,
             step=0.01,
-            format="%.0f%%"
+            format="%.0f%%",
+            help=get_tooltip('max_sector') or "Maximum weight for any sector"
         )
     
     st.markdown("---")

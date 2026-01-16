@@ -106,17 +106,33 @@ class ErrorHandler:
         message = custom_message or guidance.get('message', str(error))
         actions = custom_actions or guidance.get('actions', [])
         
+        # Get dark mode setting
+        from ..utils import load_ui_settings
+        settings = load_ui_settings()
+        dark_mode = settings.get("dark_mode", False)
+        
+        if dark_mode:
+            error_bg = "#3a2a2a"
+            error_text = "#f5f5f7"
+            error_border = "#4a3a3a"
+        else:
+            error_bg = "#ffe4e6"
+            error_text = "#0b0b0f"
+            error_border = "#fecdd3"
+        
         # Render error card
         st.markdown(f"""
         <div style="
-            background: #ffe4e6;
+            background: {error_bg};
             padding: 1.5rem;
             border-radius: 12px;
-            color: #0b0b0f;
+            color: {error_text};
             margin: 1rem 0;
-            border: 1px solid #fecdd3;
+            border: 1px solid {error_border};
         ">
-            <h3 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">❌ {guidance['title']}</h3>
+            <h3 style="margin: 0 0 0.5rem 0; color: {error_text};">
+                ❌ {guidance['title']}
+            </h3>
             <p style="margin: 0 0 1rem 0; opacity: 0.95;">{message}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -160,23 +176,38 @@ def render_warning_with_actions(
     actions: List[str],
     icon: str = "⚠️"
 ):
-    """Render a warning with actionable steps.
+    """Render a warning with actionable steps (dark mode supported).
     
     Args:
         message: Warning message
         actions: List of actionable steps
         icon: Warning icon
     """
+    from ..utils import load_ui_settings
+    settings = load_ui_settings()
+    dark_mode = settings.get("dark_mode", False)
+    
+    if dark_mode:
+        warning_bg = "#3a3a2a"
+        warning_text = "#f5f5f7"
+        warning_border = "#4a4a3a"
+    else:
+        warning_bg = "#fff2d9"
+        warning_text = "#0b0b0f"
+        warning_border = "#ffe0b2"
+    
     st.markdown(f"""
     <div style="
-        background: #fff2d9;
+        background: {warning_bg};
         padding: 1.5rem;
         border-radius: 12px;
-        color: #0b0b0f;
+        color: {warning_text};
         margin: 1rem 0;
-        border: 1px solid #ffe0b2;
+        border: 1px solid {warning_border};
     ">
-        <h4 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">{icon} Warning</h4>
+        <h4 style="margin: 0 0 0.5rem 0; color: {warning_text};">
+            {icon} Warning
+        </h4>
         <p style="margin: 0 0 1rem 0; opacity: 0.95;">{message}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -192,23 +223,38 @@ def render_info_with_help(
     help_text: str,
     icon: str = "ℹ️"
 ):
-    """Render an info message with help text.
+    """Render an info message with help text (dark mode supported).
     
     Args:
         message: Info message
         help_text: Help text to display
         icon: Info icon
     """
+    from ..utils import load_ui_settings
+    settings = load_ui_settings()
+    dark_mode = settings.get("dark_mode", False)
+    
+    if dark_mode:
+        info_bg = "#2a2a3a"
+        info_text = "#f5f5f7"
+        info_border = "#3a3a4a"
+    else:
+        info_bg = "#eaf3ff"
+        info_text = "#0b0b0f"
+        info_border = "#d6e6ff"
+    
     st.markdown(f"""
     <div style="
-        background: #eaf3ff;
+        background: {info_bg};
         padding: 1.5rem;
         border-radius: 12px;
-        color: #0b0b0f;
+        color: {info_text};
         margin: 1rem 0;
-        border: 1px solid #d6e6ff;
+        border: 1px solid {info_border};
     ">
-        <h4 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">{icon} Information</h4>
+        <h4 style="margin: 0 0 0.5rem 0; color: {info_text};">
+            {icon} Information
+        </h4>
         <p style="margin: 0; opacity: 0.95;">{message}</p>
     </div>
     """, unsafe_allow_html=True)

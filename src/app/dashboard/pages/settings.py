@@ -22,7 +22,7 @@ def render_settings():
         "Configure dashboard and manage data"
     )
     
-    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "ℹ️ About"])
+    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "⌨️ Shortcuts", "ℹ️ About"])
     
     with tabs[0]:
         _render_api_keys_tab()
@@ -35,8 +35,11 @@ def render_settings():
     
     with tabs[3]:
         _render_styles_tab()
-
+    
     with tabs[4]:
+        _render_shortcuts_tab()
+
+    with tabs[5]:
         _render_about_tab()
 
 
@@ -317,6 +320,27 @@ def _render_styles_tab():
         }
         save_ui_settings(new_settings)
         st.success("Style settings saved. Refresh the page to apply.")
+
+
+def _render_shortcuts_tab():
+    """Render keyboard shortcuts help tab."""
+    render_section_header("Keyboard Shortcuts", "⌨️")
+    
+    st.markdown("""
+    Use keyboard shortcuts to navigate and perform actions quickly.
+    Shortcuts work when you're not typing in input fields.
+    """)
+    
+    render_shortcuts_help()
+    
+    st.markdown("---")
+    st.markdown("**Tips:**")
+    st.markdown("""
+    - Press `?` on any page to show shortcuts help
+    - Shortcuts are most reliable when not focused on input fields
+    - Some shortcuts may require page refresh to take effect
+    - Navigation shortcuts (O, A, P, W, D, S) work from any page
+    """)
 
 
 def _render_about_tab():

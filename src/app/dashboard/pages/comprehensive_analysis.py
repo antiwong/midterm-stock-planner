@@ -16,6 +16,7 @@ from pathlib import Path
 
 from ..components.sidebar import render_page_header
 from ..components.enhanced_charts import create_attribution_waterfall, create_factor_exposure_heatmap
+from ..components.tooltips import get_tooltip
 from ..data import load_runs, get_run_folder
 from ..utils import format_percent, format_number
 from src.analytics.analysis_service import AnalysisService
@@ -40,7 +41,7 @@ def render_comprehensive_analysis():
         "Select Run",
         options=list(run_options.keys()),
         key="comp_analysis_run",
-        help="Select the run to analyze across all advanced modules"
+        help=get_tooltip('run_select') or "Select the run to analyze across all advanced modules"
     )
     selected_run_id = run_options[selected_run_label]
     selected_run = next(r for r in runs if r['run_id'] == selected_run_id)
@@ -55,7 +56,8 @@ def render_comprehensive_analysis():
     # Run analysis button
     col1, col2 = st.columns([3, 1])
     with col1:
-        if st.button("🔄 Run All Analyses", type="primary", use_container_width=True):
+        if st.button("🔄 Run All Analyses", type="primary", use_container_width=True, 
+                    help=get_tooltip('run_all_analyses')):
             from ..components.loading import loading_spinner
             from ..components.errors import ErrorHandler
             
