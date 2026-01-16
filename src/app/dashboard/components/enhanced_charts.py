@@ -119,8 +119,14 @@ def create_factor_exposure_heatmap(
             value = factor_exposures[factor].get(metric, 0)
             if metric == 'exposure':
                 row.append(value)
+            elif metric == 'contribution_to_return':
+                # Already in percentage from factor_exposure.py
+                row.append(value)
+            elif metric == 'contribution_to_risk':
+                # Already in percentage from factor_exposure.py
+                row.append(value)
             else:
-                row.append(value * 100)  # Convert to percentage
+                row.append(value * 100)  # Convert to percentage for other metrics
         data.append(row)
     
     fig = go.Figure(data=go.Heatmap(

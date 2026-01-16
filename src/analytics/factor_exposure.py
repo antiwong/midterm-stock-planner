@@ -62,11 +62,22 @@ class FactorExposureAnalyzer:
             exposure = (weights_aligned * factor_scores).sum()
             
             # Contribution to return (simplified - using factor score as proxy)
-            contribution_to_return = exposure * 0.1  # Placeholder - would need actual factor returns
+            # Scale to percentage (assuming factor scores are 0-100 scale)
+            contribution_to_return = exposure * 0.01  # Convert to percentage
             
-            # Contribution to risk (using volatility as proxy)
-            factor_volatility = factor_scores.std()
-            contribution_to_risk = abs(exposure) * factor_volatility
+            # Contribution to risk (normalized and scaled)
+            # Use coefficient of variation (std/mean) to normalize, then scale by exposure
+            factor_mean = factor_scores.mean()
+            factor_std = factor_scores.std()
+            
+            if factor_mean != 0 and not np.isnan(factor_mean):
+                # Coefficient of variation * exposure, scaled to percentage
+                contribution_to_risk = abs(exposure) * (factor_std / factor_mean) * 0.01
+            else:
+                contribution_to_risk = 0.0
+            
+            # Cap risk contribution at reasonable values (e.g., 100%)
+            contribution_to_risk = min(contribution_to_risk, 1.0) * 100  # Convert to percentage
             
             factor_exposures.append({
                 'factor_name': factor_name,
