@@ -2,6 +2,77 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.9.2] - 2026-01-16
+
+### Fixed
+
+#### Critical Data Quality Fixes
+- **Sector Score Display Bug**: Fixed issue where all sectors showed 0.000 in AI insights
+  - Root cause: `generate_executive_summary`, `generate_sector_analysis`, and `generate_recommendations` used `'avg_score'` key but `_build_context` expected `'score'` key
+  - Fixed all three methods to use `'score'` key consistently
+  - AI insights now correctly display sector scores (e.g., Utilities: 0.301, Technology: -0.104)
+  - Recommendations now provide proper sector allocation guidance based on actual data
+
+- **Factor Exposure Risk Contribution**: Fixed unrealistic momentum risk contribution (114,390%)
+  - Changed from `exposure * std` to coefficient of variation approach
+  - Uses `(std/mean) * exposure * 0.01` for normalized percentage
+  - Caps risk contribution at 100% to prevent unrealistic values
+  - Risk contribution values now realistic (typically 0-50%)
+
+#### Data Serialization Fixes
+- **Timestamp Key Errors**: Fixed `keys must be str, int, float, bool or None, not Timestamp` errors
+  - Added `convert_to_string_keys()` helper in `turnover_analysis.py`
+  - Converts all Timestamp/datetime keys to ISO format strings
+  - Applied to `turnover_by_period`, `buys`, and `sells` dictionaries
+  - Tax optimization and turnover analysis now save correctly to database
+
+- **HTTP 404 Errors**: Improved error handling in earnings calendar
+  - Added try-except around `stock.info` fetch to handle 404 gracefully
+  - Silently handles 404 errors (expected for tickers without earnings data)
+  - Only warns on unexpected errors
+  - Prevents console clutter from expected API failures
+
+#### Analysis Module Fixes
+- **Style Analysis Error**: Fixed `'dict' object has no attribute 'columns'` error
+  - `stock_data` is passed as dict with 'features' and 'data' keys
+  - Extract DataFrame from dict before accessing `.columns`
+  - Handles both dict and DataFrame input formats
+
+- **Benchmark Comparison**: Fixed timezone mismatch errors
+  - Normalized both portfolio and benchmark indices to timezone-naive
+  - Uses boolean masks for robust date alignment
+  - Prevents "No overlapping dates" errors with SPY and QQQ
+
+- **Fundamental Data Integration**: Enhanced `load_stock_features` to merge fundamental data
+  - Automatically merges PE, PB, ROE, margins, market_cap from `fundamentals.csv`
+  - Maps column names (pe → pe_ratio, pb → pb_ratio) for compatibility
+  - Handles both long format (ticker column) and wide format (ticker index)
+  - Style analysis now finds fundamental data correctly
+
+- **Data Completeness Check**: Improved fundamental data detection
+  - Checks `features` DataFrame (where merged data is stored)
+  - Verifies values are non-null and positive (not just placeholders)
+  - Handles both `pe`/`pb` and `pe_ratio`/`pb_ratio` column names
+
+#### API and Database Fixes
+- **save_ai_insight Metadata Error**: Fixed `unexpected keyword argument 'metadata'` error
+  - Changed all `metadata=` parameters to `context=` in `save_ai_insight` calls
+  - Updated `ai_insights.py` to use `get_context()` instead of accessing `.metadata`
+  - Fixed in `comprehensive_analysis.py` (3 instances) and `ai_insights.py` (2 instances)
+
+### Changed
+
+#### UI/UX Improvements
+- **AI Insights Generate Button**: Restored and improved generate button in comprehensive analysis
+  - Button now always visible at top of AI Insights tab (not just when no insights exist)
+  - Added checkboxes to select what to generate (commentary, recommendations)
+  - Allows regeneration of insights when they already exist
+  - Better feedback messages for each action
+
+### Documentation
+- Updated `CHANGELOG.md` with all recent fixes and improvements
+- Updated `README.md` to reflect current state and bug fixes
+
 ## [3.9.1] - 2026-01-15
 
 ### Added
