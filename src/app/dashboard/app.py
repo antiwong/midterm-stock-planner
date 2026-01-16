@@ -51,6 +51,7 @@ from src.app.dashboard.pages import (
     render_alert_management,
     render_report_templates,
     render_fundamentals_status,
+    render_performance_monitoring,
 )
 
 
@@ -103,6 +104,7 @@ def main():
         "Alert Management": render_alert_management,
         "Report Templates": render_report_templates,
         "Fundamentals Status": render_fundamentals_status,
+        "Performance Monitoring": render_performance_monitoring,
         "Documentation": render_documentation,
         "Settings": render_settings,
     }

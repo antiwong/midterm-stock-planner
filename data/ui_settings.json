@@ -1,0 +1,16 @@
+{
+  "accent_color": "#C7F0C4",
+  "card_radius": 14,
+  "dark_mode": false,
+  "enable_custom_css": true,
+  "font_scale": 0.98,
+  "primary_color": "#8EC5FF",
+  "secondary_color": "#FFB38A",
+  "sidebar_bg_end": "#707c96",
+  "sidebar_bg_start": "#707c96",
+  "sidebar_button_bg": "#0f172a",
+  "sidebar_button_border": "#22304a",
+  "sidebar_hover_bg": "#8EC5FF",
+  "sidebar_label_color": "#09247b",
+  "sidebar_text_color": "#f5f5f7"
+}

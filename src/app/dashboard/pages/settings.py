@@ -219,6 +219,12 @@ def _render_styles_tab():
             value=bool(settings.get("enable_custom_css", True)),
             help="Turn off to use Streamlit default styling."
         )
+        
+        dark_mode = st.toggle(
+            "🌙 Dark mode",
+            value=bool(settings.get("dark_mode", False)),
+            help="Switch to dark theme for better viewing in low-light conditions."
+        )
 
         st.markdown("**Sidebar Colors**")
         col1, col2 = st.columns(2)
@@ -295,6 +301,7 @@ def _render_styles_tab():
     if apply_changes:
         new_settings = {
             "enable_custom_css": enable_custom_css,
+            "dark_mode": dark_mode,
             "sidebar_bg_start": sidebar_bg_start,
             "sidebar_bg_end": sidebar_bg_start,
             "sidebar_text_color": sidebar_text_color,

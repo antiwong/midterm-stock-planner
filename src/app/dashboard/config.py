@@ -54,6 +54,7 @@ def inject_custom_css():
     if not ui_settings.get("enable_custom_css", True):
         return
 
+    dark_mode = ui_settings.get("dark_mode", False)
     sidebar_bg_start = ui_settings.get("sidebar_bg_start", COLORS["dark"])
     sidebar_bg_end = ui_settings.get("sidebar_bg_end", "#0f172a")
     sidebar_text_color = ui_settings.get("sidebar_text_color", COLORS["light"])
@@ -66,6 +67,20 @@ def inject_custom_css():
     accent_color = ui_settings.get("accent_color", COLORS["accent"])
     card_radius = ui_settings.get("card_radius", 12)
     font_scale = ui_settings.get("font_scale", 1.0)
+    
+    # Dark mode color overrides
+    if dark_mode:
+        bg_color = "#1a1a1f"
+        text_color = "#f5f5f7"
+        card_bg = "#2a2a2f"
+        card_border = "#3a3a3f"
+        muted_color = "#9a9a9f"
+    else:
+        bg_color = COLORS['light']
+        text_color = COLORS['dark']
+        card_bg = COLORS['card_bg']
+        card_border = COLORS['card_border']
+        muted_color = COLORS['muted']
 
     st.markdown(f"""
 <style>
@@ -84,7 +99,8 @@ def inject_custom_css():
     .stApp {{
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: calc(16px * var(--font-scale));
-        background-color: {COLORS['light']};
+        background-color: {bg_color};
+        color: {text_color};
     }}
 
     .block-container {{
@@ -270,7 +286,7 @@ def inject_custom_css():
     .main-header {{
         font-size: 1.8rem;
         font-weight: 700;
-        color: #0b0b0f;
+        color: {text_color};
         margin-bottom: 0;
         letter-spacing: -0.025em;
         line-height: 1.2;
@@ -279,7 +295,7 @@ def inject_custom_css():
     .sub-header {{
         font-size: 1.5rem;
         font-weight: 600;
-        color: {COLORS['dark']};
+        color: {text_color};
         margin: 1.5rem 0 1.5rem 0;
         padding-bottom: 0.5rem;
         margin-bottom: 1.5rem;
@@ -288,10 +304,10 @@ def inject_custom_css():
     
     /* Metric Cards */
     .metric-card {{
-        background: {COLORS['primary']};
+        background: {COLORS['primary'] if not dark_mode else card_bg};
         padding: 0.5rem 0.85rem;
         border-radius: var(--card-radius);
-        color: {COLORS['dark']};
+        color: {COLORS['dark'] if not dark_mode else text_color};
         box-shadow: 0 8px 20px rgba(43, 42, 47, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
         min-height: 75px;
@@ -346,10 +362,10 @@ def inject_custom_css():
     
     /* Info Cards */
     .info-card {{
-        background: {COLORS['card_bg']};
+        background: {card_bg};
         padding: 0.65rem 0.85rem;
         border-radius: var(--card-radius);
-        border: 1px solid {COLORS['card_border']};
+        border: 1px solid {card_border};
         box-shadow: 0 4px 16px rgba(43, 42, 47, 0.05);
         transition: box-shadow 0.2s ease;
         line-height: 1.2;
@@ -358,6 +374,7 @@ def inject_custom_css():
         display: flex;
         flex-direction: column;
         justify-content: center;
+        color: {text_color};
     }}
     
     .info-card:hover {{
@@ -366,7 +383,7 @@ def inject_custom_css():
     
     /* Stock Cards */
     .stock-card {{
-        background: {COLORS['card_bg']};
+        background: {card_bg};
         padding: 0.85rem 1rem;
         border-radius: var(--card-radius);
         border-left: 4px solid {COLORS['primary']};
@@ -392,13 +409,13 @@ def inject_custom_css():
     .stock-card .ticker {{
         font-size: 1.05rem;
         font-weight: 700;
-        color: {COLORS['dark']};
+        color: {text_color};
         line-height: 1.2;
     }}
     
     .stock-card .sector {{
         font-size: 0.7rem;
-        color: {COLORS['muted']};
+        color: {muted_color};
         text-transform: uppercase;
         letter-spacing: 0.04em;
         line-height: 1.2;
@@ -787,19 +804,81 @@ def inject_custom_css():
         animation: fadeIn 0.3s ease-out;
     }}
     
-    /* Responsive adjustments */
+    /* Dark mode specific styles */
+    {"/* Dark mode active */" if dark_mode else ""}
+    
+    /* Responsive adjustments - Mobile */
     @media (max-width: 768px) {{
         .main-header {{
-            font-size: 1.75rem;
+            font-size: 1.5rem;
+        }}
+        
+        .sub-header {{
+            font-size: 1.25rem;
+            margin: 1rem 0;
         }}
         
         .metric-card {{
-            padding: 0.65rem 0.85rem;
-            min-height: 85px;
+            padding: 0.5rem 0.65rem;
+            min-height: 70px;
         }}
         
         .metric-card .value {{
-            font-size: 1.3rem;
+            font-size: 1.2rem;
+        }}
+        
+        .metric-card h3 {{
+            font-size: 0.7rem;
+        }}
+        
+        .info-card {{
+            padding: 0.5rem 0.65rem;
+            min-height: 70px;
+        }}
+        
+        .stock-card {{
+            padding: 0.65rem 0.85rem;
+        }}
+        
+        .page-header {{
+            padding: 0.3rem 0.6rem !important;
+            flex-direction: column;
+            align-items: flex-start !important;
+        }}
+        
+        .page-image {{
+            max-width: 60px !important;
+            width: 60px !important;
+            margin-bottom: 0.5rem;
+        }}
+        
+        div[data-testid="column"] {{
+            padding-left: 0.25rem !important;
+            padding-right: 0.25rem !important;
+        }}
+        
+        /* Touch-friendly buttons */
+        .stButton > button {{
+            min-height: 44px !important;
+            padding: 0.6rem 1.2rem !important;
+        }}
+        
+        /* Better spacing for mobile */
+        .block-container {{
+            padding-left: 0.5rem !important;
+            padding-right: 0.5rem !important;
+        }}
+    }}
+    
+    /* Tablet adjustments */
+    @media (min-width: 769px) and (max-width: 1024px) {{
+        .main-header {{
+            font-size: 1.65rem;
+        }}
+        
+        div[data-testid="column"] {{
+            padding-left: 0.4rem !important;
+            padding-right: 0.4rem !important;
         }}
     }}
 </style>
@@ -841,6 +920,7 @@ ADVANCED_ANALYTICS = [
 
 # Utilities
 UTILITIES = [
+    ("Performance Monitoring", "performance_monitoring"),
     ("Alert Management", "alert_management"),
     ("Report Templates", "report_templates"),
     ("Fundamentals Status", "fundamentals_status"),

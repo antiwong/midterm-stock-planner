@@ -96,57 +96,80 @@ def _load_sector_mapping() -> Dict[str, str]:
     return fallback_mapping
 
 
-def _fetch_sector_for_ticker(ticker: str) -> Optional[str]:
+def _fetch_sector_for_ticker(ticker: str, retries: int = 2) -> Optional[str]:
     """
-    Fetch sector for a single ticker using yfinance.
+    Fetch sector for a single ticker using yfinance with retry logic.
+    
+    Args:
+        ticker: Stock ticker symbol
+        retries: Number of retry attempts
     
     Returns:
         Sector name or None if not found
     """
-    try:
-        import yfinance as yf
-        stock = yf.Ticker(ticker)
-        info = stock.info
-        sector = info.get('sector', '')
-        
-        # Handle ETFs
-        if info.get('quoteType') == 'ETF' and not sector:
-            # Try to classify ETF
-            name = info.get('shortName', info.get('longName', ''))
-            ticker_upper = ticker.upper()
-            name_lower = (name or '').lower()
+    import time
+    
+    for attempt in range(retries + 1):
+        try:
+            import yfinance as yf
+            stock = yf.Ticker(ticker)
+            info = stock.info
             
-            # Precious metals
-            if any(x in ticker_upper for x in ['GLD', 'SLV', 'GOLD', 'PALL', 'PPLT']):
-                return 'Precious Metals'
-            if any(x in name_lower for x in ['gold', 'silver', 'platinum', 'palladium']):
-                return 'Precious Metals'
+            # Check if info is valid (not empty dict)
+            if not info or len(info) <= 1:
+                if attempt < retries:
+                    time.sleep(0.5)
+                    continue
+                return None
             
-            # Energy/Uranium
-            if any(x in ticker_upper for x in ['URA', 'URNM', 'NLR', 'XLE', 'OIH']):
-                return 'Energy'
+            sector = info.get('sector', '')
             
-            # Technology
-            if any(x in ticker_upper for x in ['QQQ', 'XLK', 'VGT', 'ARKK', 'ARKW']):
-                return 'Technology'
+            # Handle ETFs
+            if info.get('quoteType') == 'ETF' and not sector:
+                # Try to classify ETF
+                name = info.get('shortName', info.get('longName', ''))
+                ticker_upper = ticker.upper()
+                name_lower = (name or '').lower()
+                
+                # Precious metals
+                if any(x in ticker_upper for x in ['GLD', 'SLV', 'GOLD', 'PALL', 'PPLT']):
+                    return 'Precious Metals'
+                if any(x in name_lower for x in ['gold', 'silver', 'platinum', 'palladium']):
+                    return 'Precious Metals'
+                
+                # Energy/Uranium
+                if any(x in ticker_upper for x in ['URA', 'URNM', 'NLR', 'XLE', 'OIH']):
+                    return 'Energy'
+                
+                # Technology
+                if any(x in ticker_upper for x in ['QQQ', 'XLK', 'VGT', 'ARKK', 'ARKW']):
+                    return 'Technology'
+                
+                # Financials
+                if any(x in ticker_upper for x in ['XLF', 'VFH', 'KRE']):
+                    return 'Financial Services'
+                
+                # Healthcare
+                if any(x in ticker_upper for x in ['XLV', 'VHT', 'IBB', 'XBI']):
+                    return 'Healthcare'
+                
+                # Real Estate
+                if any(x in ticker_upper for x in ['VNQ', 'XLRE', 'IYR']):
+                    return 'Real Estate'
+                
+                return 'ETF - Other'
             
-            # Financials
-            if any(x in ticker_upper for x in ['XLF', 'VFH', 'KRE']):
-                return 'Financial Services'
+            return sector if sector else None
             
-            # Healthcare
-            if any(x in ticker_upper for x in ['XLV', 'VHT', 'IBB', 'XBI']):
-                return 'Healthcare'
-            
-            # Real Estate
-            if any(x in ticker_upper for x in ['VNQ', 'XLRE', 'IYR']):
-                return 'Real Estate'
-            
-            return 'ETF - Other'
-        
-        return sector if sector else None
-    except Exception:
-        return None
+        except Exception as e:
+            # If it's the last attempt, return None
+            if attempt < retries:
+                time.sleep(0.5 * (attempt + 1))  # Exponential backoff
+                continue
+            # Log error for debugging (but don't show to user)
+            import logging
+            logging.debug(f"Error fetching sector for {ticker}: {e}")
+            return None
 
 
 def _update_sector_cache(ticker: str, sector: str):
@@ -716,7 +739,7 @@ def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch:
         with st.spinner(f"Fetching sector data for {len(symbols_to_fetch)} stocks..."):
             fetched_count = 0
             for symbol in symbols_to_fetch:
-                sector = _fetch_sector_for_ticker(symbol)
+                sector = _fetch_sector_for_ticker(symbol, retries=2)
                 if sector:
                     # Update cache
                     _update_sector_cache(symbol, sector)
@@ -775,8 +798,12 @@ def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch:
                 with st.spinner(f"Fetching sector data for {len(unknown_sector)} stocks..."):
                     fetched_count = 0
                     failed = []
-                    for symbol in unknown_sector:
-                        sector = _fetch_sector_for_ticker(symbol)
+                    progress_bar = st.progress(0)
+                    status_text = st.empty()
+                    
+                    for i, symbol in enumerate(unknown_sector):
+                        status_text.text(f"Fetching {symbol}... ({i+1}/{len(unknown_sector)})")
+                        sector = _fetch_sector_for_ticker(symbol, retries=2)
                         if sector:
                             _update_sector_cache(symbol, sector)
                             fetched_count += 1
@@ -784,12 +811,18 @@ def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch:
                             failed.append(symbol)
                         # Small delay to avoid rate limiting
                         import time
-                        time.sleep(0.2)
+                        time.sleep(0.3)  # Slightly longer delay for better reliability
+                        progress_bar.progress((i + 1) / len(unknown_sector))
+                    
+                    progress_bar.empty()
+                    status_text.empty()
                     
                     if fetched_count > 0:
                         st.success(f"✅ Fetched sector data for {fetched_count} stocks")
                         if failed:
                             st.warning(f"⚠️ Could not fetch data for {len(failed)} stocks: {', '.join(failed[:10])}")
+                            if len(failed) > 10:
+                                st.info(f"   ... and {len(failed) - 10} more. These may be invalid tickers.")
                         # Clear cache and rerun
                         try:
                             _load_sector_mapping.clear()
@@ -797,7 +830,17 @@ def _render_symbols_grid(symbols: List[str], cols_per_row: int = 10, auto_fetch:
                             pass
                         st.rerun()
                     else:
-                        st.error("❌ Could not fetch sector data. Please try again or run `python scripts/fetch_sector_data.py`")
+                        st.error("❌ Could not fetch sector data. This may be due to:")
+                        st.markdown("""
+                        - **Rate limiting**: Yahoo Finance may be temporarily blocking requests
+                        - **Invalid tickers**: Some symbols may not exist
+                        - **Network issues**: Check your internet connection
+                        
+                        **Try:**
+                        1. Wait a few minutes and try again
+                        2. Run the command-line script: `python scripts/fetch_sector_data.py`
+                        3. Check if the tickers are valid using the validation script
+                        """)
         
         if len(unknown_sector) > 0:
             st.info(f"💡 {len(unknown_sector)} stocks without sector data. Click 'Fetch Sectors' to assign them automatically.")
@@ -908,7 +951,7 @@ def _render_update_sectors():
                 progress_bar.progress(progress)
                 status_text.text(f"Fetching sector data... {i+1}/{len(tickers_to_fetch)} ({ticker})")
                 
-                sector = _fetch_sector_for_ticker(ticker)
+                sector = _fetch_sector_for_ticker(ticker, retries=2)
                 if sector:
                     _update_sector_cache(ticker, sector)
                     fetched_count += 1

@@ -402,6 +402,7 @@ def get_version() -> str:
 
 DEFAULT_UI_SETTINGS: Dict[str, Any] = {
     "enable_custom_css": True,
+    "dark_mode": False,
     "sidebar_bg_start": "#111827",
     "sidebar_bg_end": "#0b0f19",
     "sidebar_text_color": "#f5f5f7",

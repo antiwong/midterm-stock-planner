@@ -29,6 +29,7 @@ from .recommendation_tracking import render_recommendation_tracking
 from .alert_management import render_alert_management
 from .report_templates import render_report_templates
 from .fundamentals_status import render_fundamentals_status
+from .performance_monitoring import render_performance_monitoring
 
 __all__ = [
     'render_overview',
@@ -56,4 +57,5 @@ __all__ = [
     'render_alert_management',
     'render_report_templates',
     'render_fundamentals_status',
+    'render_performance_monitoring',
 ]
