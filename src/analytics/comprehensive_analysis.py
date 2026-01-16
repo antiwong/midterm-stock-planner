@@ -569,24 +569,38 @@ class ComprehensiveAnalysisRunner:
         else:
             current_weights = weights
         
-        # Get stock features
+        # Get stock features - handle dict or DataFrame
         if stock_data is None:
             return {'error': 'Stock data required for style analysis'}
         
+        # Extract DataFrame from dict if needed
+        if isinstance(stock_data, dict):
+            # Try to get features DataFrame
+            if 'features' in stock_data and isinstance(stock_data['features'], pd.DataFrame):
+                stock_features_df = stock_data['features']
+            elif 'data' in stock_data and isinstance(stock_data['data'], pd.DataFrame):
+                stock_features_df = stock_data['data']
+            else:
+                return {'error': 'Stock features DataFrame not found in stock_data dict'}
+        elif isinstance(stock_data, pd.DataFrame):
+            stock_features_df = stock_data
+        else:
+            return {'error': f'Unexpected stock_data type: {type(stock_data)}'}
+        
         # Extract features - handle different data formats
-        if 'ticker' in stock_data.columns:
+        if 'ticker' in stock_features_df.columns:
             # Long format: group by ticker
-            feature_columns = [c for c in stock_data.columns 
+            feature_columns = [c for c in stock_features_df.columns 
                               if c not in ['date', 'ticker', 'return', 'sector']]
             if len(feature_columns) > 0:
-                stock_features = stock_data.groupby('ticker')[feature_columns].last()
+                stock_features = stock_features_df.groupby('ticker')[feature_columns].last()
             else:
                 return {'error': 'No feature columns found in stock data'}
         else:
             # Wide format: already indexed by ticker
-            feature_columns = [c for c in stock_data.columns 
+            feature_columns = [c for c in stock_features_df.columns 
                               if c not in ['date', 'return', 'sector']]
-            stock_features = stock_data[feature_columns] if len(feature_columns) > 0 else stock_data
+            stock_features = stock_features_df[feature_columns] if len(feature_columns) > 0 else stock_features_df
         
         style = self.style_analyzer.analyze(
             portfolio_weights=current_weights,
