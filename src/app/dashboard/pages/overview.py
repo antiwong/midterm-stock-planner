@@ -440,14 +440,15 @@ def _update_prices():
             if downloader.failed_tickers:
                 with st.expander("❌ Failed Symbols", expanded=True):
                     # Group by error type if failed_reasons is available
-                    if hasattr(downloader, 'failed_reasons') and downloader.failed_reasons:
+                    failed_reasons = report.get('failed_reasons', {})
+                    if failed_reasons:
                         delisted = []
                         timeout = []
                         format_issues = []
                         other = []
                         
                         for ticker in downloader.failed_tickers:
-                            reason = downloader.failed_reasons.get(ticker, "Unknown error")
+                            reason = failed_reasons.get(ticker, "Unknown error")
                             if 'delisted' in reason.lower() or 'invalid' in reason.lower():
                                 delisted.append((ticker, reason))
                             elif 'timeout' in reason.lower():
