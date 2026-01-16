@@ -97,7 +97,7 @@ def load_fundamentals() -> pd.DataFrame:
 
 def render_purchase_triggers():
     """Render the purchase triggers page."""
-    render_page_header("🎯 Purchase Triggers", "Understand why stocks were selected or excluded")
+    render_page_header("Purchase Triggers", "Understand why stocks were selected or excluded")
     
     # Help/Guide expander
     with st.expander("📖 How to Read Purchase Triggers - Quick Guide", expanded=False):
@@ -505,7 +505,7 @@ def render_purchase_triggers():
                     return f'background-color: rgba(239, 68, 68, 0.1); color: {COLORS["danger"]}'
             return ''
         
-        styled_df = display_df.style.applymap(
+        styled_df = display_df.style.map(
             color_scores,
             subset=['Domain Score', 'Model Score', 'Value Score', 'Quality Score']
         ).format({
@@ -617,7 +617,7 @@ def render_purchase_triggers():
         })
     
     display_df = pd.DataFrame(display_data)
-    styled_df = display_df.style.applymap(
+    styled_df = display_df.style.map(
         color_scores,
         subset=['Domain Score', 'Model Score', 'Value Score', 'Quality Score']
     ).format({

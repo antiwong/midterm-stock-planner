@@ -264,9 +264,8 @@ def _render_profile_summary():
     }
     
     st.markdown(f"""
-    <div style="background: linear-gradient(135deg, {risk_colors.get(risk_level, COLORS['primary'])} 0%, 
-                {risk_colors.get(risk_level, COLORS['primary'])}88 100%);
-                padding: 1.5rem; border-radius: 12px; color: white; text-align: center; margin-bottom: 1rem;">
+    <div style="background: {risk_colors.get(risk_level, COLORS['primary'])};
+                padding: 1.5rem; border-radius: 12px; color: #0b0b0f; text-align: center; margin-bottom: 1rem;">
         <div style="font-size: 0.75rem; text-transform: uppercase; opacity: 0.9;">Risk Profile</div>
         <div style="font-size: 1.5rem; font-weight: 700;">{risk_level.title()}</div>
     </div>

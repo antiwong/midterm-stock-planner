@@ -16,7 +16,7 @@ from src.analytics.alert_system import AlertService, AlertType, AlertChannel
 
 def render_alert_management():
     """Render alert management page."""
-    render_page_header("🚨 Alert Management", "Configure and manage portfolio alerts")
+    render_page_header("Alert Management", "Configure and manage portfolio alerts")
     
     alert_service = AlertService()
     

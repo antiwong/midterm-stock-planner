@@ -18,7 +18,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_monte_carlo():
     """Render Monte Carlo simulation page."""
-    render_page_header("🎲 Monte Carlo Simulation", "Portfolio risk analysis and scenario modeling")
+    render_page_header("Monte Carlo Simulation", "Portfolio risk analysis and scenario modeling")
     
     # Get runs
     runs = load_runs()

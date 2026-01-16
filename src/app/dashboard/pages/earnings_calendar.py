@@ -18,7 +18,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_earnings_calendar():
     """Render earnings calendar page."""
-    render_page_header("📅 Earnings Calendar", "Portfolio earnings exposure and impact analysis")
+    render_page_header("Earnings Calendar", "Portfolio earnings exposure and impact analysis")
     
     # Get runs
     runs = load_runs()

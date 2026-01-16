@@ -25,7 +25,7 @@ from src.analytics.comprehensive_analysis import ComprehensiveAnalysisRunner
 
 def render_comprehensive_analysis():
     """Render comprehensive analysis page."""
-    render_page_header("📊 Comprehensive Analysis", "Deep dive into portfolio performance")
+    render_page_header("Comprehensive Analysis", "Deep dive into portfolio performance")
     
     # Get runs
     runs = load_runs()
@@ -39,7 +39,8 @@ def render_comprehensive_analysis():
     selected_run_label = st.selectbox(
         "Select Run",
         options=list(run_options.keys()),
-        key="comp_analysis_run"
+        key="comp_analysis_run",
+        help="Select the run to analyze across all advanced modules"
     )
     selected_run_id = run_options[selected_run_label]
     selected_run = next(r for r in runs if r['run_id'] == selected_run_id)
@@ -101,7 +102,12 @@ def render_comprehensive_analysis():
                     )
     
     with col2:
-        export_format = st.selectbox("Export Format", ["PDF", "Excel", "CSV", "JSON"], key="export_format")
+        export_format = st.selectbox(
+            "Export Format",
+            ["PDF", "Excel", "CSV", "JSON"],
+            key="export_format",
+            help="Choose output format for export files"
+        )
         if st.button("📥 Export Results", use_container_width=True):
             try:
                 from ..export import export_to_pdf, export_to_excel, export_to_csv, export_to_json

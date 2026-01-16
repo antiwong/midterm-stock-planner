@@ -33,7 +33,8 @@ def render_ai_insights():
     selected_run_id = st.selectbox(
         "Select Analysis Run",
         options=[r['run_id'] for r in completed_runs],
-        format_func=lambda x: f"{x[:12]}... - {next((r.get('name') or 'Unnamed' for r in completed_runs if r['run_id'] == x), 'Unknown')}"
+        format_func=lambda x: f"{x[:12]}... - {next((r.get('name') or 'Unnamed' for r in completed_runs if r['run_id'] == x), 'Unknown')}",
+        help="Choose a completed run to view AI commentary and recommendations"
     )
     
     if not selected_run_id:

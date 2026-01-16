@@ -24,7 +24,7 @@ from ..config import COLORS
 
 def render_advanced_comparison():
     """Render advanced comparison page."""
-    render_page_header("📊 Advanced Comparison", "Compare runs, periods, and configurations")
+    render_page_header("Advanced Comparison", "Compare runs, periods, and configurations")
     
     # Tabs for different comparison types
     tab1, tab2, tab3 = st.tabs([

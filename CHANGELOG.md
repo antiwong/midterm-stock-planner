@@ -2,6 +2,46 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.10.2] - 2026-01-17
+
+### Fixed
+
+#### UI Improvements
+- **Sidebar Styling**: Fixed section header colors (MAIN WORKFLOW, TOOLS, etc.) to black for better visibility
+- **Button Consistency**: All sidebar navigation buttons now use secondary style (no orange highlight for selected)
+- **Page Titles**: Removed all emoji icons from page titles across all pages
+- **Header Images**: Recreated all header images as square (200x200) instead of rectangular
+- **Header Layout**: Improved header image alignment and sizing
+- **Metric Cards**: Fixed padding (equal top/bottom) and standardized card heights
+
+#### Chart Fixes
+- **Equity Curve**: Fixed `create_equity_curve()` function call to include both dates and cumulative values
+- **Portfolio Analysis**: Fixed chart rendering in lazy load mode
+
+#### Analysis Fixes
+- **Performance Attribution**: Fixed KeyError when tickers exist in weights but not in stock returns
+  - Now filters to common tickers before processing
+  - Handles missing tickers gracefully across all attribution methods
+- **Factor Exposure**: Fixed unrealistic size factor values (491 trillion exposure)
+  - Uses log10 transform for market cap values
+  - Normalizes all factor scores to 0-100 scale
+  - Fixed risk contribution calculation using variance-based approach
+  - All factors now show reasonable values
+
+#### Watchlist Validation
+- **Symbol Validation**: Created validation script to check all watchlist symbols
+- **Symbol Fixes**: Fixed invalid symbols in watchlists
+  - Replaced `BRK.B` → `BRK-B` (correct format)
+  - Removed 9 invalid/delisted symbols: ANSS, WBA, MAG, SPLK, ATVI, K, PXD, SQ, SAND
+- **Validation Tools**: Added `validate_watchlist_symbols.py` and `check_symbol_alternatives.py` scripts
+
+### Changed
+
+#### UI Refinements
+- **Page Headers**: Reduced padding and improved spacing
+- **Metric Cards**: Tighter spacing, equal padding, consistent heights
+- **Sidebar**: Improved visual hierarchy with black section headers
+
 ## [3.10.1] - 2026-01-16
 
 ### Added

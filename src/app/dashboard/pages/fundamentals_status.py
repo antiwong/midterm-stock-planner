@@ -30,7 +30,7 @@ except ImportError:
 def render_fundamentals_status():
     """Render fundamentals status page."""
     render_page_header(
-        "📊 Fundamentals Status",
+        "Fundamentals Status",
         "Check which stocks have fundamentals data and identify missing data"
     )
     

@@ -109,13 +109,14 @@ class ErrorHandler:
         # Render error card
         st.markdown(f"""
         <div style="
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: #ffe4e6;
             padding: 1.5rem;
             border-radius: 12px;
-            color: white;
+            color: #0b0b0f;
             margin: 1rem 0;
+            border: 1px solid #fecdd3;
         ">
-            <h3 style="margin: 0 0 0.5rem 0; color: white;">❌ {guidance['title']}</h3>
+            <h3 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">❌ {guidance['title']}</h3>
             <p style="margin: 0 0 1rem 0; opacity: 0.95;">{message}</p>
         </div>
         """, unsafe_allow_html=True)
@@ -168,13 +169,14 @@ def render_warning_with_actions(
     """
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        background: #fff2d9;
         padding: 1.5rem;
         border-radius: 12px;
-        color: white;
+        color: #0b0b0f;
         margin: 1rem 0;
+        border: 1px solid #ffe0b2;
     ">
-        <h4 style="margin: 0 0 0.5rem 0; color: white;">{icon} Warning</h4>
+        <h4 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">{icon} Warning</h4>
         <p style="margin: 0 0 1rem 0; opacity: 0.95;">{message}</p>
     </div>
     """, unsafe_allow_html=True)
@@ -199,13 +201,14 @@ def render_info_with_help(
     """
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        background: #eaf3ff;
         padding: 1.5rem;
         border-radius: 12px;
-        color: white;
+        color: #0b0b0f;
         margin: 1rem 0;
+        border: 1px solid #d6e6ff;
     ">
-        <h4 style="margin: 0 0 0.5rem 0; color: white;">{icon} Information</h4>
+        <h4 style="margin: 0 0 0.5rem 0; color: #0b0b0f;">{icon} Information</h4>
         <p style="margin: 0; opacity: 0.95;">{message}</p>
     </div>
     """, unsafe_allow_html=True)

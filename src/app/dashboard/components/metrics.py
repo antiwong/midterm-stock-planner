@@ -39,7 +39,12 @@ def render_metric_card(
         elif delta and delta.startswith('-'):
             delta_class = "positive"
     
-    delta_html = f'<div class="delta {delta_class}">{delta}</div>' if delta else ''
+    # Always include delta div for consistent height, even if empty
+    if delta:
+        delta_html = f'<div class="delta {delta_class}">{delta}</div>'
+    else:
+        delta_html = '<div class="delta delta-empty">&nbsp;</div>'
+    
     icon_html = f'<span style="margin-right: 0.5rem;">{icon}</span>' if icon else ''
     
     html = f"""

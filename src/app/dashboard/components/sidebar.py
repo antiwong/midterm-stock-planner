@@ -6,10 +6,12 @@ Navigation sidebar with quick stats.
 
 import streamlit as st
 from typing import Optional
+import base64
+from pathlib import Path
 
 from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS
 from ..data import load_runs, get_available_run_folders
-from ..utils import get_project_root
+from ..utils import get_project_root, get_version
 
 
 def render_sidebar() -> str:
@@ -19,17 +21,21 @@ def render_sidebar() -> str:
         Selected page identifier
     """
     # Logo/Title
-    st.sidebar.markdown("""
-    <div style="text-align: center; padding: 1rem 0;">
-        <div style="font-size: 2rem;">📈</div>
-        <div style="font-size: 1.25rem; font-weight: 700; color: white; margin-top: 0.5rem;">
-            Stock Analysis
+    logo_path = get_project_root() / "assets" / "long-game-logo.svg"
+    if logo_path.exists():
+        st.sidebar.image(str(logo_path), use_container_width=True)
+    else:
+        st.sidebar.markdown("""
+        <div style="text-align: center; padding: 1rem 0;">
+            <div style="font-size: 2rem;">📈</div>
+            <div style="font-size: 1.25rem; font-weight: 700; color: white; margin-top: 0.5rem;">
+                The Long Game
+            </div>
+            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">
+                Mid-term portfolio intelligence
+            </div>
         </div>
-        <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">
-            ML-Powered Portfolio Optimizer
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+        """, unsafe_allow_html=True)
     
     st.sidebar.markdown("---")
     
@@ -58,7 +64,7 @@ def render_sidebar() -> str:
     
     # Main Workflow Section
     st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
         Main Workflow
     </div>
     """, unsafe_allow_html=True)
@@ -66,12 +72,12 @@ def render_sidebar() -> str:
     # Main Workflow Section - Use buttons for better control
     for label, identifier in MAIN_WORKFLOW:
         is_selected = (label == current_selection)
-        button_type = "primary" if is_selected else "secondary"
+        # Use secondary for all buttons to match style settings
         if st.sidebar.button(
             label,
             key=f"nav_btn_{identifier}",
             use_container_width=True,
-            type=button_type
+            type="secondary"
         ):
             st.session_state.selected_nav_item = label
             st.rerun()
@@ -79,7 +85,7 @@ def render_sidebar() -> str:
     # Standalone Tools Section
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
         Tools
     </div>
     """, unsafe_allow_html=True)
@@ -87,12 +93,12 @@ def render_sidebar() -> str:
     # Tools Section - Use buttons
     for label, identifier in STANDALONE_TOOLS:
         is_selected = (label == current_selection)
-        button_type = "primary" if is_selected else "secondary"
+        # Use secondary for all buttons to match style settings
         if st.sidebar.button(
             label,
             key=f"nav_btn_{identifier}",
             use_container_width=True,
-            type=button_type
+            type="secondary"
         ):
             st.session_state.selected_nav_item = label
             st.rerun()
@@ -100,7 +106,7 @@ def render_sidebar() -> str:
     # Advanced Analytics Section
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
         Advanced Analytics
     </div>
     """, unsafe_allow_html=True)
@@ -108,12 +114,12 @@ def render_sidebar() -> str:
     # Advanced Analytics Section - Use buttons
     for label, identifier in ADVANCED_ANALYTICS:
         is_selected = (label == current_selection)
-        button_type = "primary" if is_selected else "secondary"
+        # Use secondary for all buttons to match style settings
         if st.sidebar.button(
             label,
             key=f"nav_btn_{identifier}",
             use_container_width=True,
-            type=button_type
+            type="secondary"
         ):
             st.session_state.selected_nav_item = label
             st.rerun()
@@ -121,7 +127,7 @@ def render_sidebar() -> str:
     # Utilities Section
     st.sidebar.markdown("---")
     st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem; margin-top: 0.5rem;">
+    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
         Utilities
     </div>
     """, unsafe_allow_html=True)
@@ -129,12 +135,12 @@ def render_sidebar() -> str:
     # Utilities Section - Use buttons
     for label, identifier in UTILITIES:
         is_selected = (label == current_selection)
-        button_type = "primary" if is_selected else "secondary"
+        # Use secondary for all buttons to match style settings
         if st.sidebar.button(
             label,
             key=f"nav_btn_{identifier}",
             use_container_width=True,
-            type=button_type
+            type="secondary"
         ):
             st.session_state.selected_nav_item = label
             st.rerun()
@@ -180,22 +186,65 @@ def render_sidebar() -> str:
     
     st.sidebar.markdown("---")
     
-    # Refresh button
-    if st.sidebar.button("🔄 Refresh Data", use_container_width=True):
-        st.cache_data.clear()
-        st.cache_resource.clear()
-        st.rerun()
-    
     # Version info
-    st.sidebar.markdown("""
+    version = get_version()
+    st.sidebar.markdown(f"""
     <div style="position: absolute; bottom: 1rem; left: 1rem; right: 1rem;">
         <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-align: center;">
-            v3.0.0 · Mid-term Stock Planner
+            v{version} · The Long Game
         </div>
     </div>
     """, unsafe_allow_html=True)
     
     return selected_label
+
+
+def _get_header_image(title: str) -> Optional[str]:
+    """Get a header image path based on title."""
+    title_lower = title.lower()
+    mapping = {
+        "overview": "header-analytics.svg",
+        "the long game": "header-analytics.svg",
+        "run analysis": "header-analytics.svg",
+        "analysis runs": "header-analytics.svg",
+        "comprehensive analysis": "header-analytics.svg",
+        "portfolio analysis": "header-portfolio.svg",
+        "portfolio builder": "header-portfolio.svg",
+        "reports": "header-report.svg",
+        "report templates": "header-report.svg",
+        "watchlist": "header-watchlist.svg",
+        "stock explorer": "header-data.svg",
+        "ai insights": "header-ai.svg",
+        "compare runs": "header-analytics.svg",
+        "advanced comparison": "header-analytics.svg",
+        "event analysis": "header-calendar.svg",
+        "tax optimization": "header-analytics.svg",
+        "monte carlo": "header-analytics.svg",
+        "turnover analysis": "header-analytics.svg",
+        "earnings calendar": "header-calendar.svg",
+        "real-time monitoring": "header-analytics.svg",
+        "recommendation tracking": "header-analytics.svg",
+        "alert management": "header-analytics.svg",
+        "fundamentals status": "header-data.svg",
+        "documentation": "header-report.svg",
+        "settings": "header-settings.svg",
+    }
+
+    for key, filename in mapping.items():
+        if key in title_lower:
+            image_path = get_project_root() / "assets" / filename
+            if image_path.exists():
+                return str(image_path)
+    return None
+
+
+def _encode_image(image_path: str) -> str:
+    """Encode image to base64 for inline HTML."""
+    try:
+        with open(image_path, 'rb') as f:
+            return base64.b64encode(f.read()).decode('utf-8')
+    except Exception:
+        return ""
 
 
 def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh: bool = True):
@@ -206,20 +255,27 @@ def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh:
         subtitle: Optional subtitle
         show_refresh: Whether to show refresh button
     """
-    col1, col2 = st.columns([4, 1])
+    header_image = _get_header_image(title)
     
-    with col1:
-        st.markdown(f'<h1 class="main-header">{title}</h1>', unsafe_allow_html=True)
-        if subtitle:
-            st.markdown(f'<p style="color: {COLORS["muted"]}; margin-top: -0.5rem;">{subtitle}</p>', 
-                       unsafe_allow_html=True)
+    # Build header HTML
+    image_html = ""
+    if header_image:
+        try:
+            encoded = _encode_image(header_image)
+            if encoded:
+                image_html = f'<div class="page-image"><img src="data:image/svg+xml;base64,{encoded}" alt="header" /></div>'
+        except Exception:
+            pass
     
-    with col2:
-        if show_refresh:
-            if st.button("🔄 Refresh", use_container_width=True, key=f"refresh_{title}"):
-                st.cache_data.clear()
-                st.cache_resource.clear()
-                st.rerun()
+    title_html = f'<div class="page-title-wrap"><h1 class="main-header">{title}</h1>'
+    if subtitle:
+        title_html += f'<p class="page-subtitle">{subtitle}</p>'
+    title_html += '</div>'
+    
+    st.markdown(
+        f'<div class="page-header">{image_html}{title_html}</div>',
+        unsafe_allow_html=True
+    )
 
 
 def render_section_header(title: str, icon: str = ""):

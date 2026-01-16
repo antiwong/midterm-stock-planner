@@ -17,7 +17,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_turnover_analysis():
     """Render turnover analysis page."""
-    render_page_header("🔄 Turnover & Churn Analysis", "Portfolio turnover and position stability")
+    render_page_header("Turnover & Churn Analysis", "Portfolio turnover and position stability")
     
     # Get runs
     runs = load_runs()

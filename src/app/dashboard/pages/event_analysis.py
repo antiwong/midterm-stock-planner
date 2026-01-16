@@ -18,7 +18,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_event_analysis():
     """Render event-driven analysis page."""
-    render_page_header("📅 Event-Driven Analysis", "Analyze portfolio performance around market events")
+    render_page_header("Event-Driven Analysis", "Analyze portfolio performance around market events")
     
     # Get runs
     runs = load_runs()

@@ -42,14 +42,14 @@ def render_run_analysis():
 def _render_new_analysis_tab():
     """Render the new analysis workflow."""
     st.markdown("""
-    <div style="background: linear-gradient(135deg, {start} 0%, {end} 100%); 
-                padding: 1.5rem; border-radius: 12px; color: white; margin-bottom: 1.5rem;">
+    <div style="background: {bg}; 
+                padding: 1.5rem; border-radius: 12px; color: #0b0b0f; margin-bottom: 1.5rem;">
         <h3 style="margin: 0 0 0.5rem 0;">🚀 Start Fresh Analysis</h3>
         <p style="margin: 0; opacity: 0.9; font-size: 0.9rem;">
             Select a watchlist and run the complete analysis pipeline from scratch.
         </p>
     </div>
-    """.format(start=COLORS['gradient_start'], end=COLORS['gradient_end']), unsafe_allow_html=True)
+    """.format(bg=COLORS['light']), unsafe_allow_html=True)
     
     # Step 1: Select Watchlist
     st.markdown("### Step 1: Select Stock Universe")
@@ -76,7 +76,8 @@ def _render_new_analysis_tab():
         selected_category = st.selectbox(
             "Filter by Category",
             options=category_options,
-            key="new_analysis_category"
+            key="new_analysis_category",
+            help="Filter watchlists by category (custom, sector, region, etc.)"
         )
     
     with col2:
@@ -100,7 +101,8 @@ def _render_new_analysis_tab():
             "Select Watchlist",
             options=watchlist_options,
             format_func=format_watchlist,
-            key="new_analysis_watchlist"
+            key="new_analysis_watchlist",
+            help="Pick the stock universe to analyze"
         )
     
     # Show watchlist preview
@@ -176,10 +178,18 @@ def _render_new_analysis_tab():
     col1, col2 = st.columns(2)
     
     with col1:
-        include_ai = st.checkbox("Include AI Commentary & Recommendations", value=True)
+        include_ai = st.checkbox(
+            "Include AI Commentary & Recommendations",
+            value=True,
+            help="Generates Gemini-powered commentary and recommendations"
+        )
     
     with col2:
-        custom_name = st.text_input("Run Name (optional)", placeholder="e.g., Q1 2025 Analysis")
+        custom_name = st.text_input(
+            "Run Name (optional)",
+            placeholder="e.g., Q1 2025 Analysis",
+            help="Helps you identify this run later"
+        )
     
     # Pipeline overview
     st.markdown("**Pipeline Steps:**")

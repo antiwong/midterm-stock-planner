@@ -55,29 +55,76 @@ class FactorExposureAnalyzer:
             if len(available_features) == 0:
                 continue
             
-            # Calculate factor score for each stock
-            factor_scores = features_aligned[available_features].mean(axis=1)
+            # Get raw feature values
+            raw_features = features_aligned[available_features].copy()
+            
+            # Normalize features based on factor type
+            # For size/market cap factors, use log transform to handle large values
+            is_size_factor = factor_name.lower() == 'size' or any('market_cap' in f.lower() or 'size' in f.lower() for f in available_features)
+            
+            if is_size_factor:
+                # Use log transform for market cap to normalize large values
+                # Apply log transform column by column
+                log_features = pd.DataFrame(index=raw_features.index, columns=raw_features.columns)
+                for col in raw_features.columns:
+                    col_data = raw_features[col].replace([0, np.inf, -np.inf], np.nan)
+                    # Use log10 for better scaling of market cap (millions/billions)
+                    # Add small value to avoid log(0)
+                    col_data_positive = col_data.fillna(1).clip(lower=1)
+                    log_features[col] = np.log10(col_data_positive)
+                
+                # Take mean of log-transformed features
+                factor_scores = log_features.mean(axis=1)
+                # Normalize to 0-100 scale for consistency
+                score_min = factor_scores.min()
+                score_max = factor_scores.max()
+                if score_max > score_min:
+                    factor_scores = ((factor_scores - score_min) / (score_max - score_min)) * 100
+                else:
+                    factor_scores = pd.Series(50.0, index=factor_scores.index)  # Default to middle if all same
+            else:
+                # For other factors, use mean and normalize
+                factor_scores = raw_features.mean(axis=1)
+                # Check if values need normalization
+                score_abs_max = factor_scores.abs().max()
+                if score_abs_max > 1000:  # If values are very large, normalize to 0-100
+                    score_min = factor_scores.min()
+                    score_max = factor_scores.max()
+                    if score_max > score_min:
+                        factor_scores = ((factor_scores - score_min) / (score_max - score_min)) * 100
+                    else:
+                        factor_scores = pd.Series(50.0, index=factor_scores.index)
+                elif score_abs_max > 100:  # If values are large but not huge, scale down
+                    factor_scores = (factor_scores / score_abs_max) * 100
+                # If values are already in reasonable range (< 100), use as-is
             
             # Portfolio exposure = weighted average of factor scores
+            # Factor scores are normalized to 0-100 scale, so exposure will be 0-100
             exposure = (weights_aligned * factor_scores).sum()
             
             # Contribution to return (simplified - using factor score as proxy)
-            # Scale to percentage (assuming factor scores are 0-100 scale)
+            # Since factor scores are on 0-100 scale, exposure is also 0-100
+            # Convert to percentage: exposure of 50 = 0.5% contribution
             contribution_to_return = exposure * 0.01  # Convert to percentage
             
-            # Contribution to risk (normalized and scaled to percentage)
-            # Use coefficient of variation (std/mean) to normalize, then scale by exposure
+            # Contribution to risk (based on factor score variance weighted by portfolio)
+            # Use standard deviation of factor scores as measure of risk
             factor_mean = factor_scores.mean()
             factor_std = factor_scores.std()
             
-            if factor_mean != 0 and not np.isnan(factor_mean) and not np.isnan(factor_std):
-                # Coefficient of variation * exposure, scaled to percentage
-                # This gives a normalized measure of risk contribution
-                cv = factor_std / factor_mean  # Coefficient of variation
-                contribution_to_risk = abs(exposure) * cv * 0.01  # Scale to percentage
+            if factor_std > 0 and not np.isnan(factor_std):
+                # Risk contribution = weighted variance contribution
+                # Calculate variance contribution: sum of (weight * (score - mean)^2)
+                weighted_variance = ((weights_aligned * (factor_scores - factor_mean) ** 2).sum())
+                # Normalize by total variance to get percentage
+                total_variance = factor_scores.var() * len(factor_scores) if len(factor_scores) > 0 else 1
+                if total_variance > 0:
+                    contribution_to_risk = (weighted_variance / total_variance) * 100
+                else:
+                    contribution_to_risk = 0.0
                 
                 # Cap at 100% to prevent unrealistic values
-                contribution_to_risk = min(contribution_to_risk, 100.0)
+                contribution_to_risk = min(abs(contribution_to_risk), 100.0)
             else:
                 contribution_to_risk = 0.0
             

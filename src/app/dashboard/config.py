@@ -6,22 +6,22 @@ Centralized configuration for page settings and custom CSS.
 
 import streamlit as st
 
+from .utils import load_ui_settings
+
 # Color palette
 COLORS = {
-    'primary': '#6366f1',      # Indigo
-    'secondary': '#8b5cf6',    # Purple
-    'accent': '#06b6d4',       # Cyan
-    'success': '#10b981',      # Emerald
-    'warning': '#f59e0b',      # Amber
-    'danger': '#ef4444',       # Red
-    'info': '#3b82f6',         # Blue
-    'dark': '#1e293b',         # Slate-800
-    'light': '#f8fafc',        # Slate-50
-    'muted': '#64748b',        # Slate-500
+    'primary': '#F4B8A5',      # Soft peach (AnuPpuccin-inspired)
+    'secondary': '#E9C7B8',    # Muted clay
+    'accent': '#CFE6DA',       # Soft mint
+    'success': '#BFE6CF',      # Pastel green
+    'warning': '#F6D2AE',      # Pastel orange
+    'danger': '#F4C3C3',       # Pastel red
+    'info': '#C7D7F2',         # Pastel blue
+    'dark': '#2b2a2f',         # Charcoal ink
+    'light': '#f6f2f3',        # Soft paper
+    'muted': '#7a6f73',        # Warm gray
     'card_bg': '#ffffff',
-    'card_border': '#e2e8f0',
-    'gradient_start': '#6366f1',
-    'gradient_end': '#8b5cf6',
+    'card_border': '#ece3e7',
 }
 
 # Chart color schemes
@@ -36,41 +36,130 @@ CHART_COLORS = {
 def configure_page():
     """Configure Streamlit page settings."""
     st.set_page_config(
-        page_title="Stock Analysis Dashboard",
-        page_icon="📈",
+        page_title="The Long Game",
+        page_icon="🎯",
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
             'Get Help': 'https://github.com/yourusername/midterm-stock-planner',
             'Report a bug': 'https://github.com/yourusername/midterm-stock-planner/issues',
-            'About': '# Mid-term Stock Planner\nML-powered stock analysis and portfolio optimization.'
+            'About': '# The Long Game\nMid-term portfolio intelligence and analysis.'
         }
     )
 
 
 def inject_custom_css():
     """Inject custom CSS for improved styling."""
+    ui_settings = load_ui_settings()
+    if not ui_settings.get("enable_custom_css", True):
+        return
+
+    sidebar_bg_start = ui_settings.get("sidebar_bg_start", COLORS["dark"])
+    sidebar_bg_end = ui_settings.get("sidebar_bg_end", "#0f172a")
+    sidebar_text_color = ui_settings.get("sidebar_text_color", COLORS["light"])
+    sidebar_label_color = ui_settings.get("sidebar_label_color", "#e2e8f0")
+    sidebar_hover_bg = ui_settings.get("sidebar_hover_bg", "rgba(99, 102, 241, 0.2)")
+    sidebar_button_bg = ui_settings.get("sidebar_button_bg", "rgba(30, 41, 59, 0.8)")
+    sidebar_button_border = ui_settings.get("sidebar_button_border", "rgba(255, 255, 255, 0.2)")
+    primary_color = ui_settings.get("primary_color", COLORS["primary"])
+    secondary_color = ui_settings.get("secondary_color", COLORS["secondary"])
+    accent_color = ui_settings.get("accent_color", COLORS["accent"])
+    card_radius = ui_settings.get("card_radius", 12)
+    font_scale = ui_settings.get("font_scale", 1.0)
+
     st.markdown(f"""
 <style>
+    :root {{
+        --primary-color: {primary_color};
+        --secondary-color: {secondary_color};
+        --accent-color: {accent_color};
+        --card-radius: {card_radius}px;
+        --font-scale: {font_scale};
+    }}
+
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
     
     /* Global Styles */
     .stApp {{
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-size: calc(16px * var(--font-scale));
+        background-color: {COLORS['light']};
+    }}
+
+    .block-container {{
+        padding-top: 0.75rem;
+    }}
+    
+    /* Hide Streamlit top bar/decorator - multiple selectors */
+    header[data-testid="stHeader"],
+    div[data-testid="stHeader"],
+    .stHeader,
+    header {{
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        max-height: 0 !important;
+        overflow: hidden !important;
+    }}
+    
+    /* Hide menu and footer */
+    #MainMenu,
+    #stMainMenu {{
+        visibility: hidden !important;
+        display: none !important;
+        height: 0 !important;
+    }}
+    
+    footer,
+    footer[data-testid="stFooter"] {{
+        visibility: hidden !important;
+        display: none !important;
+        height: 0 !important;
+    }}
+    
+    /* Hide Streamlit decorator */
+    .stDecoration,
+    div[data-testid="stDecoration"] {{
+        display: none !important;
+        height: 0 !important;
+    }}
+    
+    /* Hide top toolbar */
+    div[data-testid="stToolbar"] {{
+        display: none !important;
+    }}
+    
+    /* Adjust top padding since header is hidden */
+    .block-container {{
+        padding-top: 0.5rem !important;
+    }}
+    
+    /* Hide Streamlit's header but NOT our page-header */
+    div[class*="stHeader"],
+    div[class*="st-header"] {{
+        display: none !important;
+    }}
+    
+    /* Ensure our page-header is visible */
+    .page-header {{
+        display: flex !important;
+        visibility: visible !important;
     }}
     
     /* Sidebar Styling */
     [data-testid="stSidebar"] {{
-        background: linear-gradient(180deg, {COLORS['dark']} 0%, #0f172a 100%);
+        background: {sidebar_bg_start};
     }}
     
     [data-testid="stSidebar"] * {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] .stMarkdown {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] .stMarkdown p,
@@ -78,19 +167,19 @@ def inject_custom_css():
     [data-testid="stSidebar"] .stMarkdown h1,
     [data-testid="stSidebar"] .stMarkdown h2,
     [data-testid="stSidebar"] .stMarkdown h3 {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] label {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] .stRadio label {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] .stRadio label span {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] .stRadio > div {{
@@ -100,7 +189,7 @@ def inject_custom_css():
     }}
     
     [data-testid="stSidebar"] .stRadio > div > label:hover {{
-        background: rgba(99, 102, 241, 0.2);
+        background: {sidebar_hover_bg};
         border-radius: 6px;
     }}
     
@@ -111,17 +200,17 @@ def inject_custom_css():
     }}
     
     [data-testid="stSidebar"] [data-testid="stMetricLabel"] {{
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: {sidebar_label_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="stMetricValue"] {{
-        color: {COLORS['light']} !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] button {{
-        color: {COLORS['light']} !important;
-        background-color: rgba(30, 41, 59, 0.8) !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
+        color: {sidebar_text_color} !important;
+        background-color: {sidebar_button_bg} !important;
+        border: 1px solid {sidebar_button_border} !important;
     }}
     
     [data-testid="stSidebar"] button:hover {{
@@ -131,131 +220,160 @@ def inject_custom_css():
     
     /* Radio button specific styling */
     [data-testid="stSidebar"] [data-testid="stRadio"] {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="stRadio"] > div {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="stRadio"] label p {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [role="radiogroup"] label {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [role="radiogroup"] label p {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [role="radiogroup"] label span {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     /* Fix for metric text */
     [data-testid="stSidebar"] [data-testid="metric-container"] {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="metric-container"] label {{
-        color: rgba(255, 255, 255, 0.7) !important;
+        color: {sidebar_label_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="metric-container"] [data-testid="stMetricValue"] {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     /* Info box in sidebar */
     [data-testid="stSidebar"] [data-testid="stAlert"] {{
         background: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     [data-testid="stSidebar"] [data-testid="stAlert"] p {{
-        color: white !important;
+        color: {sidebar_text_color} !important;
     }}
     
     /* Main Header */
     .main-header {{
-        font-size: 2.5rem;
+        font-size: 1.8rem;
         font-weight: 700;
-        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 1rem;
+        color: #0b0b0f;
+        margin-bottom: 0;
         letter-spacing: -0.025em;
+        line-height: 1.2;
     }}
     
     .sub-header {{
         font-size: 1.5rem;
         font-weight: 600;
         color: {COLORS['dark']};
-        margin: 1.5rem 0 1rem 0;
+        margin: 1.5rem 0 1.5rem 0;
         padding-bottom: 0.5rem;
-        border-bottom: 2px solid {COLORS['primary']};
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid var(--primary-color);
     }}
     
     /* Metric Cards */
     .metric-card {{
-        background: linear-gradient(135deg, {COLORS['gradient_start']} 0%, {COLORS['gradient_end']} 100%);
-        padding: 1.5rem;
-        border-radius: 16px;
-        color: white;
-        box-shadow: 0 10px 40px rgba(99, 102, 241, 0.3);
+        background: {COLORS['primary']};
+        padding: 0.5rem 0.85rem;
+        border-radius: var(--card-radius);
+        color: {COLORS['dark']};
+        box-shadow: 0 8px 20px rgba(43, 42, 47, 0.08);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
+        min-height: 75px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
     }}
     
     .metric-card:hover {{
-        transform: translateY(-4px);
-        box-shadow: 0 20px 50px rgba(99, 102, 241, 0.4);
+        transform: translateY(-3px);
+        box-shadow: 0 16px 32px rgba(43, 42, 47, 0.12);
     }}
     
     .metric-card h3 {{
-        font-size: 0.875rem;
-        font-weight: 500;
+        font-size: 0.75rem;
+        font-weight: 600;
         opacity: 0.9;
-        margin-bottom: 0.5rem;
+        margin: 0;
+        margin-bottom: 0.15rem;
+        padding: 0;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
+        line-height: 1.1;
     }}
     
     .metric-card .value {{
-        font-size: 2rem;
+        font-size: 1.4rem;
         font-weight: 700;
-        margin-bottom: 0.25rem;
+        margin: 0;
+        margin-bottom: 0.1rem;
+        padding: 0;
+        line-height: 1.1;
+        word-break: break-word;
     }}
     
     .metric-card .delta {{
-        font-size: 0.875rem;
-        opacity: 0.85;
+        font-size: 0.75rem;
+        opacity: 0.9;
+        line-height: 1.1;
+        word-break: break-word;
+        margin: 0;
+        padding: 0;
+        min-height: 1.1em;
+    }}
+    
+    /* Hide empty delta but preserve space for consistent card height */
+    .metric-card .delta.delta-empty {{
+        visibility: hidden;
+        min-height: 1.1em;
+        height: 1.1em;
     }}
     
     /* Info Cards */
     .info-card {{
         background: {COLORS['card_bg']};
-        padding: 1.25rem;
-        border-radius: 12px;
+        padding: 0.65rem 0.85rem;
+        border-radius: var(--card-radius);
         border: 1px solid {COLORS['card_border']};
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 4px 16px rgba(43, 42, 47, 0.05);
         transition: box-shadow 0.2s ease;
+        line-height: 1.2;
+        word-break: break-word;
+        min-height: 85px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }}
     
     .info-card:hover {{
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 20px rgba(43, 42, 47, 0.08);
     }}
     
     /* Stock Cards */
     .stock-card {{
         background: {COLORS['card_bg']};
-        padding: 1.25rem;
-        border-radius: 12px;
+        padding: 0.85rem 1rem;
+        border-radius: var(--card-radius);
         border-left: 4px solid {COLORS['primary']};
-        margin: 0.75rem 0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        margin: 0.5rem 0;
+        box-shadow: 0 4px 14px rgba(43, 42, 47, 0.06);
         transition: all 0.2s ease;
+        line-height: 1.3;
     }}
     
     .stock-card:hover {{
@@ -272,16 +390,154 @@ def inject_custom_css():
     }}
     
     .stock-card .ticker {{
-        font-size: 1.25rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: {COLORS['dark']};
+        line-height: 1.2;
     }}
     
     .stock-card .sector {{
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: {COLORS['muted']};
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.04em;
+        line-height: 1.2;
+    }}
+
+    /* Buttons */
+    .stButton > button, .stDownloadButton > button {{
+        border-radius: var(--card-radius) !important;
+        padding: 0.5rem 1rem !important;
+        margin-top: 0.25rem !important;
+    }}
+
+    .stButton > button[kind="primary"], .stDownloadButton > button[kind="primary"] {{
+        background: var(--primary-color) !important;
+        border-color: var(--primary-color) !important;
+    }}
+
+    .stButton > button[kind="primary"]:hover, .stDownloadButton > button[kind="primary"]:hover {{
+        background: var(--secondary-color) !important;
+        border-color: var(--secondary-color) !important;
+    }}
+
+    .stButton > button[kind="secondary"], .stDownloadButton > button[kind="secondary"] {{
+        border-color: var(--primary-color) !important;
+        color: var(--primary-color) !important;
+    }}
+
+    .stButton > button[kind="secondary"]:hover, .stDownloadButton > button[kind="secondary"]:hover {{
+        background: rgba(99, 102, 241, 0.08) !important;
+    }}
+
+    /* Button groups spacing */
+    div[data-testid="column"] .stButton {{
+        margin-top: 0.35rem !important;
+    }}
+    
+    /* Reduce spacing between columns/cards */
+    div[data-testid="column"] {{
+        padding-left: 0.5rem !important;
+        padding-right: 0.5rem !important;
+    }}
+    
+    div[data-testid="column"]:first-child {{
+        padding-left: 0 !important;
+    }}
+    
+    div[data-testid="column"]:last-child {{
+        padding-right: 0 !important;
+    }}
+
+    /* Page titles */
+    .main-header {{
+        letter-spacing: -0.02em;
+        margin-top: 0.25rem;
+        color: #0b0b0f;
+    }}
+
+    h1, h2, h3 {{
+        letter-spacing: -0.015em;
+    }}
+
+    .page-header {{
+        background: #ffffff;
+        border: 1px solid {COLORS['card_border']};
+        border-radius: var(--card-radius);
+        padding: 0.4rem 0.9rem;
+        box-shadow: 0 2px 8px rgba(43, 42, 47, 0.04);
+        margin-bottom: 1rem;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        gap: 0.9rem !important;
+        flex-direction: row !important;
+    }}
+
+    .page-subtitle {{
+        color: #6e6e73;
+        margin-top: -0.15rem;
+    }}
+
+    .page-title-wrap {{
+        display: flex;
+        flex-direction: column;
+        gap: 0.05rem;
+    }}
+
+    .page-image {{
+        max-width: 80px !important;
+        width: 80px !important;
+        height: 80px !important;
+        flex-shrink: 0 !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        vertical-align: middle !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }}
+
+    .page-image img {{
+        max-height: 80px !important;
+        max-width: 80px !important;
+        width: 80px !important;
+        height: 80px !important;
+        object-fit: contain !important;
+        vertical-align: middle !important;
+        margin: 0 !important;
+        display: block !important;
+    }}
+    
+    .page-title-wrap {{
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 0.15rem !important;
+        align-items: flex-start !important;
+        justify-content: center !important;
+    }}
+
+    /* Tables */
+    .stDataFrame {{
+        border-radius: var(--card-radius) !important;
+        overflow: hidden !important;
+        border: 1px solid {COLORS['card_border']} !important;
+    }}
+
+    .stDataFrame thead th {{
+        background: #f4f0f2 !important;
+        color: {COLORS['dark']} !important;
+        font-weight: 600 !important;
+    }}
+
+    .stDataFrame tbody td {{
+        font-size: 0.9rem !important;
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
+    }}
+
+    /* Symbols formatting */
+    .symbol-text, code, pre {{
+        font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace !important;
     }}
     
     /* Status Badges */
@@ -399,11 +655,11 @@ def inject_custom_css():
     
     .stButton > button:hover {{
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
     }}
     
     .stButton > button[kind="primary"] {{
-        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%);
+        background: {COLORS['primary']};
     }}
     
     /* Sidebar buttons - darker background for visibility */
@@ -419,14 +675,14 @@ def inject_custom_css():
     }}
     
     [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
-        background: linear-gradient(135deg, {COLORS['primary']} 0%, {COLORS['secondary']} 100%) !important;
+        background: {COLORS['primary']} !important;
         color: white !important;
         border: 1px solid {COLORS['primary']} !important;
     }}
     
     [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
-        background: linear-gradient(135deg, #818cf8 0%, #a78bfa 100%) !important;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4) !important;
+        background: {COLORS['secondary']} !important;
+        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25) !important;
     }}
     
     /* Expanders */
@@ -440,7 +696,7 @@ def inject_custom_css():
     /* Tabs */
     .stTabs [data-baseweb="tab-list"] {{
         gap: 8px;
-        background: {COLORS['light']};
+        background: #f1ecef;
         padding: 0.5rem;
         border-radius: 10px;
     }}
@@ -453,7 +709,7 @@ def inject_custom_css():
     
     .stTabs [aria-selected="true"] {{
         background: {COLORS['primary']} !important;
-        color: white !important;
+        color: {COLORS['dark']} !important;
     }}
     
     /* Metrics */
@@ -497,8 +753,8 @@ def inject_custom_css():
     hr {{
         border: none;
         height: 1px;
-        background: linear-gradient(90deg, transparent, {COLORS['card_border']}, transparent);
-        margin: 2rem 0;
+        background: {COLORS['card_border']};
+        margin: 1.25rem 0;
     }}
     
     /* Custom scrollbar */
@@ -538,11 +794,12 @@ def inject_custom_css():
         }}
         
         .metric-card {{
-            padding: 1rem;
+            padding: 0.65rem 0.85rem;
+            min-height: 85px;
         }}
         
         .metric-card .value {{
-            font-size: 1.5rem;
+            font-size: 1.3rem;
         }}
     }}
 </style>
@@ -552,43 +809,43 @@ def inject_custom_css():
 # Navigation pages - organized by workflow groups
 # Main workflow (sequential)
 MAIN_WORKFLOW = [
-    ("🏠 Overview", "overview"),
-    ("🎮 Run Analysis", "run_analysis"),
-    ("🎯 Portfolio Builder", "portfolio_builder"),
-    ("📄 Reports", "reports"),
-    ("💼 Portfolio Analysis", "portfolio_analysis"),
-    ("📊 Comprehensive Analysis", "comprehensive_analysis"),
-    ("🔍 Purchase Triggers", "purchase_triggers"),
-    ("📊 Analysis Runs", "analysis_runs"),
-    ("🤖 AI Insights", "ai_insights"),
+    ("Overview", "overview"),
+    ("Run Analysis", "run_analysis"),
+    ("Portfolio Builder", "portfolio_builder"),
+    ("Reports", "reports"),
+    ("Portfolio Analysis", "portfolio_analysis"),
+    ("Comprehensive Analysis", "comprehensive_analysis"),
+    ("Purchase Triggers", "purchase_triggers"),
+    ("Analysis Runs", "analysis_runs"),
+    ("AI Insights", "ai_insights"),
 ]
 
 # Standalone tools
 STANDALONE_TOOLS = [
-    ("📋 Watchlist Manager", "watchlist_manager"),
-    ("🔎 Stock Explorer", "stock_explorer"),
-    ("📈 Compare Runs", "compare_runs"),
-    ("🔀 Advanced Comparison", "advanced_comparison"),
+    ("Watchlist Manager", "watchlist_manager"),
+    ("Stock Explorer", "stock_explorer"),
+    ("Compare Runs", "compare_runs"),
+    ("Advanced Comparison", "advanced_comparison"),
 ]
 
 # Advanced Analytics
 ADVANCED_ANALYTICS = [
-    ("📅 Event Analysis", "event_analysis"),
-    ("💰 Tax Optimization", "tax_optimization"),
-    ("🎲 Monte Carlo", "monte_carlo"),
-    ("🔄 Turnover Analysis", "turnover_analysis"),
-    ("📅 Earnings Calendar", "earnings_calendar"),
-    ("⚡ Real-Time Monitoring", "realtime_monitoring"),
-    ("📊 Recommendation Tracking", "recommendation_tracking"),
+    ("Event Analysis", "event_analysis"),
+    ("Tax Optimization", "tax_optimization"),
+    ("Monte Carlo", "monte_carlo"),
+    ("Turnover Analysis", "turnover_analysis"),
+    ("Earnings Calendar", "earnings_calendar"),
+    ("Real-Time Monitoring", "realtime_monitoring"),
+    ("Recommendation Tracking", "recommendation_tracking"),
 ]
 
 # Utilities
 UTILITIES = [
-    ("🚨 Alert Management", "alert_management"),
-    ("📄 Report Templates", "report_templates"),
-    ("📊 Fundamentals Status", "fundamentals_status"),
-    ("📚 Documentation", "documentation"),
-    ("⚙️ Settings", "settings"),
+    ("Alert Management", "alert_management"),
+    ("Report Templates", "report_templates"),
+    ("Fundamentals Status", "fundamentals_status"),
+    ("Documentation", "documentation"),
+    ("Settings", "settings"),
 ]
 
 # Combined list for backward compatibility

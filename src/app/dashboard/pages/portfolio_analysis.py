@@ -35,21 +35,10 @@ CHART_COLORS = {
     'success': '#10b981',      # Emerald
     'warning': '#f59e0b',      # Amber
     'danger': '#ef4444',       # Red
-    'gradient_start': '#667eea',
-    'gradient_end': '#764ba2',
     'dark': '#1e1e2e',
     'light': '#f8fafc',
     'muted': '#94a3b8',
 }
-
-# Beautiful gradient color scales
-GRADIENT_SCALE = [
-    [0, '#667eea'],
-    [0.25, '#764ba2'],
-    [0.5, '#f093fb'],
-    [0.75, '#f5576c'],
-    [1, '#4facfe']
-]
 
 HEATMAP_SCALE = [
     [0, '#ef4444'],
@@ -64,9 +53,9 @@ def render_portfolio_analysis():
     st.markdown("""
     <style>
     .portfolio-hero {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+        background: var(--secondary-color);
         padding: 2rem 2.5rem;
-        border-radius: 20px;
+        border-radius: var(--card-radius);
         margin-bottom: 2rem;
         color: white;
         box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
@@ -86,7 +75,7 @@ def render_portfolio_analysis():
         background: rgba(255,255,255,0.1);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255,255,255,0.2);
-        border-radius: 16px;
+        border-radius: var(--card-radius);
         padding: 1.5rem;
         text-align: center;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -107,8 +96,8 @@ def render_portfolio_analysis():
         letter-spacing: 1px;
     }
     .chart-container {
-        background: linear-gradient(145deg, #f8fafc, #e2e8f0);
-        border-radius: 16px;
+        background: #ffffff;
+        border-radius: var(--card-radius);
         padding: 1rem;
         margin: 0.5rem 0;
         box-shadow: 0 4px 16px rgba(0,0,0,0.08);
@@ -122,17 +111,17 @@ def render_portfolio_analysis():
         display: flex;
         align-items: center;
         gap: 0.75rem;
-        background: linear-gradient(90deg, #e2e8f0, #f1f5f9) !important;
+        background: #f7f7f9 !important;
         padding: 0.75rem 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #6366f1;
+        border-radius: var(--card-radius);
+        border-left: 4px solid var(--primary-color);
     }
     .stock-pill {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1));
-        border: 1px solid rgba(99, 102, 241, 0.3);
+        background: #f7f7f9;
+        border: 1px solid #e5e5ea;
         border-radius: 50px;
         padding: 0.5rem 1rem;
         margin: 0.25rem;
@@ -163,10 +152,11 @@ def render_portfolio_analysis():
         return name
     
     selected_run_id = st.selectbox(
-        "📊 Select Analysis Run",
+        "Select Analysis Run",
         options=[r['run_id'] for r in completed_runs],
         format_func=format_run,
-        key="portfolio_run_selector"
+        key="portfolio_run_selector",
+        help="Pick a completed run to explore portfolio metrics and charts"
     )
     
     if not selected_run_id:
@@ -179,12 +169,12 @@ def render_portfolio_analysis():
     
     # Tabs for different views
     tabs = st.tabs([
-        "📊 Overview", 
-        "📈 Performance", 
-        "🏭 Sectors", 
-        "⚖️ Risk", 
-        "🎯 Holdings",
-        "🤖 AI Analysis"
+        "Overview", 
+        "Performance", 
+        "Sectors", 
+        "Risk", 
+        "Holdings",
+        "AI Analysis"
     ])
     
     with tabs[0]:
@@ -217,7 +207,7 @@ def _render_hero_section(run: dict):
     
     st.markdown(f"""
     <div class="portfolio-hero">
-        <h1>📊 Portfolio Analysis</h1>
+        <h1>Portfolio Analysis</h1>
         <p>Comprehensive insights and performance metrics</p>
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
             <div class="metric-glass">
@@ -267,11 +257,20 @@ def _render_overview_tab(run: dict, run_id: str):
     # ==========================================
     
     # Chart loading mode selector
+    default_lazy = False
+    if returns_df is not None and not returns_df.empty and len(returns_df) > 800:
+        default_lazy = True
+    if scores_df is not None and not scores_df.empty and len(scores_df) > 200:
+        default_lazy = True
+
+    chart_options = ["All Charts", "Lazy Load"]
     chart_mode = st.radio(
         "Chart Loading Mode",
-        ["All Charts", "Lazy Load"],
+        chart_options,
         horizontal=True,
-        key=f"chart_mode_{run_id}"
+        index=1 if default_lazy else 0,
+        key=f"chart_mode_{run_id}",
+        help="Lazy Load renders charts on demand for faster performance"
     )
     
     if chart_mode == "All Charts":
@@ -404,9 +403,12 @@ def _render_lazy_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: 
         returns_df['cumulative'] = (1 + returns_df['portfolio_return']).cumprod()
     
     # Equity Curve
-    with st.expander("📈 Equity Curve", expanded=True):
-        if 'portfolio_return' in returns_df.columns:
-            fig = create_equity_curve(returns_df['portfolio_return'].tolist())
+    with st.expander("Equity Curve", expanded=True):
+        if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
+            # Calculate cumulative values from returns
+            cumulative_values = (1 + returns_df['portfolio_return']).cumprod().tolist()
+            dates = returns_df['date'].tolist()
+            fig = create_equity_curve(dates, cumulative_values)
             st.plotly_chart(fig, use_container_width=True)
             _render_chart_insight("equity_curve", returns_df, scores_df, run)
     
@@ -500,7 +502,7 @@ def _render_portfolio_details_panel(run: dict, scores_df: pd.DataFrame):
     top_sector = scores_df['sector'].value_counts().index[0] if not scores_df.empty and 'sector' in scores_df.columns else 'N/A'
     
     st.markdown(f"""
-    <div style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); border-radius: 20px; 
+    <div style="background: #ffffff; border-radius: 20px; 
                 padding: 2rem; margin-bottom: 1rem; border: 1px solid #cbd5e1;
                 box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
@@ -738,7 +740,7 @@ def _render_ai_portfolio_summary(run: dict, scores_df: pd.DataFrame, returns_df:
     summary = _generate_portfolio_summary(run, scores_df, returns_df)
     
     st.markdown(f"""
-    <div style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); 
+    <div style="background: #ffffff; 
                 border-radius: 16px; padding: 1.5rem; border: 1px solid #6366f1;
                 box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
         <div style="display: flex; align-items: flex-start; gap: 1rem;">
@@ -1110,9 +1112,9 @@ def _render_ai_tab(run_id: str):
     
     # Beautiful profile cards
     profile_styles = {
-        'conservative': {'emoji': '🛡️', 'gradient': 'linear-gradient(135deg, #10b981, #059669)', 'color': '#10b981'},
-        'balanced': {'emoji': '⚖️', 'gradient': 'linear-gradient(135deg, #6366f1, #4f46e5)', 'color': '#6366f1'},
-        'aggressive': {'emoji': '🚀', 'gradient': 'linear-gradient(135deg, #ef4444, #dc2626)', 'color': '#ef4444'},
+        'conservative': {'emoji': '🛡️', 'background': '#e8f7ef', 'color': '#10b981'},
+        'balanced': {'emoji': '⚖️', 'background': '#eef4ff', 'color': '#6366f1'},
+        'aggressive': {'emoji': '🚀', 'background': '#ffecec', 'color': '#ef4444'},
     }
     
     cols = st.columns(len(portfolio_profiles))
@@ -1129,8 +1131,8 @@ def _render_ai_tab(run_id: str):
         
         with cols[i]:
             st.markdown(f"""
-            <div style="background: {style['gradient']}; padding: 2rem; border-radius: 20px; 
-                        box-shadow: 0 20px 60px rgba(0,0,0,0.3); color: white; height: 100%;">
+            <div style="background: {style['background']}; padding: 2rem; border-radius: 20px; 
+                        box-shadow: 0 12px 32px rgba(0,0,0,0.08); color: #0b0b0f; height: 100%;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">{style['emoji']}</div>
                 <h2 style="margin: 0; font-weight: 800;">{profile_data.get('name', profile_name.title())}</h2>
                 <div style="margin-top: 1.5rem;">
@@ -1146,7 +1148,7 @@ def _render_ai_tab(run_id: str):
                         <span style="opacity: 0.7;">Time Horizon</span><br/>
                         <span style="font-size: 1.2rem; font-weight: 600;">{profile_data.get('time_horizon', 'N/A')}</span>
                     </div>
-                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(15, 23, 42, 0.1);">
                         <span style="opacity: 0.7; font-size: 0.85rem;">Top Holdings</span><br/>
                         <span style="font-size: 0.9rem;">{holdings_str}</span>
                     </div>
@@ -1159,7 +1161,7 @@ def _render_ai_tab(run_id: str):
     if overall and isinstance(overall, str):
         st.markdown('<div class="section-title">Overall Assessment</div>', unsafe_allow_html=True)
         st.markdown(f"""
-        <div style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); padding: 1.5rem; 
+        <div style="background: #ffffff; padding: 1.5rem; 
                     border-radius: 16px; border-left: 4px solid #667eea; color: #334155;
                     border: 1px solid #e2e8f0;">
             {overall}
@@ -1194,13 +1196,13 @@ def _render_ai_tab(run_id: str):
 # ============================================================================
 
 def _create_beautiful_equity_curve(returns_df: pd.DataFrame) -> go.Figure:
-    """Create a beautiful gradient equity curve."""
+    """Create a clean equity curve."""
     returns_df['cumulative'] = (1 + returns_df['portfolio_return']).cumprod()
     returns_df['portfolio_value'] = returns_df['cumulative'] * 100000
     
     fig = go.Figure()
     
-    # Area fill with gradient
+    # Area fill
     fig.add_trace(go.Scatter(
         x=returns_df['date'],
         y=returns_df['portfolio_value'],
@@ -1652,10 +1654,7 @@ def _render_sector_stats(scores_df: pd.DataFrame):
     sector_stats.columns = ['Count', 'Avg', 'Std', 'Min', 'Max']
     sector_stats = sector_stats.sort_values('Avg', ascending=False)
     
-    st.dataframe(
-        sector_stats.style.background_gradient(cmap='viridis', subset=['Avg']),
-        use_container_width=True
-    )
+    st.dataframe(sector_stats, use_container_width=True)
 
 
 def _render_sector_top_stocks(scores_df: pd.DataFrame):
@@ -1669,7 +1668,7 @@ def _render_sector_top_stocks(scores_df: pd.DataFrame):
         
         with cols[i % 3]:
             st.markdown(f"""
-            <div style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); 
+            <div style="background: #ffffff; 
                         border-radius: 12px; padding: 1rem; margin: 0.5rem 0;
                         border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <h4 style="color: #4f46e5; margin: 0 0 0.75rem 0; font-size: 1rem;">📂 {sector}</h4>
@@ -1706,7 +1705,7 @@ def _render_risk_metrics_cards(run: dict):
     for i, (label, value, icon, color) in enumerate(metrics):
         with cols[i]:
             st.markdown(f"""
-            <div style="background: linear-gradient(145deg, #f8fafc, #e2e8f0); 
+            <div style="background: #ffffff; 
                         border-radius: 16px; padding: 1.25rem; text-align: center;
                         border-top: 3px solid {color}; border: 1px solid #e2e8f0;">
                 <div style="font-size: 1.5rem;">{icon}</div>

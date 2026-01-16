@@ -17,7 +17,7 @@ from src.analytics.report_templates import ReportTemplateEngine, ReportFormat
 
 def render_report_templates():
     """Render report templates page."""
-    render_page_header("📄 Report Templates", "Create and manage custom report templates")
+    render_page_header("Report Templates", "Create and manage custom report templates")
     
     engine = ReportTemplateEngine()
     

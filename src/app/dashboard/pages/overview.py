@@ -7,22 +7,24 @@ Dashboard home page with summary metrics and recent activity.
 import streamlit as st
 import pandas as pd
 import numpy as np
+from datetime import datetime
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.metrics import render_metric_card, render_kpi_summary
 from ..components.charts import create_performance_bar, create_returns_chart
 from ..components.tables import render_runs_table
 from ..components.cards import render_run_card, render_info_card
-from ..data import load_runs, get_available_run_folders
-from ..utils import format_percent, format_number
+from ..data import load_runs, get_available_run_folders, get_all_available_watchlists
+from ..utils import format_percent, format_number, get_project_root
 from ..config import COLORS
+from src.analytics.fundamentals_status import FundamentalsStatusChecker
 
 
 def render_overview():
     """Render the overview page."""
     render_page_header(
-        "Stock Analysis Dashboard",
-        "ML-powered portfolio optimization and analysis"
+        "The Long Game",
+        "Mid-term portfolio intelligence and analysis"
     )
     
     runs = load_runs()
@@ -32,6 +34,7 @@ def render_overview():
         return
     
     _render_summary_metrics(runs)
+    _render_data_quality_summary()
     st.markdown("---")
     
     col1, col2 = st.columns([2, 1])
@@ -113,6 +116,117 @@ def _render_summary_metrics(runs: list):
             "with results",
             icon="📁"
         )
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _get_data_file_status():
+    """Get data freshness status for key data files."""
+    project_root = get_project_root()
+    data_files = {
+        "prices": project_root / "data" / "prices.csv",
+        "fundamentals": project_root / "data" / "fundamentals.csv",
+        "benchmark": project_root / "data" / "benchmark.csv",
+    }
+
+    status = {}
+    now = datetime.utcnow()
+    for key, path in data_files.items():
+        if not path.exists():
+            status[key] = {
+                "exists": False,
+                "last_modified": None,
+                "age_days": None,
+            }
+            continue
+        last_modified = datetime.utcfromtimestamp(path.stat().st_mtime)
+        age_days = (now - last_modified).total_seconds() / 86400
+        status[key] = {
+            "exists": True,
+            "last_modified": last_modified,
+            "age_days": age_days,
+        }
+    return status
+
+
+@st.cache_data(ttl=600, show_spinner=False)
+def _get_fundamentals_completeness(symbols: tuple):
+    """Get fundamentals completeness for a set of symbols."""
+    checker = FundamentalsStatusChecker("data/fundamentals.csv")
+    return checker.check_watchlist_fundamentals(watchlist_symbols=list(symbols))
+
+
+def _render_data_quality_summary():
+    """Render data freshness and completeness summary."""
+    render_section_header("Data Quality & Freshness", "🧪")
+
+    status = _get_data_file_status()
+    watchlists = get_all_available_watchlists()
+    all_symbols = []
+    for wl in watchlists.values():
+        all_symbols.extend(wl.get("symbols", []))
+    unique_symbols = tuple(sorted(set(all_symbols)))
+
+    fundamentals_summary = None
+    if unique_symbols:
+        fundamentals_summary = _get_fundamentals_completeness(unique_symbols)
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        prices = status.get("prices", {})
+        if prices.get("exists"):
+            age_days = prices.get("age_days", 0) or 0
+            render_metric_card(
+                "Price Data Age",
+                f"{age_days:.0f} days",
+                "Last update",
+                icon="🕒"
+            )
+        else:
+            render_metric_card("Price Data Age", "Missing", "prices.csv not found", icon="⚠️")
+
+    with col2:
+        if fundamentals_summary and fundamentals_summary.get("total_stocks", 0) > 0:
+            completeness = fundamentals_summary.get("required_completeness_rate", 0.0) or 0.0
+            render_metric_card(
+                "Fundamentals Coverage",
+                f"{completeness*100:.1f}%",
+                f"{fundamentals_summary.get('stocks_complete', 0)}/{fundamentals_summary.get('total_stocks', 0)} complete",
+                icon="📊"
+            )
+        else:
+            render_metric_card("Fundamentals Coverage", "N/A", "No symbols found", icon="⚠️")
+
+    with col3:
+        benchmark = status.get("benchmark", {})
+        if benchmark.get("exists"):
+            age_days = benchmark.get("age_days", 0) or 0
+            render_metric_card(
+                "Benchmark Data Age",
+                f"{age_days:.0f} days",
+                "Last update",
+                icon="📈"
+            )
+        else:
+            render_metric_card("Benchmark Data Age", "Missing", "benchmark.csv not found", icon="⚠️")
+
+    warnings = []
+    if not status.get("prices", {}).get("exists"):
+        warnings.append("Price data missing: `data/prices.csv` not found.")
+    elif status.get("prices", {}).get("age_days", 0) and status["prices"]["age_days"] > 30:
+        warnings.append("Price data is older than 30 days. Consider updating.")
+
+    if not status.get("benchmark", {}).get("exists"):
+        warnings.append("Benchmark data missing: `data/benchmark.csv` not found.")
+    elif status.get("benchmark", {}).get("age_days", 0) and status["benchmark"]["age_days"] > 30:
+        warnings.append("Benchmark data is older than 30 days. Consider updating.")
+
+    if fundamentals_summary and fundamentals_summary.get("required_completeness_rate", 1.0) < 0.8:
+        warnings.append("Fundamentals coverage below 80%. Download fundamentals to improve scores.")
+
+    if warnings:
+        for msg in warnings:
+            st.warning(msg)
 
 
 def _render_recent_runs(runs: list):

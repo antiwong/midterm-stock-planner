@@ -55,12 +55,13 @@ def render_loading_card(message: str, icon: str = "⏳"):
     """
     st.markdown(f"""
     <div style="
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: #eaf3ff;
         padding: 2rem;
         border-radius: 12px;
         text-align: center;
-        color: white;
+        color: #0b0b0f;
         margin: 1rem 0;
+        border: 1px solid #d6e6ff;
     ">
         <div style="font-size: 3rem; margin-bottom: 1rem;">{icon}</div>
         <div style="font-size: 1.2rem; font-weight: 500;">{message}</div>
@@ -104,7 +105,7 @@ def render_stage_progress(stage: str, current_stage: int, total_stages: int):
     ">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
             <span style="font-weight: 600;">Stage {current_stage}/{total_stages}: {stage}</span>
-            <span style="color: #667eea; font-weight: 600;">{progress*100:.0f}%</span>
+            <span style="color: #0a84ff; font-weight: 600;">{progress*100:.0f}%</span>
         </div>
         <div style="
             background: #e9ecef;
@@ -113,7 +114,7 @@ def render_stage_progress(stage: str, current_stage: int, total_stages: int):
             overflow: hidden;
         ">
             <div style="
-                background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+                background: #8EC5FF;
                 height: 100%;
                 width: {progress*100}%;
                 transition: width 0.3s ease;

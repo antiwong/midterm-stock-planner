@@ -398,3 +398,55 @@ def get_version() -> str:
         return "Unknown"
     except Exception:
         return "Unknown"
+
+
+DEFAULT_UI_SETTINGS: Dict[str, Any] = {
+    "enable_custom_css": True,
+    "sidebar_bg_start": "#111827",
+    "sidebar_bg_end": "#0b0f19",
+    "sidebar_text_color": "#f5f5f7",
+    "sidebar_label_color": "#cbd5f5",
+    "sidebar_hover_bg": "#F4B8A5",
+    "sidebar_button_bg": "#0f172a",
+    "sidebar_button_border": "#22304a",
+    "primary_color": "#F4B8A5",
+    "secondary_color": "#E9C7B8",
+    "accent_color": "#CFE6DA",
+    "card_radius": 14,
+    "font_scale": 0.98,
+}
+
+
+def get_ui_settings_path() -> Path:
+    """Get the path for UI settings storage."""
+    return get_project_root() / "data" / "ui_settings.json"
+
+
+def load_ui_settings() -> Dict[str, Any]:
+    """Load UI settings from disk with defaults."""
+    settings = DEFAULT_UI_SETTINGS.copy()
+    settings_path = get_ui_settings_path()
+    if not settings_path.exists():
+        return settings
+    try:
+        import json
+        with open(settings_path, "r", encoding="utf-8") as f:
+            saved = json.load(f)
+        if isinstance(saved, dict):
+            settings.update(saved)
+    except Exception:
+        return settings
+    return settings
+
+
+def save_ui_settings(settings: Dict[str, Any]) -> None:
+    """Persist UI settings to disk."""
+    settings_path = get_ui_settings_path()
+    try:
+        settings_path.parent.mkdir(parents=True, exist_ok=True)
+        import json
+        with open(settings_path, "w", encoding="utf-8") as f:
+            json.dump(settings, f, indent=2, sort_keys=True)
+    except Exception:
+        # Avoid breaking the UI if save fails
+        return

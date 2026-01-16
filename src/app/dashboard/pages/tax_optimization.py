@@ -17,7 +17,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_tax_optimization():
     """Render tax optimization page."""
-    render_page_header("💰 Tax Optimization", "Tax-loss harvesting and tax-efficient strategies")
+    render_page_header("Tax Optimization", "Tax-loss harvesting and tax-efficient strategies")
     
     # Get runs
     runs = load_runs()

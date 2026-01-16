@@ -19,7 +19,7 @@ from src.analytics.analysis_service import AnalysisService
 
 def render_realtime_monitoring():
     """Render real-time monitoring page."""
-    render_page_header("⚡ Real-Time Monitoring", "Portfolio alerts and daily performance tracking")
+    render_page_header("Real-Time Monitoring", "Portfolio alerts and daily performance tracking")
     
     # Get runs
     runs = load_runs()

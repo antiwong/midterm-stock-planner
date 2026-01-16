@@ -11,7 +11,7 @@ from pathlib import Path
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.cards import render_info_card, render_alert
 from ..data import load_runs, delete_run, get_database
-from ..utils import get_project_root, get_version
+from ..utils import get_project_root, get_version, load_ui_settings, save_ui_settings, DEFAULT_UI_SETTINGS
 from ..config import COLORS
 
 
@@ -22,7 +22,7 @@ def render_settings():
         "Configure dashboard and manage data"
     )
     
-    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "ℹ️ About"])
+    tabs = st.tabs(["🔑 API Keys", "🗄️ Database", "📁 Files", "🎨 Styles", "ℹ️ About"])
     
     with tabs[0]:
         _render_api_keys_tab()
@@ -34,6 +34,9 @@ def render_settings():
         _render_files_tab()
     
     with tabs[3]:
+        _render_styles_tab()
+
+    with tabs[4]:
         _render_about_tab()
 
 
@@ -202,6 +205,113 @@ def _render_files_tab():
         st.rerun()
 
 
+def _render_styles_tab():
+    """Render style configuration tab."""
+    render_section_header("Style Settings", "🎨")
+
+    settings = load_ui_settings()
+
+    st.info("Changes apply on next page refresh. Use the button below to save.")
+
+    with st.form("style_settings_form"):
+        enable_custom_css = st.toggle(
+            "Enable custom dashboard styling",
+            value=bool(settings.get("enable_custom_css", True)),
+            help="Turn off to use Streamlit default styling."
+        )
+
+        st.markdown("**Sidebar Colors**")
+        col1, col2 = st.columns(2)
+        with col1:
+            sidebar_bg_start = st.color_picker(
+                "Sidebar background",
+                value=settings.get("sidebar_bg_start", DEFAULT_UI_SETTINGS["sidebar_bg_start"])
+            )
+            sidebar_text_color = st.color_picker(
+                "Sidebar text color",
+                value=settings.get("sidebar_text_color", DEFAULT_UI_SETTINGS["sidebar_text_color"])
+            )
+            sidebar_hover_bg = st.color_picker(
+                "Sidebar hover background",
+                value=settings.get("sidebar_hover_bg", DEFAULT_UI_SETTINGS["sidebar_hover_bg"])
+            )
+        with col2:
+            sidebar_label_color = st.color_picker(
+                "Sidebar label color",
+                value=settings.get("sidebar_label_color", DEFAULT_UI_SETTINGS["sidebar_label_color"])
+            )
+            sidebar_button_bg = st.color_picker(
+                "Sidebar button background",
+                value=settings.get("sidebar_button_bg", DEFAULT_UI_SETTINGS["sidebar_button_bg"])
+            )
+
+        sidebar_button_border = st.color_picker(
+            "Sidebar button border",
+            value=settings.get("sidebar_button_border", DEFAULT_UI_SETTINGS["sidebar_button_border"])
+        )
+
+        st.markdown("**Theme Colors & Layout**")
+        theme_col1, theme_col2 = st.columns(2)
+        with theme_col1:
+            primary_color = st.color_picker(
+                "Primary color",
+                value=settings.get("primary_color", DEFAULT_UI_SETTINGS["primary_color"])
+            )
+            accent_color = st.color_picker(
+                "Accent color",
+                value=settings.get("accent_color", DEFAULT_UI_SETTINGS["accent_color"])
+            )
+            font_scale = st.slider(
+                "Base font scale",
+                min_value=0.85,
+                max_value=1.15,
+                value=float(settings.get("font_scale", DEFAULT_UI_SETTINGS["font_scale"])),
+                step=0.02
+            )
+        with theme_col2:
+            secondary_color = st.color_picker(
+                "Secondary color",
+                value=settings.get("secondary_color", DEFAULT_UI_SETTINGS["secondary_color"])
+            )
+            card_radius = st.slider(
+                "Card radius (px)",
+                min_value=6,
+                max_value=24,
+                value=int(settings.get("card_radius", DEFAULT_UI_SETTINGS["card_radius"])),
+                step=1
+            )
+
+        col_apply, col_reset = st.columns(2)
+        with col_apply:
+            apply_changes = st.form_submit_button("💾 Save Styles")
+        with col_reset:
+            reset_defaults = st.form_submit_button("↩️ Reset to Defaults")
+
+    if reset_defaults:
+        save_ui_settings(DEFAULT_UI_SETTINGS.copy())
+        st.success("Style settings reset to defaults.")
+        st.rerun()
+
+    if apply_changes:
+        new_settings = {
+            "enable_custom_css": enable_custom_css,
+            "sidebar_bg_start": sidebar_bg_start,
+            "sidebar_bg_end": sidebar_bg_start,
+            "sidebar_text_color": sidebar_text_color,
+            "sidebar_label_color": sidebar_label_color,
+            "sidebar_hover_bg": sidebar_hover_bg,
+            "sidebar_button_bg": sidebar_button_bg,
+            "sidebar_button_border": sidebar_button_border,
+            "primary_color": primary_color,
+            "secondary_color": secondary_color,
+            "accent_color": accent_color,
+            "card_radius": card_radius,
+            "font_scale": font_scale,
+        }
+        save_ui_settings(new_settings)
+        st.success("Style settings saved. Refresh the page to apply.")
+
+
 def _render_about_tab():
     """Render about information tab."""
     render_section_header("About", "ℹ️")
@@ -210,11 +320,11 @@ def _render_about_tab():
     version = get_version()
     
     st.markdown(f"""
-    ## Mid-term Stock Planner
+    ## The Long Game
     
     **Version:** {version}
     
-    ML-powered stock analysis and portfolio optimization platform.
+    Mid-term portfolio intelligence and analysis platform.
     
     ### Features
     
