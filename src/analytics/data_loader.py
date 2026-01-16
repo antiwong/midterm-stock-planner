@@ -196,16 +196,84 @@ class RunDataLoader:
         return None
     
     def load_stock_features(self) -> Optional[pd.DataFrame]:
-        """Load stock features/scores."""
+        """
+        Load stock features/scores and merge fundamental data.
+        
+        Tries multiple sources and merges fundamental data from fundamentals.csv.
+        """
+        features_df = None
+        
         # Try portfolio enriched file
         enriched_files = list(self.run_dir.glob("*portfolio_enriched*.csv"))
         if enriched_files:
             latest = max(enriched_files, key=lambda p: p.stat().st_mtime)
-            df = pd.read_csv(latest)
-            return df
+            features_df = pd.read_csv(latest)
         
-        # Try scores from database
-        return None
+        # If no enriched file, try scores from database or other sources
+        if features_df is None:
+            # Try scores files
+            scores_files = list(self.run_dir.glob("*scores*.csv"))
+            if scores_files:
+                latest = max(scores_files, key=lambda p: p.stat().st_mtime)
+                features_df = pd.read_csv(latest)
+        
+        if features_df is None:
+            return None
+        
+        # Merge fundamental data from fundamentals.csv
+        fundamentals_path = Path("data/fundamentals.csv")
+        if fundamentals_path.exists():
+            try:
+                fundamentals_df = pd.read_csv(fundamentals_path)
+                
+                # Get latest fundamental data for each ticker
+                if 'ticker' in fundamentals_df.columns and 'date' in fundamentals_df.columns:
+                    fundamentals_df['date'] = pd.to_datetime(fundamentals_df['date'])
+                    # Get most recent data for each ticker
+                    fundamentals_latest = fundamentals_df.sort_values('date').groupby('ticker').last().reset_index()
+                    
+                    # Map column names (fundamentals.csv uses 'pe', 'pb', etc.)
+                    column_mapping = {
+                        'pe': 'pe_ratio',
+                        'pb': 'pb_ratio',
+                        'roe': 'roe',
+                        'net_margin': 'net_margin',
+                        'gross_margin': 'gross_margin',
+                        'operating_margin': 'operating_margin',
+                        'market_cap': 'market_cap'
+                    }
+                    
+                    # Rename columns to match expected names
+                    for old_col, new_col in column_mapping.items():
+                        if old_col in fundamentals_latest.columns:
+                            fundamentals_latest = fundamentals_latest.rename(columns={old_col: new_col})
+                    
+                    # Merge with features
+                    if 'ticker' in features_df.columns:
+                        # Long format - merge on ticker
+                        features_df = features_df.merge(
+                            fundamentals_latest[['ticker'] + [c for c in fundamentals_latest.columns 
+                                                              if c in column_mapping.values() or c in ['pe', 'pb', 'roe', 'market_cap']]],
+                            on='ticker',
+                            how='left',
+                            suffixes=('', '_fund')
+                        )
+                    elif features_df.index.name == 'ticker' or all(isinstance(x, str) for x in features_df.index[:5]):
+                        # Index is ticker - merge on index
+                        features_df = features_df.merge(
+                            fundamentals_latest.set_index('ticker')[[c for c in fundamentals_latest.columns 
+                                                                    if c in column_mapping.values() or c in ['pe', 'pb', 'roe', 'market_cap']]],
+                            left_index=True,
+                            right_index=True,
+                            how='left',
+                            suffixes=('', '_fund')
+                        )
+            except Exception as e:
+                # If merge fails, continue without fundamentals
+                import warnings
+                warnings.warn(f"Could not merge fundamental data: {e}")
+        
+        return features_df
     
     def load_sector_mapping(self) -> Dict[str, str]:
         """Load ticker to sector mapping."""
