@@ -52,6 +52,7 @@ from src.app.dashboard.pages import (
     render_report_templates,
     render_fundamentals_status,
     render_performance_monitoring,
+    render_data_quality,
 )
 
 
@@ -105,6 +106,7 @@ def main():
         "Report Templates": render_report_templates,
         "Fundamentals Status": render_fundamentals_status,
         "Performance Monitoring": render_performance_monitoring,
+        "Data Quality": render_data_quality,
         "Documentation": render_documentation,
         "Settings": render_settings,
     }

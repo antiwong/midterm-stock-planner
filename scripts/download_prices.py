@@ -316,16 +316,22 @@ class PriceDownloader:
             print(f"\n   Batch {batch_num}/{total_batches}: {len(batch)} tickers...")
             
             try:
-                # Download batch
-                data = yf.download(
-                    batch,
-                    start=start_date,
-                    end=end_date,
-                    group_by='ticker',
-                    auto_adjust=True,
-                    progress=False,
-                    threads=True
-                )
+                # Download batch with retry logic
+                from src.app.dashboard.utils.retry import retry_network
+                
+                @retry_network
+                def download_batch():
+                    return yf.download(
+                        batch,
+                        start=start_date,
+                        end=end_date,
+                        group_by='ticker',
+                        auto_adjust=True,
+                        progress=False,
+                        threads=True
+                    )
+                
+                data = download_batch()
                 
                 # Process downloaded data
                 if len(batch) == 1:

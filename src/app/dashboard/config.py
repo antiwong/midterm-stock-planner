@@ -1185,6 +1185,7 @@ UTILITIES = [
     ("Alert Management", "alert_management"),
     ("Report Templates", "report_templates"),
     ("Fundamentals Status", "fundamentals_status"),
+    ("Data Quality", "data_quality"),
     ("Documentation", "documentation"),
     ("Settings", "settings"),
 ]
