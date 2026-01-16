@@ -102,11 +102,69 @@ def render_analysis_runs():
     
     st.markdown("---")
     
-    # Export button
+    # Bulk export section
     if filtered_runs:
+        st.markdown("### Bulk Export")
+        
+        # Multi-select runs for export
+        run_options = {f"{r.get('name', r['run_id'][:16])} ({r['run_id'][:8]})": r['run_id'] 
+                      for r in filtered_runs}
+        selected_for_export = st.multiselect(
+            "Select Runs to Export",
+            options=list(run_options.keys()),
+            default=[],
+            help="Select multiple runs to export together"
+        )
+        
+        if selected_for_export:
+            export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
+            
+            with export_col1:
+                if st.button("📥 Export Selected (CSV)", key="export_selected_csv", use_container_width=True):
+                    selected_run_ids = [run_options[label] for label in selected_for_export]
+                    selected_runs_data = [r for r in filtered_runs if r['run_id'] in selected_run_ids]
+                    df_export = pd.DataFrame(selected_runs_data)
+                    csv = df_export.to_csv(index=False)
+                    st.download_button(
+                        label="Download CSV",
+                        data=csv,
+                        file_name=f"runs_bulk_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        key="download_selected_csv"
+                    )
+            
+            with export_col2:
+                if st.button("📥 Export Selected (ZIP)", key="export_selected_zip", use_container_width=True):
+                    import zipfile
+                    import io
+                    from ..data import get_run_folder
+                    from pathlib import Path
+                    
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                        selected_run_ids = [run_options[label] for label in selected_for_export]
+                        for run_id in selected_run_ids:
+                            run_folder = get_run_folder(run_id)
+                            if run_folder and run_folder.exists():
+                                # Add all files from run folder
+                                for file_path in run_folder.glob("*"):
+                                    if file_path.is_file():
+                                        zip_file.write(file_path, f"{run_id}/{file_path.name}")
+                    
+                    zip_buffer.seek(0)
+                    st.download_button(
+                        label="Download ZIP",
+                        data=zip_buffer.read(),
+                        file_name=f"runs_bulk_{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip",
+                        mime="application/zip",
+                        key="download_selected_zip"
+                    )
+        
+        # Single export buttons (all filtered runs)
+        st.markdown("---")
         export_col1, export_col2, export_col3 = st.columns([1, 1, 2])
         with export_col1:
-            if st.button("📥 Export CSV", key="export_runs_csv", use_container_width=True):
+            if st.button("📥 Export All (CSV)", key="export_runs_csv", use_container_width=True):
                 df_export = pd.DataFrame(filtered_runs)
                 csv = df_export.to_csv(index=False)
                 st.download_button(
@@ -117,7 +175,7 @@ def render_analysis_runs():
                     key="download_runs_csv"
                 )
         with export_col2:
-            if st.button("📥 Export JSON", key="export_runs_json", use_container_width=True):
+            if st.button("📥 Export All (JSON)", key="export_runs_json", use_container_width=True):
                 import json
                 json_data = json.dumps(filtered_runs, indent=2, default=str)
                 st.download_button(

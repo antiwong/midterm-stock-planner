@@ -106,6 +106,56 @@ def _render_multiple_runs_comparison():
     )
     st.plotly_chart(fig, use_container_width=True)
     
+    # Enhanced comparison: Performance attribution
+    if len(selected_runs) >= 2:
+        st.markdown("---")
+        st.markdown("### Performance Attribution Comparison")
+        st.info("💡 Compare how different portfolios achieved their returns through factor, sector, and stock selection.")
+        
+        # Load comprehensive analysis for each run
+        from src.analytics.analysis_service import AnalysisService
+        service = AnalysisService()
+        
+        attribution_data = []
+        for run_id in selected_run_ids:
+            try:
+                results = service.get_analysis_results(run_id)
+                if results and 'attribution' in results:
+                    attr = results['attribution'].get('results', {})
+                    attribution_data.append({
+                        'Run': next((r.get('name', r['run_id'][:16]) for r in selected_run_data if r['run_id'] == run_id), run_id[:16]),
+                        'Factor Attribution': attr.get('factor_attribution', {}).get('total', 0),
+                        'Sector Attribution': attr.get('sector_attribution', {}).get('total', 0),
+                        'Stock Selection': attr.get('stock_selection', {}).get('total', 0),
+                        'Timing': attr.get('timing', {}).get('total', 0),
+                    })
+            except Exception:
+                pass
+        
+        if attribution_data:
+            attr_df = pd.DataFrame(attribution_data)
+            st.dataframe(attr_df, use_container_width=True, hide_index=True)
+    
+    # Export comparison
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("📥 Export Comparison", use_container_width=True):
+            # Create comparison export
+            comparison_data = {
+                'runs': selected_run_data,
+                'metrics': comparison_df.to_dict('records'),
+                'timestamp': datetime.now().isoformat()
+            }
+            import json
+            json_str = json.dumps(comparison_data, indent=2, default=str)
+            st.download_button(
+                label="📥 Download JSON",
+                data=json_str,
+                file_name=f"comparison_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+                mime="application/json"
+            )
+    
     # Holdings comparison
     st.markdown("### Holdings Comparison")
     holdings_data = {}

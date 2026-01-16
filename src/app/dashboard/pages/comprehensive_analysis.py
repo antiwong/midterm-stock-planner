@@ -174,6 +174,35 @@ def render_comprehensive_analysis():
                         file_name=f"{base_filename}.json",
                         mime="application/json"
                     )
+                elif export_format == "ZIP (All Formats)":
+                    # Create ZIP with all formats
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+                        # Add JSON
+                        json_bytes = export_to_json(all_results)
+                        zip_file.writestr(f"{base_filename}.json", json_bytes)
+                        
+                        # Add CSV files
+                        for analysis_type, data in all_results.items():
+                            if 'results' in data and isinstance(data['results'], dict):
+                                df = pd.json_normalize(data['results'])
+                                csv_bytes = export_to_csv(df)
+                                zip_file.writestr(f"{analysis_type}.csv", csv_bytes)
+                        
+                        # Add Excel if available
+                        try:
+                            excel_bytes = export_to_excel(all_results, selected_run, None)
+                            zip_file.writestr(f"{base_filename}.xlsx", excel_bytes)
+                        except Exception:
+                            pass
+                    
+                    zip_buffer.seek(0)
+                    st.download_button(
+                        label="📥 Download ZIP (All Formats)",
+                        data=zip_buffer.read(),
+                        file_name=f"{base_filename}_complete.zip",
+                        mime="application/zip"
+                    )
             except ImportError as e:
                 st.error(f"Export requires additional packages: {e}")
             except Exception as e:

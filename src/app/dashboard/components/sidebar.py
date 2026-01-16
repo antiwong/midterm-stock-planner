@@ -12,6 +12,8 @@ from pathlib import Path
 from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS
 from ..data import load_runs, get_available_run_folders
 from ..utils import get_project_root, get_version
+from .search import render_global_search
+from .notifications import render_notification_bell, NotificationManager
 
 
 def render_sidebar() -> str:
@@ -36,6 +38,21 @@ def render_sidebar() -> str:
             </div>
         </div>
         """, unsafe_allow_html=True)
+    
+    st.sidebar.markdown("---")
+    
+    # Global search
+    search_result = render_global_search()
+    if search_result:
+        st.session_state['selected_nav_item'] = search_result
+        st.rerun()
+    
+    st.sidebar.markdown("---")
+    
+    # Notifications bell
+    if render_notification_bell():
+        st.session_state['selected_nav_item'] = 'Notifications'
+        st.rerun()
     
     st.sidebar.markdown("---")
     

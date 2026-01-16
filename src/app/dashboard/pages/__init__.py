@@ -31,6 +31,7 @@ from .report_templates import render_report_templates
 from .fundamentals_status import render_fundamentals_status
 from .performance_monitoring import render_performance_monitoring
 from .data_quality import render_data_quality
+from .notifications import render_notifications
 
 __all__ = [
     'render_overview',
@@ -60,4 +61,5 @@ __all__ = [
     'render_fundamentals_status',
     'render_performance_monitoring',
     'render_data_quality',
+    'render_notifications',
 ]
