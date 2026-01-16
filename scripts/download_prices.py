@@ -248,6 +248,29 @@ class PriceDownloader:
         self.download_log = []
         self.failed_tickers = []
         self.successful_tickers = []
+        self.failed_reasons = {}  # Track why each ticker failed
+    
+    def _normalize_ticker(self, ticker: str) -> tuple[str, Optional[str]]:
+        """Normalize ticker format and return (normalized_ticker, original_if_changed).
+        
+        Args:
+            ticker: Original ticker symbol
+        
+        Returns:
+            Tuple of (normalized_ticker, original_if_changed_or_None)
+        """
+        original = ticker.upper()
+        
+        # Known format fixes
+        format_fixes = {
+            'BRK.B': 'BRK-B',
+            'BRKB': 'BRK-B',
+        }
+        
+        if original in format_fixes:
+            return format_fixes[original], original
+        
+        return original, None
     
     def download(self, tickers: List[str], start_date: str, end_date: str,
                  merge_existing: bool = True, batch_size: int = 50) -> pd.DataFrame:
@@ -271,7 +294,18 @@ class PriceDownloader:
         print(f"   Period: {start_date} to {end_date}")
         
         all_data = []
-        tickers = [t.upper() for t in tickers]
+        # Normalize tickers and track format changes
+        normalized_tickers = []
+        ticker_map = {}  # Maps normalized -> original for display
+        
+        for t in tickers:
+            normalized, original = self._normalize_ticker(t)
+            normalized_tickers.append(normalized)
+            if original:
+                ticker_map[normalized] = original
+                print(f"   ℹ️  Format fix: {original} → {normalized}")
+        
+        tickers = normalized_tickers
         
         # Process in batches
         for i in range(0, len(tickers), batch_size):
@@ -305,7 +339,9 @@ class PriceDownloader:
                         self.successful_tickers.append(ticker)
                         self._log(f"✓ {ticker}: {len(df)} rows")
                     else:
-                        self.failed_tickers.append(ticker)
+                        original = ticker_map.get(ticker, ticker)
+                        self.failed_tickers.append(original)
+                        self.failed_reasons[original] = "No data returned (possibly delisted)"
                         self._log(f"✗ {ticker}: No data")
                 else:
                     # Multiple tickers
@@ -321,24 +357,52 @@ class PriceDownloader:
                                 
                                 if len(ticker_data) > 0:
                                     all_data.append(ticker_data)
-                                    self.successful_tickers.append(ticker)
-                                    self._log(f"✓ {ticker}: {len(ticker_data)} rows")
+                                    # Use original ticker name if it was normalized
+                                    display_ticker = ticker_map.get(ticker, ticker)
+                                    self.successful_tickers.append(display_ticker)
+                                    self._log(f"✓ {display_ticker}: {len(ticker_data)} rows")
                                 else:
-                                    self.failed_tickers.append(ticker)
+                                    original = ticker_map.get(ticker, ticker)
+                                    self.failed_tickers.append(original)
+                                    self.failed_reasons[original] = "No valid data (all NaN)"
                                     self._log(f"✗ {ticker}: No valid data")
                             else:
-                                self.failed_tickers.append(ticker)
+                                original = ticker_map.get(ticker, ticker)
+                                self.failed_tickers.append(original)
+                                self.failed_reasons[original] = "Symbol not found in download results"
                                 self._log(f"✗ {ticker}: Not found")
                         except Exception as e:
-                            self.failed_tickers.append(ticker)
-                            self._log(f"✗ {ticker}: {str(e)[:50]}")
+                            original = ticker_map.get(ticker, ticker)
+                            self.failed_tickers.append(original)
+                            error_msg = str(e)
+                            if 'delisted' in error_msg.lower() or 'timezone' in error_msg.lower():
+                                self.failed_reasons[original] = "Possibly delisted or invalid symbol"
+                            elif 'timeout' in error_msg.lower():
+                                self.failed_reasons[original] = "Download timeout (try again later)"
+                            else:
+                                self.failed_reasons[original] = f"Error: {error_msg[:100]}"
+                            self._log(f"✗ {ticker}: {error_msg[:50]}")
                 
                 # Rate limiting
                 time.sleep(0.5)
                 
             except Exception as e:
-                print(f"   ⚠️ Batch failed: {e}")
-                self.failed_tickers.extend(batch)
+                error_msg = str(e)
+                print(f"   ⚠️ Batch failed: {error_msg}")
+                
+                # Categorize batch failure
+                if 'delisted' in error_msg.lower() or 'timezone' in error_msg.lower():
+                    reason = "Possibly delisted or invalid symbols"
+                elif 'timeout' in error_msg.lower():
+                    reason = "Download timeout (try again later)"
+                else:
+                    reason = f"Batch error: {error_msg[:100]}"
+                
+                # Mark each ticker in batch as failed
+                for ticker in batch:
+                    original = ticker_map.get(ticker, ticker)
+                    self.failed_tickers.append(original)
+                    self.failed_reasons[original] = reason
         
         # Combine all data
         if all_data:
@@ -395,6 +459,7 @@ class PriceDownloader:
             'successful': len(self.successful_tickers),
             'failed': len(self.failed_tickers),
             'failed_tickers': self.failed_tickers,
+            'failed_reasons': getattr(self, 'failed_reasons', {}),
             'log': self.download_log
         }
 

@@ -439,29 +439,84 @@ def _update_prices():
             st.warning(f"⚠️ {report['failed']} symbols failed to download. Check the details below.")
             if downloader.failed_tickers:
                 with st.expander("❌ Failed Symbols", expanded=True):
-                    failed_list = ", ".join(downloader.failed_tickers[:50])
-                    st.write(failed_list)
-                    if len(downloader.failed_tickers) > 50:
-                        st.write(f"... and {len(downloader.failed_tickers) - 50} more")
+                    # Group by error type if failed_reasons is available
+                    if hasattr(downloader, 'failed_reasons') and downloader.failed_reasons:
+                        delisted = []
+                        timeout = []
+                        format_issues = []
+                        other = []
+                        
+                        for ticker in downloader.failed_tickers:
+                            reason = downloader.failed_reasons.get(ticker, "Unknown error")
+                            if 'delisted' in reason.lower() or 'invalid' in reason.lower():
+                                delisted.append((ticker, reason))
+                            elif 'timeout' in reason.lower():
+                                timeout.append((ticker, reason))
+                            elif 'format' in reason.lower() or ticker == 'BRK.B':
+                                format_issues.append((ticker, reason))
+                            else:
+                                other.append((ticker, reason))
+                        
+                        # Display grouped errors
+                        if delisted:
+                            st.markdown("**🗑️ Delisted/Invalid Symbols:**")
+                            for ticker, reason in delisted[:20]:
+                                st.markdown(f"- **{ticker}**: {reason}")
+                            if len(delisted) > 20:
+                                st.markdown(f"... and {len(delisted) - 20} more")
+                            st.markdown("")
+                        
+                        if timeout:
+                            st.markdown("**⏱️ Timeout Errors (try again):**")
+                            for ticker, reason in timeout[:10]:
+                                st.markdown(f"- **{ticker}**: {reason}")
+                            if len(timeout) > 10:
+                                st.markdown(f"... and {len(timeout) - 10} more")
+                            st.markdown("")
+                        
+                        if format_issues:
+                            st.markdown("**🔧 Format Issues:**")
+                            for ticker, reason in format_issues:
+                                st.markdown(f"- **{ticker}**: {reason}")
+                            st.markdown("")
+                        
+                        if other:
+                            st.markdown("**❓ Other Errors:**")
+                            for ticker, reason in other[:10]:
+                                st.markdown(f"- **{ticker}**: {reason}")
+                            if len(other) > 10:
+                                st.markdown(f"... and {len(other) - 10} more")
+                    else:
+                        # Fallback: simple list
+                        failed_list = ", ".join(downloader.failed_tickers[:50])
+                        st.write(failed_list)
+                        if len(downloader.failed_tickers) > 50:
+                            st.write(f"... and {len(downloader.failed_tickers) - 50} more")
                     
                     st.markdown("---")
                     st.markdown("**Common Issues & Fixes:**")
                     st.markdown("""
-                    - **BRK.B** → Use **BRK-B** instead (format issue)
+                    - **BRK.B** → Automatically converted to **BRK-B** (format issue - fixed automatically)
                     - **ATVI, SPLK, PXD** → Remove (acquired/delisted)
+                    - **Timeout errors** → Try downloading again later
                     - **Others** → May be invalid or temporarily unavailable
                     
-                    **Action**: Go to **Watchlist Manager** to fix or remove these symbols.
+                    **Action**: Use **Watchlist Manager → Validate & Fix** to automatically fix these issues.
                     """)
                     
-                    # Show link to guide
                     st.info("📖 See `docs/failed-symbols-guide.md` for detailed recommendations")
                     
-                    # Quick fix button
-                    if st.button("🔧 Go to Watchlist Manager", use_container_width=True,
-                                help="Open Watchlist Manager to fix invalid symbols"):
-                        st.session_state['page'] = 'Watchlist Manager'
-                        st.rerun()
+                    # Quick fix buttons
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        if st.button("🔧 Go to Watchlist Manager", use_container_width=True,
+                                    help="Open Watchlist Manager to fix invalid symbols"):
+                            st.session_state['page'] = 'Watchlist Manager'
+                            st.rerun()
+                    with col2:
+                        if st.button("🔄 Retry Failed Symbols", use_container_width=True,
+                                    help="Try downloading failed symbols again (may work for timeouts)"):
+                            st.info("💡 Use Watchlist Manager → Validate & Fix to remove invalid symbols first, then retry.")
         
         st.info("💡 The data age will refresh after you reload the page.")
         
