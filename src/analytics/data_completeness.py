@@ -227,21 +227,54 @@ class DataCompletenessChecker:
         elif requirement == DataRequirement.FUNDAMENTAL_DATA:
             # Check if fundamental data is available (PE ratios, etc.)
             if isinstance(stock_data, dict):
-                # Check for fundamental fields
-                fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'portfolio_pe']
+                # Check for fundamental fields in features DataFrame
+                fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
+                
+                # Check in features DataFrame (most common location)
+                if isinstance(stock_data.get('features'), pd.DataFrame):
+                    df = stock_data['features']
+                    has_fundamentals = any(field in df.columns for field in fundamental_fields)
+                    if has_fundamentals:
+                        # Check if we have valid (non-null, non-zero) values
+                        for field in fundamental_fields:
+                            if field in df.columns:
+                                valid_values = df[field].dropna()
+                                if len(valid_values) > 0:
+                                    # Check if any are positive (valid fundamental data)
+                                    if (valid_values > 0).any():
+                                        return True
+                
+                # Check in data DataFrame
+                if isinstance(stock_data.get('data'), pd.DataFrame):
+                    df = stock_data['data']
+                    has_fundamentals = any(field in df.columns for field in fundamental_fields)
+                    if has_fundamentals:
+                        for field in fundamental_fields:
+                            if field in df.columns:
+                                valid_values = df[field].dropna()
+                                if len(valid_values) > 0 and (valid_values > 0).any():
+                                    return True
+                
+                # Check for fundamental fields directly in dict
                 has_fundamentals = any(
                     field in stock_data or 
                     (isinstance(stock_data.get('data'), pd.DataFrame) and field in stock_data['data'].columns)
                     for field in fundamental_fields
                 )
                 if has_fundamentals:
-                    # Check if values are non-zero (not just placeholders)
-                    if isinstance(stock_data.get('data'), pd.DataFrame):
-                        df = stock_data['data']
-                        if 'pe_ratio' in df.columns:
-                            non_zero_pe = (df['pe_ratio'] > 0).any()
-                            return non_zero_pe
                     return True
+            
+            # Also check if stock_data is a DataFrame directly
+            elif isinstance(stock_data, pd.DataFrame):
+                fundamental_fields = ['pe_ratio', 'pb_ratio', 'roe', 'net_margin', 'pe', 'pb']
+                has_fundamentals = any(field in stock_data.columns for field in fundamental_fields)
+                if has_fundamentals:
+                    for field in fundamental_fields:
+                        if field in stock_data.columns:
+                            valid_values = stock_data[field].dropna()
+                            if len(valid_values) > 0 and (valid_values > 0).any():
+                                return True
+            
             return False
         
         elif requirement == DataRequirement.BENCHMARK_DATA:
