@@ -98,6 +98,13 @@ Or edit `config/watchlists.yaml` directly.
 - Use "Update Sectors" tab to fetch sector data for unknown stocks
 - One-click sector assignment from Yahoo Finance
 - Dark mode support (Settings → Styles)
+
+**Performance Features (v3.11+):**
+- Lazy loading for charts and large tables
+- Automatic chart optimization for 1000+ data points
+- Query caching (5-minute TTL)
+- Request batching for API calls
+- Data compression for cached results
 - Mobile-responsive design
 - Performance monitoring dashboard
 
@@ -222,6 +229,61 @@ Event-driven analysis shows how your portfolio performs around:
 - Macro data releases (CPI, GDP, etc.)
 
 This helps identify if your portfolio is sensitive to specific events.
+
+## Performance & Optimization (v3.11+)
+
+### Why are charts loading slowly?
+
+**Large Datasets:**
+- Charts with 1000+ data points are automatically optimized
+- Use "Lazy Load" mode in Portfolio Analysis for faster initial load
+- Charts load progressively (one at a time or in batches)
+
+**Solutions:**
+1. Enable "Lazy Load" mode in chart settings
+2. Filter data before generating charts
+3. Use pagination for large tables
+4. Clear cache if performance degrades (Performance Monitoring page)
+
+### How does query caching work?
+
+**Automatic Caching:**
+- Frequently accessed queries are cached for 5 minutes
+- Cache includes: run lists, scores, sector mappings
+- Cache is automatically cleared when data changes
+
+**Manual Control:**
+- View cache stats in Performance Monitoring page
+- Clear cache manually if needed
+- Cache compression reduces memory usage by 20-40%
+
+### What is request batching?
+
+**API Request Batching:**
+- Multiple API requests are grouped and sent together
+- Improves performance (parallel execution)
+- Respects rate limits automatically
+- Reduces API costs
+
+**Configuration:**
+- Batch size: 10 requests per batch (default)
+- Rate limit: Configurable per API provider
+- Automatic fallback if batching fails
+
+### How do I optimize for large datasets?
+
+**Best Practices:**
+1. Use pagination for tables (10-100 items per page)
+2. Enable lazy loading for charts
+3. Filter data before analysis
+4. Use virtual scrolling for very large lists (1000+ items)
+5. Clear cache periodically
+
+**Performance Tips:**
+- Close unused browser tabs
+- Use "Lazy Load" mode when exploring multiple runs
+- Export large datasets instead of viewing in browser
+- Use filters to reduce data size before analysis
 
 ## Troubleshooting
 

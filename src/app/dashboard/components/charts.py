@@ -1,7 +1,7 @@
 """
 Chart Components
 ================
-Reusable chart components using Plotly.
+Reusable chart components using Plotly with optimization for large datasets.
 """
 
 import plotly.express as px
@@ -12,6 +12,66 @@ import numpy as np
 from typing import Optional, List, Dict
 
 from ..config import COLORS, CHART_COLORS
+
+
+def downsample_data(
+    data: List[float],
+    max_points: int = 1000,
+    method: str = "lttb"
+) -> tuple:
+    """
+    Downsample data for better chart performance.
+    
+    Args:
+        data: List of data points
+        max_points: Maximum number of points to keep
+        method: Downsampling method ("lttb" for Largest-Triangle-Three-Buckets, "uniform" for uniform sampling)
+    
+    Returns:
+        Tuple of (indices, downsampled_data)
+    """
+    if len(data) <= max_points:
+        return list(range(len(data))), data
+    
+    if method == "uniform":
+        # Uniform sampling
+        step = len(data) / max_points
+        indices = [int(i * step) for i in range(max_points)]
+        indices[-1] = len(data) - 1  # Always include last point
+        downsampled = [data[i] for i in indices]
+        return indices, downsampled
+    
+    elif method == "lttb":
+        # Largest-Triangle-Three-Buckets algorithm (simplified)
+        # This is a simplified version - for production, use a proper LTTB library
+        step = len(data) / max_points
+        indices = [0]  # Always include first point
+        
+        for i in range(1, max_points - 1):
+            start_idx = int((i - 1) * step)
+            end_idx = int((i + 1) * step)
+            mid_idx = int(i * step)
+            
+            # Find point with largest triangle area
+            max_area = 0
+            best_idx = mid_idx
+            
+            for idx in range(start_idx, min(end_idx, len(data))):
+                # Calculate triangle area (simplified)
+                area = abs(data[idx] - data[mid_idx])
+                if area > max_area:
+                    max_area = area
+                    best_idx = idx
+            
+            indices.append(best_idx)
+        
+        indices.append(len(data) - 1)  # Always include last point
+        downsampled = [data[i] for i in indices]
+        return indices, downsampled
+    
+    else:
+        # Default: uniform sampling
+        return downsample_data(data, max_points, "uniform")
 
 
 def get_chart_template() -> dict:
@@ -32,9 +92,11 @@ def create_equity_curve(
     values: List[float],
     benchmark: Optional[List[float]] = None,
     title: str = "Portfolio Value",
-    height: int = 400
+    height: int = 400,
+    max_points: int = 1000,
+    optimize: bool = True
 ) -> go.Figure:
-    """Create an equity curve chart.
+    """Create an equity curve chart with optimization for large datasets.
     
     Args:
         dates: List of dates
@@ -42,16 +104,26 @@ def create_equity_curve(
         benchmark: Optional benchmark values
         title: Chart title
         height: Chart height
+        max_points: Maximum data points to render (for performance)
+        optimize: Whether to downsample if data exceeds max_points
     
     Returns:
         Plotly figure
     """
     fig = go.Figure()
     
+    # Optimize data if needed
+    if optimize and len(values) > max_points:
+        indices, downsampled_values = downsample_data(values, max_points)
+        downsampled_dates = [dates[i] for i in indices]
+    else:
+        downsampled_dates = dates
+        downsampled_values = values
+    
     # Portfolio line
     fig.add_trace(go.Scatter(
-        x=dates,
-        y=values,
+        x=downsampled_dates,
+        y=downsampled_values,
         name='Portfolio',
         mode='lines',
         line=dict(color=COLORS['primary'], width=2.5),
@@ -61,9 +133,14 @@ def create_equity_curve(
     
     # Benchmark line
     if benchmark:
+        if optimize and len(benchmark) > max_points:
+            _, downsampled_benchmark = downsample_data(benchmark, max_points)
+        else:
+            downsampled_benchmark = benchmark
+        
         fig.add_trace(go.Scatter(
-            x=dates,
-            y=benchmark,
+            x=downsampled_dates,
+            y=downsampled_benchmark,
             name='Benchmark',
             mode='lines',
             line=dict(color=COLORS['muted'], width=1.5, dash='dot')

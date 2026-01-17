@@ -1,13 +1,15 @@
 """
 Query Caching Utilities
 ========================
-Cache frequently accessed database queries and data.
+Cache frequently accessed database queries and data with compression support.
 """
 
 import functools
 import hashlib
 import json
 import time
+import gzip
+import pickle
 from typing import Any, Callable, Optional, Dict
 from datetime import datetime, timedelta
 
@@ -30,17 +32,57 @@ class QueryCache:
         if key in self.cache:
             entry = self.cache[key]
             if time.time() < entry['expires_at']:
-                return entry['value']
+                value = entry['value']
+                # Decompress if needed
+                if entry.get('compressed', False):
+                    try:
+                        decompressed = gzip.decompress(value)
+                        value = pickle.loads(decompressed)
+                    except Exception:
+                        # If decompression fails, return None
+                        del self.cache[key]
+                        return None
+                return value
             else:
                 # Expired, remove it
                 del self.cache[key]
         return None
     
-    def set(self, key: str, value: Any, ttl: Optional[int] = None):
-        """Set value in cache with TTL."""
+    def set(self, key: str, value: Any, ttl: Optional[int] = None, compress: bool = True):
+        """
+        Set value in cache with TTL.
+        
+        Args:
+            key: Cache key
+            value: Value to cache
+            ttl: Time-to-live in seconds
+            compress: Whether to compress large values (default: True)
+        """
         ttl = ttl or self.default_ttl
+        
+        # Compress large values (dicts, lists, DataFrames)
+        if compress and isinstance(value, (dict, list)):
+            try:
+                # Serialize and compress
+                serialized = pickle.dumps(value)
+                if len(serialized) > 1024:  # Compress if > 1KB
+                    compressed = gzip.compress(serialized)
+                    if len(compressed) < len(serialized) * 0.8:  # Only use if 20%+ savings
+                        self.cache[key] = {
+                            'value': compressed,
+                            'compressed': True,
+                            'expires_at': time.time() + ttl,
+                            'created_at': time.time()
+                        }
+                        return
+            except Exception:
+                # If compression fails, store uncompressed
+                pass
+        
+        # Store uncompressed
         self.cache[key] = {
             'value': value,
+            'compressed': False,
             'expires_at': time.time() + ttl,
             'created_at': time.time()
         }
