@@ -1,0 +1,4 @@
+ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
+SPY,Broad Market ETF,0.009226760179606228,30.0,30.0,15.304521112488008,1
+DIA,Broad Market ETF,-0.008351069567126725,30.0,30.0,15.295907975912108,2
+IWM,Broad Market ETF,-0.010331834745529886,30.0,30.0,15.29493740097469,3

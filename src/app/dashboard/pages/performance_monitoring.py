@@ -15,6 +15,8 @@ import pandas as pd
 from ..components.sidebar import render_page_header, render_section_header
 from ..data import get_database
 from ..utils import format_number, format_percent
+from ..utils.cache import get_cache_stats
+from ..utils.parallel import ParallelPerformanceMonitor
 
 
 def render_performance_monitoring():
@@ -24,7 +26,7 @@ def render_performance_monitoring():
         "System performance metrics and execution times"
     )
     
-    tabs = st.tabs(["📊 System Metrics", "⏱️ Execution Times", "💾 Database Performance", "📈 Trends"])
+    tabs = st.tabs(["📊 System Metrics", "⏱️ Execution Times", "💾 Database Performance", "💾 Cache Performance", "📈 Trends"])
     
     with tabs[0]:
         _render_system_metrics()
@@ -36,6 +38,9 @@ def render_performance_monitoring():
         _render_database_performance()
     
     with tabs[3]:
+        _render_cache_performance()
+    
+    with tabs[4]:
         _render_performance_trends()
 
 
@@ -288,6 +293,57 @@ def _render_database_performance():
         
     except Exception as e:
         st.error(f"Error accessing database: {e}")
+
+
+def _render_cache_performance():
+    """Render cache performance metrics."""
+    render_section_header("Cache Performance", "💾")
+    
+    try:
+        stats = get_cache_stats()
+        
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Entries", stats['total_entries'])
+        
+        with col2:
+            st.metric("Active Entries", stats['active_entries'])
+        
+        with col3:
+            st.metric("Expired Entries", stats['expired_entries'])
+        
+        with col4:
+            st.metric("Default TTL", f"{stats['default_ttl']}s")
+        
+        st.markdown("---")
+        
+        # Cache hit rate (if available)
+        st.markdown("### Cache Statistics")
+        st.info("💡 Cache reduces database load by storing frequently accessed query results.")
+        
+        if stats['total_entries'] > 0:
+            hit_rate = stats['active_entries'] / stats['total_entries'] * 100
+            st.metric("Cache Hit Rate", f"{hit_rate:.1f}%")
+        else:
+            st.info("No cache entries yet. Cache will populate as queries are executed.")
+        
+        # Clear cache button
+        st.markdown("---")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🗑️ Clear All Cache", use_container_width=True):
+                from ..utils.cache import clear_cache
+                clear_cache()
+                st.success("✅ Cache cleared!")
+                st.rerun()
+        
+        with col2:
+            if st.button("🔄 Refresh Stats", use_container_width=True):
+                st.rerun()
+    
+    except Exception as e:
+        st.error(f"Error accessing cache: {e}")
 
 
 def _render_performance_trends():

@@ -206,7 +206,10 @@ def get_database():
     return get_db(str(db_path))
 
 
-@st.cache_data(ttl=60, show_spinner=False)  # Cache for 60 seconds
+from ..utils.cache import cached_query
+
+@st.cache_data(ttl=60, show_spinner=False)  # Streamlit cache for 60 seconds
+@cached_query(ttl=60)  # Additional application-level cache
 def load_runs() -> List[Dict[str, Any]]:
     """Load all runs from database (cached for 60 seconds).
     
@@ -240,7 +243,8 @@ def load_run_by_id(run_id: str) -> Optional[Dict[str, Any]]:
         session.close()
 
 
-@st.cache_data(ttl=300, show_spinner=False)  # Cache for 5 minutes (scores don't change often)
+@st.cache_data(ttl=300, show_spinner=False)  # Streamlit cache for 5 minutes
+@cached_query(ttl=300, key_func=lambda run_id: f"run_scores:{run_id}")  # Application cache
 def load_run_scores(run_id: str) -> List[Dict[str, Any]]:
     """Load scores for a specific run (cached for 5 minutes).
     

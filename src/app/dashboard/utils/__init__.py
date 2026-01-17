@@ -29,6 +29,15 @@ from .parallel import (
     ParallelPerformanceMonitor
 )
 
+from .cache import (
+    QueryCache,
+    cached_query,
+    cache_key_for_run,
+    cache_key_for_watchlist,
+    clear_cache,
+    get_cache_stats
+)
+
 __all__ = [
     'retry_on_failure',
     'retry_with_exponential_backoff',
@@ -46,4 +55,10 @@ __all__ = [
     'parallel_filter',
     'parallelize',
     'ParallelPerformanceMonitor',
+    'QueryCache',
+    'cached_query',
+    'cache_key_for_run',
+    'cache_key_for_watchlist',
+    'clear_cache',
+    'get_cache_stats',
 ]

@@ -1,7 +1,7 @@
 {
   "run_id": "20260109_144437_72eb46cd",
   "run_name": "combined list 1 - Backtest 2026-01-09 14:44",
-  "generated_at": "2026-01-09T14:54:59.581194",
+  "generated_at": "2026-01-16T23:49:33.595583",
   "workflow_steps": {
     "data_validation": false,
     "portfolio_enrichment": true,
@@ -109,6 +109,6 @@
       "Healthcare",
       "Industrials"
     ],
-    "generated_at": "2026-01-09T14:54:58.891333"
+    "generated_at": "2026-01-16T23:49:32.924123"
   }
 }

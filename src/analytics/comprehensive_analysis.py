@@ -116,7 +116,66 @@ class ComprehensiveAnalysisRunner:
             print("   Analysis will continue but some results may be incomplete.")
             print("   See data completeness report above for details.\n")
         
-        # 1. Performance Attribution
+        # Run independent analyses in parallel
+        parallelized_names = set()
+        try:
+            from src.app.dashboard.utils.parallel import parallel_calculation
+            
+            # Define independent analysis functions
+            independent_analyses = []
+            
+            # 1. Performance Attribution (depends on stock_data)
+            attribution_status = completeness['analysis_status'].get('attribution', {})
+            if attribution_status.get('can_run', False):
+                independent_analyses.append(('attribution', lambda: self._run_attribution(
+                    run_id, portfolio_data, stock_data
+                )))
+            
+            # 2. Benchmark Comparison (independent)
+            independent_analyses.append(('benchmark', lambda: self._run_benchmark_comparison(
+                run_id, portfolio_data
+            )))
+            
+            # 3. Factor Exposure (depends on stock_data)
+            independent_analyses.append(('factor_exposure', lambda: self._run_factor_exposure(
+                run_id, portfolio_data, stock_data
+            )))
+            
+            # 4. Rebalancing Analysis (independent)
+            independent_analyses.append(('rebalancing', lambda: self._run_rebalancing_analysis(
+                run_id, portfolio_data
+            )))
+            
+            # 5. Style Analysis (depends on stock_data)
+            style_status = completeness['analysis_status'].get('style', {})
+            if style_status.get('can_run', False):
+                independent_analyses.append(('style', lambda: self._run_style_analysis(
+                    run_id, portfolio_data, stock_data
+                )))
+            
+            # Run independent analyses in parallel
+            if len(independent_analyses) > 1:
+                print(f"[{run_id}] Running {len(independent_analyses)} analyses in parallel...")
+                analysis_functions = [func for _, func in independent_analyses]
+                analysis_results = parallel_calculation(
+                    analysis_functions,
+                    max_workers=min(4, len(independent_analyses))
+                )
+                
+                # Map results back to analysis names
+                for (name, _), result in zip(independent_analyses, analysis_results):
+                    parallelized_names.add(name)
+                    if result:
+                        results['analyses'][name] = result
+                    else:
+                        results['analyses'][name] = {'error': 'Analysis failed'}
+        except ImportError:
+            print("   ⚠️  Parallel processing not available, using sequential execution")
+        except Exception as e:
+            print(f"   ⚠️  Parallel processing failed: {e}, using sequential execution")
+        
+        # Run remaining analyses sequentially (those that couldn't be parallelized)
+        # 1. Performance Attribution (if not already run)
         attribution_status = completeness['analysis_status'].get('attribution', {})
         if attribution_status.get('can_run', False):
             try:

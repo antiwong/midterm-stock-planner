@@ -1,0 +1,96 @@
+{
+  "run_id": "20260116_235041_5286701f",
+  "run_name": "combined list 1 - Backtest 2026-01-16 23:50",
+  "n_stocks": 319,
+  "n_sectors": 15,
+  "diversification": {
+    "stock_level_ew": 0.9968652037617555,
+    "stock_level_rp": 0.9963510983481062,
+    "sector_level_ew": 0.9042757048378063,
+    "sector_level_rp": 0.9126654331032761,
+    "effective_n_ew": 319.0000000000001,
+    "effective_n_rp": 274.05507064872535
+  },
+  "score_distributions": {
+    "Value Score": {
+      "mean": 50.0,
+      "std": 0.0,
+      "min": 50.0,
+      "max": 50.0,
+      "median": 50.0
+    },
+    "Quality Score": {
+      "mean": 50.0,
+      "std": 0.0,
+      "min": 50.0,
+      "max": 50.0,
+      "median": 50.0
+    },
+    "Tech Score": {
+      "mean": 100.0,
+      "std": 0.0,
+      "min": 100.0,
+      "max": 100.0,
+      "median": 100.0
+    }
+  },
+  "sector_breakdown": {
+    "count": {
+      "Basic Materials": 27,
+      "Broad Market ETF": 3,
+      "Communication Services": 14,
+      "Consumer Cyclical": 31,
+      "Consumer Defensive": 21,
+      "ETF - Other": 6,
+      "Energy": 22,
+      "Financial Services": 30,
+      "Healthcare": 37,
+      "Industrials": 32,
+      "Other": 1,
+      "Precious Metals": 11,
+      "Real Estate": 11,
+      "Technology": 55,
+      "Utilities": 18
+    },
+    "ew_pct": {
+      "Basic Materials": 8.463949843260188,
+      "Broad Market ETF": 0.9404388714733543,
+      "Communication Services": 4.38871473354232,
+      "Consumer Cyclical": 9.717868338557993,
+      "Consumer Defensive": 6.583072100313479,
+      "ETF - Other": 1.8808777429467085,
+      "Energy": 6.896551724137931,
+      "Financial Services": 9.40438871473354,
+      "Healthcare": 11.598746081504702,
+      "Industrials": 10.031347962382444,
+      "Other": 0.3134796238244514,
+      "Precious Metals": 3.4482758620689653,
+      "Real Estate": 3.4482758620689653,
+      "Technology": 17.241379310344826,
+      "Utilities": 5.642633228840125
+    },
+    "rp_pct": {
+      "Basic Materials": 7.165774107833696,
+      "Broad Market ETF": 1.470444865882738,
+      "Communication Services": 4.2194144499725565,
+      "Consumer Cyclical": 8.65434057531683,
+      "Consumer Defensive": 9.309395758622326,
+      "ETF - Other": 2.355401560594914,
+      "Energy": 5.448583132282348,
+      "Financial Services": 11.066972716995771,
+      "Healthcare": 11.30775591618818,
+      "Industrials": 10.676488693810827,
+      "Other": 0.30119070938827647,
+      "Precious Metals": 3.6922467523556532,
+      "Real Estate": 4.414601650647166,
+      "Technology": 12.11974814138682,
+      "Utilities": 7.797640968721882
+    }
+  },
+  "top_sectors": [
+    "Technology",
+    "Healthcare",
+    "Industrials"
+  ],
+  "generated_at": "2026-01-16T23:50:56.841729"
+}

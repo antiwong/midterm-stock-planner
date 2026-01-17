@@ -1,0 +1,200 @@
+{
+  "recommendations": {
+    "conservative": {
+      "name": "Conservative Portfolio",
+      "risk_level": "Low",
+      "time_horizon": "1-3 years",
+      "target_volatility": "12-15%",
+      "holdings": [
+        {
+          "ticker": "K",
+          "weight": 25,
+          "rationale": "Consumer Defensive sector provides stability. Lowest volatility (0.5%) of all candidates."
+        },
+        {
+          "ticker": "BLK",
+          "weight": 20,
+          "rationale": "Financial Services provides stability and steady returns. Low volatility (1.7%)."
+        },
+        {
+          "ticker": "DLTR",
+          "weight": 15,
+          "rationale": "Consumer Defensive sector. Relatively low volatility (2.7%)"
+        },
+        {
+          "ticker": "EQIX",
+          "weight": 15,
+          "rationale": "Real Estate sector offers diversification and stability. Low volatility (1.7%)"
+        },
+        {
+          "ticker": "AEM",
+          "weight": 10,
+          "rationale": "Basic Materials, provides diversification with reasonable volatility (2.4%)"
+        },
+        {
+          "ticker": "VST",
+          "weight": 10,
+          "rationale": "Utilities sector is traditionally defensive. Moderate volatility (4.2%)"
+        },
+        {
+          "ticker": "SPY",
+          "weight": 5,
+          "rationale": "Broad market exposure with moderate risk and diversification benefits."
+        }
+      ],
+      "expected_return": {
+        "low": 4,
+        "mid": 7,
+        "high": 10
+      },
+      "risk_assessment": {
+        "volatility": "3-5%",
+        "max_drawdown": "5-8%",
+        "key_risks": [
+          "Interest rate risk (BLK, EQIX), consumer spending slowdown (K, DLTR), regulatory changes (Utilities), and broad market decline (SPY)."
+        ]
+      },
+      "rebalance_frequency": "Quarterly"
+    },
+    "balanced": {
+      "name": "Balanced Portfolio",
+      "risk_level": "Moderate",
+      "time_horizon": "3-5 years",
+      "target_volatility": "18-22%",
+      "holdings": [
+        {
+          "ticker": "SMCI",
+          "weight": 15,
+          "rationale": "Technology sector growth potential, solid domain score, moderate volatility (5.4%)"
+        },
+        {
+          "ticker": "NVDA",
+          "weight": 10,
+          "rationale": "Technology sector leader, growth potential, relatively low volatility within tech (3.1%)"
+        },
+        {
+          "ticker": "PLUG",
+          "weight": 10,
+          "rationale": "Industrials sector, high domain score, but higher volatility (7.2%)"
+        },
+        {
+          "ticker": "JD",
+          "weight": 10,
+          "rationale": "Consumer Cyclical exposure, growth in Chinese market (2.5% volatility)"
+        },
+        {
+          "ticker": "MRNA",
+          "weight": 10,
+          "rationale": "Healthcare sector, potential for growth, moderate volatility (4.3%)"
+        },
+        {
+          "ticker": "BTG",
+          "weight": 10,
+          "rationale": "Basic Materials sector, diversification benefit and moderate volatility (3.0%)"
+        },
+        {
+          "ticker": "EQIX",
+          "weight": 10,
+          "rationale": "Real Estate Sector, provides diversification, relatively low volatility (1.7%)"
+        },
+        {
+          "ticker": "K",
+          "weight": 10,
+          "rationale": "Consumer Defensive anchor for stability, very low volatility (0.5%)"
+        },
+        {
+          "ticker": "WBD",
+          "weight": 5,
+          "rationale": "Communication Services sector, potential value play, moderate volatility (3.9%)"
+        },
+        {
+          "ticker": "SPY",
+          "weight": 10,
+          "rationale": "Broad market ETF for diversification and core exposure."
+        }
+      ],
+      "expected_return": {
+        "low": 8,
+        "mid": 12,
+        "high": 18
+      },
+      "risk_assessment": {
+        "volatility": "10-14%",
+        "max_drawdown": "15-20%",
+        "key_risks": [
+          "Technology sector slowdown (SMCI, NVDA), regulatory changes (Healthcare), economic sensitivity (JD), and broad market correction (SPY)."
+        ]
+      },
+      "rebalance_frequency": "Bi-Annually"
+    },
+    "aggressive": {
+      "name": "Aggressive Portfolio",
+      "risk_level": "High",
+      "time_horizon": "5+ years",
+      "target_volatility": "25-35%",
+      "holdings": [
+        {
+          "ticker": "PLUG",
+          "weight": 20,
+          "rationale": "Highest domain score in Industrials, high growth potential, but high volatility (7.2%)."
+        },
+        {
+          "ticker": "SMCI",
+          "weight": 20,
+          "rationale": "Highest domain score in Tech, aggressive growth, high volatility (5.4%)."
+        },
+        {
+          "ticker": "XPEV",
+          "weight": 15,
+          "rationale": "Consumer Cyclical exposure, higher risk/reward potential, moderate volatility (4.2%)."
+        },
+        {
+          "ticker": "LEU",
+          "weight": 10,
+          "rationale": "Energy sector, high potential returns, considerable volatility (6.0%)"
+        },
+        {
+          "ticker": "SEDG",
+          "weight": 10,
+          "rationale": "Technology sector, growth potential, high volatility (6.8%)"
+        },
+        {
+          "ticker": "RUN",
+          "weight": 10,
+          "rationale": "Technology sector, growth potential, high volatility (7.1%)"
+        },
+        {
+          "ticker": "AI",
+          "weight": 5,
+          "rationale": "Technology sector, significant growth potential, moderate volatility (4.1%)"
+        },
+        {
+          "ticker": "DNN",
+          "weight": 5,
+          "rationale": "Energy sector, speculative bet with high potential, moderate volatility (3.9%)"
+        },
+        {
+          "ticker": "LCID",
+          "weight": 5,
+          "rationale": "Consumer Cyclical sector, high growth potential, moderate volatility (4.8%)"
+        }
+      ],
+      "expected_return": {
+        "low": 12,
+        "mid": 18,
+        "high": 30
+      },
+      "risk_assessment": {
+        "volatility": "18-25%",
+        "max_drawdown": "30-40%",
+        "key_risks": [
+          "Technology sector bubble (SMCI,SEDG, AI, RUN), commodity price fluctuations (Energy, Basic Materials), regulatory hurdles (Industrials, Healthcare), and macroeconomic downturn (Consumer Cyclical)."
+        ]
+      },
+      "rebalance_frequency": "Monthly"
+    },
+    "overall_assessment": "Based on the provided data, these portfolio recommendations offer varying levels of risk and return tailored to different investor profiles. The Conservative portfolio prioritizes capital preservation with lower volatility, while the Balanced portfolio aims for moderate growth with reasonable risk. The Aggressive portfolio targets maximum growth, accepting higher volatility and potential drawdowns. The given historical backtest and risk metrics are limited. More robust analysis, including correlation between assets, stress testing, and sensitivity analysis, is recommended before implementing these portfolios."
+  },
+  "raw_response": "```json\n{\n  \"conservative\": {\n    \"name\": \"Conservative Portfolio\",\n    \"risk_level\": \"Low\",\n    \"time_horizon\": \"1-3 years\",\n    \"target_volatility\": \"12-15%\",\n    \"holdings\": [\n      {\"ticker\": \"K\", \"weight\": 25, \"rationale\": \"Consumer Defensive sector provides stability. Lowest volatility (0.5%) of all candidates.\"},\n      {\"ticker\": \"BLK\", \"weight\": 20, \"rationale\": \"Financial Services provides stability and steady returns. Low volatility (1.7%).\"},\n      {\"ticker\": \"DLTR\", \"weight\": 15, \"rationale\": \"Consumer Defensive sector. Relatively low volatility (2.7%)\"},\n      {\"ticker\": \"EQIX\", \"weight\": 15, \"rationale\": \"Real Estate sector offers diversification and stability. Low volatility (1.7%)\"},\n      {\"ticker\": \"AEM\", \"weight\": 10, \"rationale\": \"Basic Materials, provides diversification with reasonable volatility (2.4%)\"},\n      {\"ticker\": \"VST\", \"weight\": 10, \"rationale\": \"Utilities sector is traditionally defensive. Moderate volatility (4.2%)\"},\n      {\"ticker\": \"SPY\", \"weight\": 5, \"rationale\": \"Broad market exposure with moderate risk and diversification benefits.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 4,\n      \"mid\": 7,\n      \"high\": 10\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"3-5%\",\n      \"max_drawdown\": \"5-8%\",\n      \"key_risks\": [\"Interest rate risk (BLK, EQIX), consumer spending slowdown (K, DLTR), regulatory changes (Utilities), and broad market decline (SPY).\"]\n    },\n    \"rebalance_frequency\": \"Quarterly\"\n  },\n  \"balanced\": {\n    \"name\": \"Balanced Portfolio\",\n    \"risk_level\": \"Moderate\",\n    \"time_horizon\": \"3-5 years\",\n    \"target_volatility\": \"18-22%\",\n    \"holdings\": [\n      {\"ticker\": \"SMCI\", \"weight\": 15, \"rationale\": \"Technology sector growth potential, solid domain score, moderate volatility (5.4%)\"},\n      {\"ticker\": \"NVDA\", \"weight\": 10, \"rationale\": \"Technology sector leader, growth potential, relatively low volatility within tech (3.1%)\"},\n      {\"ticker\": \"PLUG\", \"weight\": 10, \"rationale\": \"Industrials sector, high domain score, but higher volatility (7.2%)\"},\n      {\"ticker\": \"JD\", \"weight\": 10, \"rationale\": \"Consumer Cyclical exposure, growth in Chinese market (2.5% volatility)\"},\n      {\"ticker\": \"MRNA\", \"weight\": 10, \"rationale\": \"Healthcare sector, potential for growth, moderate volatility (4.3%)\"},\n      {\"ticker\": \"BTG\", \"weight\": 10, \"rationale\": \"Basic Materials sector, diversification benefit and moderate volatility (3.0%)\"},\n      {\"ticker\": \"EQIX\", \"weight\": 10, \"rationale\": \"Real Estate Sector, provides diversification, relatively low volatility (1.7%)\"},\n      {\"ticker\": \"K\", \"weight\": 10, \"rationale\": \"Consumer Defensive anchor for stability, very low volatility (0.5%)\"},\n      {\"ticker\": \"WBD\", \"weight\": 5, \"rationale\": \"Communication Services sector, potential value play, moderate volatility (3.9%)\"},\n      {\"ticker\": \"SPY\", \"weight\": 10, \"rationale\": \"Broad market ETF for diversification and core exposure.\"}\n    ],\n    \"expected_return\": {\n      \"low\": 8,\n      \"mid\": 12,\n      \"high\": 18\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"10-14%\",\n      \"max_drawdown\": \"15-20%\",\n      \"key_risks\": [\"Technology sector slowdown (SMCI, NVDA), regulatory changes (Healthcare), economic sensitivity (JD), and broad market correction (SPY).\"]\n    },\n    \"rebalance_frequency\": \"Bi-Annually\"\n  },\n  \"aggressive\": {\n    \"name\": \"Aggressive Portfolio\",\n    \"risk_level\": \"High\",\n    \"time_horizon\": \"5+ years\",\n    \"target_volatility\": \"25-35%\",\n    \"holdings\": [\n      {\"ticker\": \"PLUG\", \"weight\": 20, \"rationale\": \"Highest domain score in Industrials, high growth potential, but high volatility (7.2%).\"},\n      {\"ticker\": \"SMCI\", \"weight\": 20, \"rationale\": \"Highest domain score in Tech, aggressive growth, high volatility (5.4%).\"},\n      {\"ticker\": \"XPEV\", \"weight\": 15, \"rationale\": \"Consumer Cyclical exposure, higher risk/reward potential, moderate volatility (4.2%).\"},\n      {\"ticker\": \"LEU\", \"weight\": 10, \"rationale\": \"Energy sector, high potential returns, considerable volatility (6.0%)\"},\n      {\"ticker\": \"SEDG\", \"weight\": 10, \"rationale\": \"Technology sector, growth potential, high volatility (6.8%)\"},\n      {\"ticker\": \"RUN\", \"weight\": 10, \"rationale\": \"Technology sector, growth potential, high volatility (7.1%)\"},\n      {\"ticker\": \"AI\", \"weight\": 5, \"rationale\": \"Technology sector, significant growth potential, moderate volatility (4.1%)\"},\n      {\"ticker\": \"DNN\", \"weight\": 5, \"rationale\": \"Energy sector, speculative bet with high potential, moderate volatility (3.9%)\"},\n      {\"ticker\": \"LCID\", \"weight\": 5, \"rationale\": \"Consumer Cyclical sector, high growth potential, moderate volatility (4.8%)\"}\n    ],\n    \"expected_return\": {\n      \"low\": 12,\n      \"mid\": 18,\n      \"high\": 30\n    },\n    \"risk_assessment\": {\n      \"volatility\": \"18-25%\",\n      \"max_drawdown\": \"30-40%\",\n      \"key_risks\": [\"Technology sector bubble (SMCI,SEDG, AI, RUN), commodity price fluctuations (Energy, Basic Materials), regulatory hurdles (Industrials, Healthcare), and macroeconomic downturn (Consumer Cyclical).\"]\n    },\n    \"rebalance_frequency\": \"Monthly\"\n  },\n  \"overall_assessment\": \"Based on the provided data, these portfolio recommendations offer varying levels of risk and return tailored to different investor profiles. The Conservative portfolio prioritizes capital preservation with lower volatility, while the Balanced portfolio aims for moderate growth with reasonable risk. The Aggressive portfolio targets maximum growth, accepting higher volatility and potential drawdowns. The given historical backtest and risk metrics are limited. More robust analysis, including correlation between assets, stress testing, and sensitivity analysis, is recommended before implementing these portfolios.\"\n}\n```",
+  "generated_at": "2026-01-16T23:51:15.405082"
+}

@@ -273,7 +273,8 @@ class PriceDownloader:
         return original, None
     
     def download(self, tickers: List[str], start_date: str, end_date: str,
-                 merge_existing: bool = True, batch_size: int = 50) -> pd.DataFrame:
+                 merge_existing: bool = True, batch_size: int = 50, 
+                 parallel: bool = True, max_workers: int = None) -> pd.DataFrame:
         """
         Download price data for tickers.
         
@@ -292,6 +293,8 @@ class PriceDownloader:
         
         print(f"\n📥 Downloading price data for {len(tickers)} tickers...")
         print(f"   Period: {start_date} to {end_date}")
+        if parallel:
+            print(f"   Using parallel processing (max_workers: {max_workers or 'auto'})")
         
         all_data = []
         # Normalize tickers and track format changes
@@ -307,6 +310,104 @@ class PriceDownloader:
         
         tickers = normalized_tickers
         
+        # Use parallel processing for multiple batches if enabled
+        if parallel and len(tickers) > batch_size:
+            try:
+                from src.app.dashboard.utils.parallel import ParallelProcessor
+                
+                # Create batches
+                batches = [tickers[i:i + batch_size] for i in range(0, len(tickers), batch_size)]
+                
+                def download_single_batch(batch: List[str]) -> Tuple[List[pd.DataFrame], List[str], Dict[str, str]]:
+                    """Download a single batch and return results."""
+                    batch_data = []
+                    batch_successful = []
+                    batch_failed = {}
+                    
+                    try:
+                        from src.app.dashboard.utils.retry import retry_network
+                        
+                        @retry_network
+                        def download_batch():
+                            return yf.download(
+                                batch,
+                                start=start_date,
+                                end=end_date,
+                                group_by='ticker',
+                                auto_adjust=True,
+                                progress=False,
+                                threads=True
+                            )
+                        
+                        data = download_batch()
+                        
+                        # Process downloaded data
+                        if len(batch) == 1:
+                            ticker = batch[0]
+                            if not data.empty:
+                                df = data.reset_index()
+                                df['ticker'] = ticker
+                                df.columns = [c.lower() for c in df.columns]
+                                batch_data.append(df)
+                                batch_successful.append(ticker)
+                            else:
+                                original = ticker_map.get(ticker, ticker)
+                                batch_failed[original] = "No data returned"
+                        else:
+                            for ticker in batch:
+                                try:
+                                    if ticker in data.columns.get_level_values(0):
+                                        ticker_data = data[ticker].reset_index()
+                                        ticker_data['ticker'] = ticker
+                                        ticker_data.columns = [c.lower() for c in ticker_data.columns]
+                                        batch_data.append(ticker_data)
+                                        batch_successful.append(ticker)
+                                    else:
+                                        original = ticker_map.get(ticker, ticker)
+                                        batch_failed[original] = "Ticker not in download results"
+                                except Exception as e:
+                                    original = ticker_map.get(ticker, ticker)
+                                    batch_failed[original] = str(e)
+                    except Exception as e:
+                        # Mark all in batch as failed
+                        for ticker in batch:
+                            original = ticker_map.get(ticker, ticker)
+                            batch_failed[original] = str(e)
+                    
+                    return batch_data, batch_successful, batch_failed
+                
+                # Process batches in parallel
+                processor = ParallelProcessor(max_workers=max_workers, show_progress=True)
+                batch_results = processor.process_batch(batches, download_single_batch)
+                
+                # Collect results
+                for batch, (batch_data, batch_successful, batch_failed), error in batch_results:
+                    if error is None:
+                        all_data.extend(batch_data)
+                        self.successful_tickers.extend(batch_successful)
+                        self.failed_tickers.extend(batch_failed.keys())
+                        self.failed_reasons.update(batch_failed)
+                    else:
+                        # Mark all in batch as failed
+                        for ticker in batch:
+                            original = ticker_map.get(ticker, ticker)
+                            self.failed_tickers.append(original)
+                            self.failed_reasons[original] = str(error)
+                
+                # Continue to merge existing data if needed
+                if all_data:
+                    result_df = pd.concat(all_data, ignore_index=True)
+                    if merge_existing:
+                        result_df = self._merge_with_existing(result_df)
+                    return result_df
+                else:
+                    return pd.DataFrame()
+            
+            except ImportError:
+                print("   ⚠️  Parallel processing not available, falling back to sequential")
+                parallel = False
+        
+        # Sequential processing (fallback or if parallel=False)
         # Process in batches
         for i in range(0, len(tickers), batch_size):
             batch = tickers[i:i + batch_size]
@@ -643,7 +744,9 @@ Examples:
                 tickers=tickers,
                 start_date=args.start,
                 end_date=args.end,
-                merge_existing=not args.no_merge
+                merge_existing=not args.no_merge,
+                parallel=True,
+                max_workers=8
             )
             
             if not df.empty:

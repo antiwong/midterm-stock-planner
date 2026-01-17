@@ -363,8 +363,21 @@ class DatabaseManager:
     
     def __init__(self, db_path: str = "data/analysis.db"):
         self.db_path = db_path
-        self.engine = create_engine(f'sqlite:///{db_path}', echo=False)
-        self.Session = sessionmaker(bind=self.engine)
+        # Create engine with connection pooling and optimizations
+        self.engine = create_engine(
+            f'sqlite:///{db_path}',
+            echo=False,
+            pool_pre_ping=True,  # Verify connections before using
+            pool_size=5,  # Connection pool size
+            max_overflow=10,  # Max overflow connections
+            connect_args={
+                'check_same_thread': False,  # Allow multi-threaded access
+                'timeout': 20,  # Connection timeout
+            }
+        )
+        # Use scoped_session for thread safety
+        from sqlalchemy.orm import scoped_session
+        self.Session = scoped_session(sessionmaker(bind=self.engine))
         self._create_tables()
         self._run_migrations()
     

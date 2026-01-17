@@ -47,7 +47,6 @@ watchlists:
       - SNOW    # Snowflake
       - MDB     # MongoDB
       - NET     # Cloudflare
-      - SPLK    # Splunk
       # Internet & E-commerce
       - GOOGL   # Alphabet Inc (Class A)
       - GOOG    # Alphabet Inc (Class C)
@@ -72,7 +71,6 @@ watchlists:
       - WBD     # Warner Bros Discovery
       - EA      # Electronic Arts
       - TTWO    # Take-Two Interactive
-      - ATVI    # Activision Blizzard
       # Biotech & Pharmaceuticals
       - AMGN    # Amgen Inc
       - GILD    # Gilead Sciences
@@ -207,13 +205,12 @@ watchlists:
       - PSX     # Phillips 66
       - VLO     # Valero Energy
       - OXY     # Occidental Petroleum
-      - PXD     # Pioneer Natural Resources
       - DVN     # Devon Energy
       - HAL     # Halliburton
       - BKR     # Baker Hughes
       - FANG    # Diamondback Energy
       # Financials
-      - BRK.B   # Berkshire Hathaway
+      - BRK-B   # Berkshire Hathaway
       - JPM     # JPMorgan Chase
       - V       # Visa Inc
       - MA      # Mastercard Inc
@@ -551,7 +548,7 @@ watchlists:
     description: "Potentially undervalued companies"
     category: "strategy"
     symbols:
-      - BRK.B   # Berkshire Hathaway
+      - BRK-B   # Berkshire Hathaway
       - JPM     # JPMorgan Chase
       - BAC     # Bank of America
       - WFC     # Wells Fargo
@@ -654,7 +651,7 @@ watchlists:
       - NVDA    # NVIDIA
       - META    # Meta
       - TSLA    # Tesla
-      - BRK.B   # Berkshire
+      - BRK-B   # Berkshire
       - V       # Visa
       - JPM     # JPMorgan
       - UNH     # UnitedHealth

@@ -1,348 +1,354 @@
 ticker,sector,industry,name,market_cap,quote_type,updated_at
-UPS,Industrials,Integrated Freight & Logistics,"United Parcel Service, Inc.",84151369728.0,EQUITY,2026-01-02T11:36:09.379143
-ORCL,Technology,Software - Infrastructure,Oracle Corporation,560001777664.0,EQUITY,2026-01-02T11:36:09.463238
-MCD,Consumer Cyclical,Restaurants,McDonald's Corporation,218098925568.0,EQUITY,2026-01-02T11:36:09.573265
-VLO,Energy,Oil & Gas Refining & Marketing,Valero Energy Corporation,50570993664.0,EQUITY,2026-01-02T11:36:09.744648
-ZBH,Healthcare,Medical Devices,"Zimmer Biomet Holdings, Inc.",17820485632.0,EQUITY,2026-01-02T11:36:09.854572
-DM,,,,,NONE,2026-01-02T11:36:09.928020
-JD,Consumer Cyclical,Internet Retail,"JD.com, Inc.",42344157184.0,EQUITY,2026-01-02T11:36:10.027896
-FNV,Basic Materials,Gold,Franco-Nevada Corporation,40115507200.0,EQUITY,2026-01-02T11:36:10.109649
-PAYX,Technology,Software - Application,"Paychex, Inc.",40268967936.0,EQUITY,2026-01-02T11:36:10.288420
-HON,Industrials,Conglomerates,Honeywell International Inc.,131465240576.0,EQUITY,2026-01-02T11:36:10.373455
-EA,Communication Services,Electronic Gaming & Multimedia,Electronic Arts Inc.,51104186368.0,EQUITY,2026-01-02T11:36:10.646222
-CTAS,Industrials,Specialty Business Services,Cintas Corporation,75782430720.0,EQUITY,2026-01-02T11:36:10.794332
-UNP,Industrials,Railroads,Union Pacific Corporation,137209978880.0,EQUITY,2026-01-02T11:36:10.870929
-LEU,Energy,Uranium,Centrus Energy Corp.,4421152768.0,EQUITY,2026-01-02T11:36:10.967072
-OR,Basic Materials,Gold,OR Royalties Inc.,6652820480.0,EQUITY,2026-01-02T11:36:11.042054
-MRK,Healthcare,Drug Manufacturers - General,"Merck & Company, Inc.",262916669440.0,EQUITY,2026-01-02T11:36:11.136774
-MLM,Basic Materials,Building Materials,"Martin Marietta Materials, Inc.",37550845952.0,EQUITY,2026-01-02T11:36:11.218966
-PSLV,,,"""Sprott Physical Silver Trust""",13738147840.0,EQUITY,2026-01-02T11:36:11.372570
-AEM,Basic Materials,Gold,Agnico Eagle Mines Limited,85111955456.0,EQUITY,2026-01-02T11:36:11.468199
-GE,Industrials,Aerospace & Defense,GE Aerospace,326647119872.0,EQUITY,2026-01-02T11:36:11.561451
-RSG,Industrials,Waste Management,"Republic Services, Inc.",66167894016.0,EQUITY,2026-01-02T11:36:12.216401
-SRE,Utilities,Utilities - Diversified,DBA Sempra,57625251840.0,EQUITY,2026-01-02T11:36:12.460667
-ICLN,ETF - Other,Exchange Traded Fund,iShares Global Clean Energy ETF,,ETF,2026-01-02T11:36:12.569978
-DNN,Energy,Uranium,Denison Mines Corp,2386792960.0,EQUITY,2026-01-02T11:36:12.655554
-VRTX,Healthcare,Biotechnology,Vertex Pharmaceuticals Incorpor,116237262848.0,EQUITY,2026-01-02T11:36:12.743196
-MS,Financial Services,Capital Markets,Morgan Stanley,283397488640.0,EQUITY,2026-01-02T11:36:12.950121
-CMS,Utilities,Utilities - Regulated Electric,CMS Energy Corporation,21281081344.0,EQUITY,2026-01-02T11:36:13.039433
-ABNB,Consumer Cyclical,Travel Services,"Airbnb, Inc.",83092619264.0,EQUITY,2026-01-02T11:36:13.171765
-SQ,,,,,NONE,2026-01-02T11:36:13.255819
-KMB,Consumer Defensive,Household & Personal Products,Kimberly-Clark Corporation,33484697600.0,EQUITY,2026-01-02T11:36:13.446226
-ON,Technology,Semiconductors,ON Semiconductor Corporation,22145941504.0,EQUITY,2026-01-02T11:36:13.754739
-GILD,Healthcare,Drug Manufacturers - General,"Gilead Sciences, Inc.",152296636416.0,EQUITY,2026-01-02T11:36:13.845943
-CPRT,Industrials,Specialty Business Services,"Copart, Inc.",37897891840.0,EQUITY,2026-01-02T11:36:13.995272
-AMZN,Consumer Cyclical,Internet Retail,"Amazon.com, Inc.",2467515596800.0,EQUITY,2026-01-02T11:36:14.089613
-BBBY,,,"Bed Bath & Beyond, Inc.",375914144.0,EQUITY,2026-01-02T11:36:14.191967
-GM,Consumer Cyclical,Auto Manufacturers,General Motors Company,77422968832.0,EQUITY,2026-01-02T11:36:14.348763
-ORLY,Consumer Cyclical,Auto Parts,"O'Reilly Automotive, Inc.",77166608384.0,EQUITY,2026-01-02T11:36:14.513217
-XLE,Energy,Exchange Traded Fund,State Street Energy Select Sect,8335016960.0,ETF,2026-01-02T11:36:14.610460
-SMH,ETF - Other,Exchange Traded Fund,VanEck Semiconductor ETF,4203041280.0,ETF,2026-01-02T11:36:14.697853
-GDX,Precious Metals,Exchange Traded Fund,VanEck Gold Miners ETF,,ETF,2026-01-02T11:36:14.804468
-PRU,Financial Services,Insurance - Life,"Prudential Financial, Inc.",39727316992.0,EQUITY,2026-01-02T11:36:15.146056
-CRM,Technology,Software - Application,"Salesforce, Inc.",252194324480.0,EQUITY,2026-01-02T11:36:15.235203
 COF,Financial Services,Credit Services,Capital One Financial Corporati,154993410048.0,EQUITY,2026-01-02T11:36:15.314584
-TAP,Consumer Defensive,Beverages - Brewers,Molson Coors Beverage Company,9231241216.0,EQUITY,2026-01-02T11:36:15.392040
-ARKK,Technology,Exchange Traded Fund,ARK Innovation ETF,,ETF,2026-01-02T11:36:15.553800
-CAT,Industrials,Farm & Heavy Construction Machinery,"Caterpillar, Inc.",268377505792.0,EQUITY,2026-01-02T11:36:15.654773
-KDP,Consumer Defensive,Beverages - Non-Alcoholic,Keurig Dr Pepper Inc.,38053916672.0,EQUITY,2026-01-02T11:36:15.744633
-XLK,Technology,Exchange Traded Fund,State Street Technology Select ,39167901696.0,ETF,2026-01-02T11:36:15.829052
-AIG,Financial Services,Insurance - Diversified,"American International Group, I",47395028992.0,EQUITY,2026-01-02T11:36:15.919791
-SNPS,Technology,Software - Infrastructure,"Synopsys, Inc.",89865986048.0,EQUITY,2026-01-02T11:36:16.101595
-WDAY,Technology,Software - Application,"Workday, Inc.",57346260992.0,EQUITY,2026-01-02T11:36:16.393083
-CDW,Technology,Information Technology Services,CDW Corporation,17850472448.0,EQUITY,2026-01-02T11:36:16.560264
-FAST,Industrials,Industrial Distribution,Fastenal Company,46070673408.0,EQUITY,2026-01-02T11:36:16.664005
-URNM,Energy,Exchange Traded Fund,Sprott Uranium Miners ETF,,ETF,2026-01-02T11:36:16.775196
-ED,Utilities,Utilities - Regulated Electric,"Consolidated Edison, Inc.",35848126464.0,EQUITY,2026-01-02T11:36:16.944576
-TTWO,Communication Services,Electronic Gaming & Multimedia,"Take-Two Interactive Software, ",47308922880.0,EQUITY,2026-01-02T11:36:17.109836
-MET,Financial Services,Insurance - Life,"MetLife, Inc.",52497158144.0,EQUITY,2026-01-02T11:36:17.202039
-IQV,Healthcare,Diagnostics & Research,"IQVIA Holdings, Inc.",38387322880.0,EQUITY,2026-01-02T11:36:17.295839
-ILMN,Healthcare,Diagnostics & Research,"Illumina, Inc.",20159293440.0,EQUITY,2026-01-02T11:36:17.392314
-IDXX,Healthcare,Diagnostics & Research,"IDEXX Laboratories, Inc.",54125580288.0,EQUITY,2026-01-02T11:36:17.500912
-HAL,Energy,Oil & Gas Equipment & Services,Halliburton Company,24094535680.0,EQUITY,2026-01-02T11:36:17.839037
-BKNG,Consumer Cyclical,Travel Services,Booking Holdings Inc. Common St,173565640704.0,EQUITY,2026-01-02T11:36:17.927359
-ROST,Consumer Cyclical,Apparel Retail,"Ross Stores, Inc.",58586259456.0,EQUITY,2026-01-02T11:36:18.001135
-SAND,,,,,NONE,2026-01-02T11:36:18.160943
-ANSS,,,,,,2026-01-02T11:36:18.441145
-NUE,Basic Materials,Steel,Nucor Corporation,37329133568.0,EQUITY,2026-01-02T11:36:18.514184
-TMO,Healthcare,Diagnostics & Research,Thermo Fisher Scientific Inc,217704038400.0,EQUITY,2026-01-02T11:36:18.689933
-RING,Precious Metals,Exchange Traded Fund,iShares MSCI Global Gold Miners,846859968.0,ETF,2026-01-02T11:36:18.756374
-NSC,Industrials,Railroads,Norfolk Southern Corporation,64784908288.0,EQUITY,2026-01-02T11:36:18.838089
-NEE,Utilities,Utilities - Regulated Electric,"NextEra Energy, Inc.",167191904256.0,EQUITY,2026-01-02T11:36:18.906985
-ETN,Industrials,Specialty Industrial Machinery,"Eaton Corporation, PLC",123995947008.0,EQUITY,2026-01-02T11:36:19.254175
-SPLK,,,,,NONE,2026-01-02T11:36:19.358444
-ADI,Technology,Semiconductors,"Analog Devices, Inc.",132794204160.0,EQUITY,2026-01-02T11:36:19.471398
-BILL,Technology,Software - Application,"BILL Holdings, Inc.",5474662400.0,EQUITY,2026-01-02T11:36:19.557168
-QS,Consumer Cyclical,Auto Parts,QuantumScape Corporation,6921080832.0,EQUITY,2026-01-02T11:36:19.710150
-NOW,Technology,Software - Application,"ServiceNow, Inc.",159071076352.0,EQUITY,2026-01-02T11:36:19.801861
-ES,Utilities,Utilities - Regulated Electric,Eversource Energy (D/B/A),25261486080.0,EQUITY,2026-01-02T11:36:19.882527
-COIN,Financial Services,Financial Data & Stock Exchanges,"Coinbase Global, Inc. - 3",60980371456.0,EQUITY,2026-01-02T11:36:19.963504
-XEL,Utilities,Utilities - Regulated Electric,Xcel Energy Inc.,43691126784.0,EQUITY,2026-01-02T11:36:20.052901
-RGLD,Basic Materials,Gold,"Royal Gold, Inc.",18760845312.0,EQUITY,2026-01-02T11:36:20.138543
+SQ,,,,,NONE,2026-01-02T11:36:13.255819
+LI,Consumer Cyclical,Auto Manufacturers,Li Auto Inc.,17154903040.0,EQUITY,2026-01-02T11:36:51.307926
 BEP,Utilities,Utilities - Renewable,Brookfield Renewable Partners L,18368428032.0,EQUITY,2026-01-02T11:36:20.439324
-HSY,Consumer Defensive,Confectioners,The Hershey Company,36902834176.0,EQUITY,2026-01-02T11:36:20.519611
-UNH,Healthcare,Healthcare Plans,UnitedHealth Group Incorporated,299026350080.0,EQUITY,2026-01-02T11:36:20.597912
-PM,Consumer Defensive,Tobacco,Philip Morris International Inc,249684836352.0,EQUITY,2026-01-02T11:36:20.781547
-ENPH,Technology,Solar,"Enphase Energy, Inc.",4194053632.0,EQUITY,2026-01-02T11:36:20.846368
-NKE,Consumer Cyclical,Footwear & Accessories,"Nike, Inc.",94176206848.0,EQUITY,2026-01-02T11:36:20.912074
-MRNA,Healthcare,Biotechnology,"Moderna, Inc.",11522735104.0,EQUITY,2026-01-02T11:36:20.991141
-EBAY,Consumer Cyclical,Internet Retail,eBay Inc.,39804698624.0,EQUITY,2026-01-02T11:36:21.057163
-BMY,Healthcare,Drug Manufacturers - General,Bristol-Myers Squibb Company,109808517120.0,EQUITY,2026-01-02T11:36:21.137634
-EW,Healthcare,Medical Devices,Edwards Lifesciences Corporatio,50050277376.0,EQUITY,2026-01-02T11:36:21.294368
+QCLN,ETF - Other,Exchange Traded Fund,First Trust NASDAQ Clean Edge G,,ETF,2026-01-02T11:36:38.953334
+DIA,Broad Market ETF,Exchange Traded Fund,SPDR Dow Jones Industrial Avera,39042899968.0,ETF,2026-01-02T11:36:33.735242
+OR,Basic Materials,Gold,OR Royalties Inc.,6652820480.0,EQUITY,2026-01-02T11:36:11.042054
+MDT,Healthcare,Medical Devices,Medtronic plc.,123208097792.0,EQUITY,2026-01-02T11:36:28.762337
+V,Financial Services,Credit Services,Visa Inc.,676834246656.0,EQUITY,2026-01-02T11:36:39.656197
+HL,Basic Materials,Other Precious Metals & Mining,Hecla Mining Company,12859194368.0,EQUITY,2026-01-02T11:36:26.201150
+AVB,Real Estate,REIT - Residential,"AvalonBay Communities, Inc.",25815465984.0,EQUITY,2026-01-02T11:36:32.105644
+AMC,Communication Services,Entertainment,"AMC Entertainment Holdings, Inc",800191936.0,EQUITY,2026-01-02T11:36:30.829619
+PNC,Financial Services,Banks - Regional,"PNC Financial Services Group, I",82017738752.0,EQUITY,2026-01-02T11:36:37.713119
+LRCX,Technology,Semiconductor Equipment & Materials,Lam Research Corporation,215863508992.0,EQUITY,2026-01-02T11:36:31.820705
+USB,Financial Services,Banks - Regional,U.S. Bancorp,83038273536.0,EQUITY,2026-01-02T11:36:41.467330
+WBD,Communication Services,Entertainment,"Warner Bros. Discovery, Inc. - ",71427448832.0,EQUITY,2026-01-02T11:36:24.514799
+UNP,Industrials,Railroads,Union Pacific Corporation,137209978880.0,EQUITY,2026-01-02T11:36:10.870929
+DE,Industrials,Farm & Heavy Construction Machinery,Deere & Company,125911285760.0,EQUITY,2026-01-02T11:36:38.433973
+ABNB,Consumer Cyclical,Travel Services,"Airbnb, Inc.",83092619264.0,EQUITY,2026-01-02T11:36:13.171765
+PATH,Technology,Software - Infrastructure,"UiPath, Inc.",8764547072.0,EQUITY,2026-01-02T11:36:30.393018
+URNM,Energy,Exchange Traded Fund,Sprott Uranium Miners ETF,,ETF,2026-01-02T11:36:16.775196
+SWK,Industrials,Tools & Accessories,"Stanley Black & Decker, Inc.",11504855040.0,EQUITY,2026-01-02T11:36:47.211375
+BAC,Financial Services,Banks - Diversified,Bank of America Corporation,407382097920.0,EQUITY,2026-01-02T11:36:48.755093
+DHR,Healthcare,Diagnostics & Research,Danaher Corporation,163918528512.0,EQUITY,2026-01-02T11:36:45.509924
 DUK,Utilities,Utilities - Regulated Electric,Duke Energy Corporation (Holdin,91149672448.0,EQUITY,2026-01-02T11:36:21.568533
+NLR,Energy,Exchange Traded Fund,VanEck Uranium and Nuclear ETF,,ETF,2026-01-02T11:36:44.907047
+AXP,Financial Services,Credit Services,American Express Company,257441644544.0,EQUITY,2026-01-02T11:36:44.622491
+SIRI,Communication Services,Entertainment,SiriusXM Holdings Inc.,6733125632.0,EQUITY,2026-01-02T11:36:41.896713
+DM,,,,,NONE,2026-01-02T11:36:09.928020
+EQIX,Real Estate,REIT - Specialty,"Equinix, Inc.",75226243072.0,EQUITY,2026-01-02T11:36:37.792117
+SPG,Real Estate,REIT - Retail,"Simon Property Group, Inc.",69824790528.0,EQUITY,2026-01-02T11:36:28.510839
+MMM,Industrials,Conglomerates,3M Company,85274017792.0,EQUITY,2026-01-02T11:36:27.069269
+SLB,Energy,Oil & Gas Equipment & Services,SLB Limited,57336786944.0,EQUITY,2026-01-02T11:36:43.704110
+NET,Technology,Software - Infrastructure,"Cloudflare, Inc.",69057929216.0,EQUITY,2026-01-02T11:36:51.806131
+HON,Industrials,Conglomerates,Honeywell International Inc.,131465240576.0,EQUITY,2026-01-02T11:36:10.373455
+DOW,Basic Materials,Chemicals,Dow Inc.,16617740288.0,EQUITY,2026-01-02T11:36:23.977884
+QQQ,Technology,Exchange Traded Fund,"Invesco QQQ Trust, Series 1",241485266944.0,ETF,2026-01-02T11:36:52.431661
+CLOV,Healthcare,Healthcare Plans,"Clover Health Investments, Corp",1214193408.0,EQUITY,2026-01-02T11:36:37.174322
+XLK,Technology,Exchange Traded Fund,State Street Technology Select ,39167901696.0,ETF,2026-01-02T11:36:15.829052
+RIVN,Consumer Cyclical,Auto Manufacturers,"Rivian Automotive, Inc.",24162746368.0,EQUITY,2026-01-02T11:36:29.460872
+ED,Utilities,Utilities - Regulated Electric,"Consolidated Edison, Inc.",35848126464.0,EQUITY,2026-01-02T11:36:16.944576
+WMT,Consumer Defensive,Discount Stores,Walmart Inc.,888255348736.0,EQUITY,2026-01-02T11:36:49.442599
+ORCL,Technology,Software - Infrastructure,Oracle Corporation,560001777664.0,EQUITY,2026-01-02T11:36:09.463238
+PG,Consumer Defensive,Household & Personal Products,Procter & Gamble Company (The),335414951936.0,EQUITY,2026-01-02T11:36:26.088401
+EBAY,Consumer Cyclical,Internet Retail,eBay Inc.,39804698624.0,EQUITY,2026-01-02T11:36:21.057163
+UPST,Financial Services,Credit Services,"Upstart Holdings, Inc.",4254337792.0,EQUITY,2026-01-02T11:36:49.324878
+AEP,Utilities,Utilities - Regulated Electric,American Electric Power Company,61721473024.0,EQUITY,2026-01-02T11:36:31.452907
+A,Healthcare,Diagnostics & Research,"Agilent Technologies, Inc.",38575902720.0,EQUITY,2026-01-02T11:36:32.183997
+MET,Financial Services,Insurance - Life,"MetLife, Inc.",52497158144.0,EQUITY,2026-01-02T11:36:17.202039
+GD,Industrials,Aerospace & Defense,General Dynamics Corporation,90938753024.0,EQUITY,2026-01-02T11:36:28.904925
+ABT,Healthcare,Medical Devices,Abbott Laboratories,218062110720.0,EQUITY,2026-01-02T11:36:47.326476
+CVX,Energy,Oil & Gas Integrated,Chevron Corporation,307079086080.0,EQUITY,2026-01-02T11:36:33.484259
+AAPL,Technology,Consumer Electronics,Apple Inc.,4034508095488.0,EQUITY,2026-01-02T11:36:33.627448
+CRM,Technology,Software - Application,"Salesforce, Inc.",252194324480.0,EQUITY,2026-01-02T11:36:15.235203
+TXN,Technology,Semiconductors,Texas Instruments Incorporated,157726212096.0,EQUITY,2026-01-02T11:36:24.275022
+JOBY,Industrials,Airports & Air Services,"Joby Aviation, Inc.",12035537920.0,EQUITY,2026-01-02T11:36:24.826479
+SPCE,Industrials,Aerospace & Defense,"Virgin Galactic Holdings, Inc.",202872784.0,EQUITY,2026-01-02T11:36:23.732160
+LEU,Energy,Uranium,Centrus Energy Corp.,4421152768.0,EQUITY,2026-01-02T11:36:10.967072
+NOC,Industrials,Aerospace & Defense,Northrop Grumman Corporation,81644371968.0,EQUITY,2026-01-02T11:36:40.863665
+PSLV,,,"""Sprott Physical Silver Trust""",13738147840.0,EQUITY,2026-01-02T11:36:11.372570
+GDXJ,Precious Metals,Exchange Traded Fund,VanEck Junior Gold Miners ETF,,ETF,2026-01-02T11:36:48.238970
+LAZR,Consumer Cyclical,Auto Parts,"Luminar Technologies, Inc.",14668649.0,EQUITY,2026-01-02T11:36:40.787177
 APD,Basic Materials,Specialty Chemicals,"Air Products and Chemicals, Inc",54984617984.0,EQUITY,2026-01-02T11:36:21.675363
+CCJ,Energy,Uranium,Cameco Corporation,39949291520.0,EQUITY,2026-01-02T11:36:36.588662
+EGO,Basic Materials,Gold,Eldorado Gold Corporation,7252613120.0,EQUITY,2026-01-02T11:36:45.760975
+MMC,Financial Services,Insurance Brokers,"Marsh & McLennan Companies, Inc",91206090752.0,EQUITY,2026-01-02T11:36:46.625146
+ABBV,Healthcare,Drug Manufacturers - General,AbbVie Inc.,403829719040.0,EQUITY,2026-01-02T11:36:52.519227
+BLK,Financial Services,Asset Management,"BlackRock, Inc.",166064226304.0,EQUITY,2026-01-02T11:36:30.046714
+JPM,Financial Services,Banks - Diversified,JP Morgan Chase & Co.,886025682944.0,EQUITY,2026-01-02T11:36:52.906197
+ITW,Industrials,Specialty Industrial Machinery,Illinois Tool Works Inc.,71796449280.0,EQUITY,2026-01-02T11:36:46.735044
+CMCSA,Communication Services,Telecom Services,Comcast Corporation,110360051712.0,EQUITY,2026-01-02T11:36:50.390250
+DHI,Consumer Cyclical,Residential Construction,"D.R. Horton, Inc.",42065481728.0,EQUITY,2026-01-02T11:36:39.219467
+ICLN,ETF - Other,Exchange Traded Fund,iShares Global Clean Energy ETF,,ETF,2026-01-02T11:36:12.569978
+BTG,Basic Materials,Gold,B2Gold Corp,6025981440.0,EQUITY,2026-01-02T11:36:35.127355
+T,Communication Services,Telecom Services,AT&T Inc.,177615585280.0,EQUITY,2026-01-02T11:36:41.092206
+GOLD,Financial Services,Capital Markets,"Gold.com, Inc.",839141376.0,EQUITY,2026-01-02T11:36:48.105078
+GLDM,Precious Metals,Exchange Traded Fund,SPDR Gold MiniShares Trust,,ETF,2026-01-02T11:36:39.496617
+PLD,Real Estate,REIT - Industrial,"Prologis, Inc.",118579167232.0,EQUITY,2026-01-02T11:36:36.233070
+SNPS,Technology,Software - Infrastructure,"Synopsys, Inc.",89865986048.0,EQUITY,2026-01-02T11:36:16.101595
+SBUX,Consumer Cyclical,Restaurants,Starbucks Corporation,95755190272.0,EQUITY,2026-01-02T11:36:27.777021
+SRE,Utilities,Utilities - Diversified,DBA Sempra,57625251840.0,EQUITY,2026-01-02T11:36:12.460667
+CDW,Technology,Information Technology Services,CDW Corporation,17850472448.0,EQUITY,2026-01-02T11:36:16.560264
+ICE,Financial Services,Financial Data & Stock Exchanges,Intercontinental Exchange Inc.,92709650432.0,EQUITY,2026-01-02T11:36:43.627461
+ADI,Technology,Semiconductors,"Analog Devices, Inc.",132794204160.0,EQUITY,2026-01-02T11:36:19.471398
+ROST,Consumer Cyclical,Apparel Retail,"Ross Stores, Inc.",58586259456.0,EQUITY,2026-01-02T11:36:18.001135
+MAG,,,,,,2026-01-02T11:36:43.550090
+SMH,ETF - Other,Exchange Traded Fund,VanEck Semiconductor ETF,4203041280.0,ETF,2026-01-02T11:36:14.697853
+CMG,Consumer Cyclical,Restaurants,"Chipotle Mexican Grill, Inc.",49612742656.0,EQUITY,2026-01-02T11:36:24.447625
+VRTX,Healthcare,Biotechnology,Vertex Pharmaceuticals Incorpor,116237262848.0,EQUITY,2026-01-02T11:36:12.743196
+PSX,Energy,Oil & Gas Refining & Marketing,Phillips 66,52148191232.0,EQUITY,2026-01-02T11:36:35.846574
+AU,Basic Materials,Gold,AngloGold Ashanti PLC,43056873472.0,EQUITY,2026-01-02T11:36:52.589631
 DD,Basic Materials,Specialty Chemicals,"DuPont de Nemours, Inc.",16842808320.0,EQUITY,2026-01-02T11:36:21.836000
-PEP,Consumer Defensive,Beverages - Non-Alcoholic,"Pepsico, Inc.",196489969664.0,EQUITY,2026-01-02T11:36:21.921002
-MO,Consumer Defensive,Tobacco,"Altria Group, Inc.",96862511104.0,EQUITY,2026-01-02T11:36:22.006023
+SOFI,Financial Services,Credit Services,"SoFi Technologies, Inc.",32998543360.0,EQUITY,2026-01-02T11:36:22.665663
+QS,Consumer Cyclical,Auto Parts,QuantumScape Corporation,6921080832.0,EQUITY,2026-01-02T11:36:19.710150
+CAT,Industrials,Farm & Heavy Construction Machinery,"Caterpillar, Inc.",268377505792.0,EQUITY,2026-01-02T11:36:15.654773
+AEE,Utilities,Utilities - Regulated Electric,Ameren Corporation,27011622912.0,EQUITY,2026-01-02T11:36:26.897540
+FAST,Industrials,Industrial Distribution,Fastenal Company,46070673408.0,EQUITY,2026-01-02T11:36:16.664005
+CSCO,Technology,Communication Equipment,"Cisco Systems, Inc.",304352821248.0,EQUITY,2026-01-02T11:36:50.878858
+INTC,Technology,Semiconductors,Intel Corporation,176013000704.0,EQUITY,2026-01-02T11:36:49.965379
+EW,Healthcare,Medical Devices,Edwards Lifesciences Corporatio,50050277376.0,EQUITY,2026-01-02T11:36:21.294368
+TTWO,Communication Services,Electronic Gaming & Multimedia,"Take-Two Interactive Software, ",47308922880.0,EQUITY,2026-01-02T11:36:17.109836
+ASML,Technology,Semiconductor Equipment & Materials,ASML Holding N.V. - New York Re,415263686656.0,EQUITY,2026-01-02T11:36:36.816642
+BLNK,Industrials,Engineering & Construction,Blink Charging Co.,94215576.0,EQUITY,2026-01-02T11:36:22.990489
+EXC,Utilities,Utilities - Regulated Electric,Exelon Corporation,44025344000.0,EQUITY,2026-01-02T11:36:44.477507
+AMZN,Consumer Cyclical,Internet Retail,"Amazon.com, Inc.",2467515596800.0,EQUITY,2026-01-02T11:36:14.089613
+VMC,Basic Materials,Building Materials,Vulcan Materials Company (Holdi,37686378496.0,EQUITY,2026-01-02T11:36:37.104917
+PLUG,Industrials,Electrical Equipment & Parts,"Plug Power, Inc.",2741521408.0,EQUITY,2026-01-02T11:36:28.989852
+CPRT,Industrials,Specialty Business Services,"Copart, Inc.",37897891840.0,EQUITY,2026-01-02T11:36:13.995272
+IQV,Healthcare,Diagnostics & Research,"IQVIA Holdings, Inc.",38387322880.0,EQUITY,2026-01-02T11:36:17.295839
+TAP,Consumer Defensive,Beverages - Brewers,Molson Coors Beverage Company,9231241216.0,EQUITY,2026-01-02T11:36:15.392040
+AVGO,Technology,Semiconductors,Broadcom Inc.,1640954855424.0,EQUITY,2026-01-02T11:36:38.235713
+ROK,Industrials,Specialty Industrial Machinery,"Rockwell Automation, Inc.",43744378880.0,EQUITY,2026-01-02T11:36:41.969925
+ISRG,Healthcare,Medical Instruments & Supplies,"Intuitive Surgical, Inc.",203026759680.0,EQUITY,2026-01-02T11:36:36.005712
+STEM,Utilities,Utilities - Renewable,"Stem, Inc.",126272632.0,EQUITY,2026-01-02T11:36:50.727194
+NIO,Consumer Cyclical,Auto Manufacturers,NIO Inc.,12896161792.0,EQUITY,2026-01-02T11:36:29.541243
+GM,Consumer Cyclical,Auto Manufacturers,General Motors Company,77422968832.0,EQUITY,2026-01-02T11:36:14.348763
+SO,Utilities,Utilities - Regulated Electric,Southern Company (The),96016343040.0,EQUITY,2026-01-02T11:36:32.003852
+MNST,Consumer Defensive,Beverages - Non-Alcoholic,Monster Beverage Corporation,74908213248.0,EQUITY,2026-01-02T11:36:51.381961
+AFRM,Technology,Software - Infrastructure,"Affirm Holdings, Inc.",24567379968.0,EQUITY,2026-01-02T11:36:51.511774
+HSY,Consumer Defensive,Confectioners,The Hershey Company,36902834176.0,EQUITY,2026-01-02T11:36:20.519611
+SYK,Healthcare,Medical Devices,Stryker Corporation,134410436608.0,EQUITY,2026-01-02T11:36:33.233372
+COP,Energy,Oil & Gas E&P,ConocoPhillips,116913496064.0,EQUITY,2026-01-02T11:36:37.337280
+BSX,Healthcare,Medical Devices,Boston Scientific Corporation,141350846464.0,EQUITY,2026-01-02T11:36:42.363952
+MU,Technology,Semiconductors,"Micron Technology, Inc.",321231585280.0,EQUITY,2026-01-02T11:36:44.753604
+SAND,,,,,NONE,2026-01-02T11:36:18.160943
+DDOG,Technology,Software - Application,"Datadog, Inc.",47687716864.0,EQUITY,2026-01-02T11:36:39.136972
+ACN,Technology,Information Technology Services,Accenture plc,166383255552.0,EQUITY,2026-01-02T11:36:38.602704
+VST,Utilities,Utilities - Independent Power Producers,Vistra Corp.,54662717440.0,EQUITY,2026-01-02T11:36:41.329468
+DXCM,Healthcare,Medical Devices,"DexCom, Inc.",26027345920.0,EQUITY,2026-01-02T11:36:51.575816
+KDP,Consumer Defensive,Beverages - Non-Alcoholic,Keurig Dr Pepper Inc.,38053916672.0,EQUITY,2026-01-02T11:36:15.744633
+META,Communication Services,Internet Content & Information,"Meta Platforms, Inc.",1663775145984.0,EQUITY,2026-01-02T11:36:50.952168
 C,Financial Services,Banks - Diversified,"Citigroup, Inc.",214814375936.0,EQUITY,2026-01-02T11:36:22.117698
 CHPT,Consumer Cyclical,Specialty Retail,"ChargePoint Holdings, Inc.",157056496.0,EQUITY,2026-01-02T11:36:22.328160
-KO,Consumer Defensive,Beverages - Non-Alcoholic,Coca-Cola Company (The),300869386240.0,EQUITY,2026-01-02T11:36:22.460977
-CME,Financial Services,Financial Data & Stock Exchanges,CME Group Inc.,98472583168.0,EQUITY,2026-01-02T11:36:22.565458
-SOFI,Financial Services,Credit Services,"SoFi Technologies, Inc.",32998543360.0,EQUITY,2026-01-02T11:36:22.665663
-BLNK,Industrials,Engineering & Construction,Blink Charging Co.,94215576.0,EQUITY,2026-01-02T11:36:22.990489
-NFLX,Communication Services,Entertainment,"Netflix, Inc.",397291454464.0,EQUITY,2026-01-02T11:36:23.113030
-OPEN,Real Estate,Real Estate Services,Opendoor Technologies Inc,5560584704.0,EQUITY,2026-01-02T11:36:23.188483
-OKTA,Technology,Software - Infrastructure,"Okta, Inc.",15325097984.0,EQUITY,2026-01-02T11:36:23.269542
-RTX,Industrials,Aerospace & Defense,RTX Corporation,245897576448.0,EQUITY,2026-01-02T11:36:23.451738
-GLD,Precious Metals,Exchange Traded Fund,SPDR Gold Shares,103159488512.0,ETF,2026-01-02T11:36:23.533271
-WPM,Basic Materials,Gold,Wheaton Precious Metals Corp,53426860032.0,EQUITY,2026-01-02T11:36:23.629863
-SPCE,Industrials,Aerospace & Defense,"Virgin Galactic Holdings, Inc.",202872784.0,EQUITY,2026-01-02T11:36:23.732160
-CL,Consumer Defensive,Household & Personal Products,Colgate-Palmolive Company,63865606144.0,EQUITY,2026-01-02T11:36:23.900702
-DOW,Basic Materials,Chemicals,Dow Inc.,16617740288.0,EQUITY,2026-01-02T11:36:23.977884
-TXN,Technology,Semiconductors,Texas Instruments Incorporated,157726212096.0,EQUITY,2026-01-02T11:36:24.275022
-CMG,Consumer Cyclical,Restaurants,"Chipotle Mexican Grill, Inc.",49612742656.0,EQUITY,2026-01-02T11:36:24.447625
-WBD,Communication Services,Entertainment,"Warner Bros. Discovery, Inc. - ",71427448832.0,EQUITY,2026-01-02T11:36:24.514799
-AI,Technology,Software - Infrastructure,"C3.ai, Inc.",1897354112.0,EQUITY,2026-01-02T11:36:24.598483
+RGLD,Basic Materials,Gold,"Royal Gold, Inc.",18760845312.0,EQUITY,2026-01-02T11:36:20.138543
+FNV,Basic Materials,Gold,Franco-Nevada Corporation,40115507200.0,EQUITY,2026-01-02T11:36:10.109649
 SIVR,Precious Metals,Exchange Traded Fund,abrdn Physical Silver Shares ET,,ETF,2026-01-02T11:36:24.676886
-VRSK,Industrials,Consulting Services,"Verisk Analytics, Inc.",31252842496.0,EQUITY,2026-01-02T11:36:24.747798
-JOBY,Industrials,Airports & Air Services,"Joby Aviation, Inc.",12035537920.0,EQUITY,2026-01-02T11:36:24.826479
-GOOGL,Communication Services,Internet Content & Information,Alphabet Inc.,3791094022144.0,EQUITY,2026-01-02T11:36:24.992216
-O,Real Estate,REIT - Retail,Realty Income Corporation,51855089664.0,EQUITY,2026-01-02T11:36:25.060516
-AMGN,Healthcare,Drug Manufacturers - General,Amgen Inc.,176250093568.0,EQUITY,2026-01-02T11:36:25.126882
-MA,Financial Services,Credit Services,Mastercard Incorporated,516082270208.0,EQUITY,2026-01-02T11:36:25.498254
-KR,Consumer Defensive,Grocery Stores,Kroger Company (The),41404133376.0,EQUITY,2026-01-02T11:36:25.636267
-AMAT,Technology,Semiconductor Equipment & Materials,"Applied Materials, Inc.",204729122816.0,EQUITY,2026-01-02T11:36:25.750848
-AGI,Basic Materials,Gold,Alamos Gold Inc.,16197204992.0,EQUITY,2026-01-02T11:36:25.857288
-SEDG,Technology,Solar,"SolarEdge Technologies, Inc.",1725231488.0,EQUITY,2026-01-02T11:36:26.004133
-PG,Consumer Defensive,Household & Personal Products,Procter & Gamble Company (The),335414951936.0,EQUITY,2026-01-02T11:36:26.088401
-HL,Basic Materials,Other Precious Metals & Mining,Hecla Mining Company,12859194368.0,EQUITY,2026-01-02T11:36:26.201150
-DVN,Energy,Oil & Gas E&P,Devon Energy Corporation,23252723712.0,EQUITY,2026-01-02T11:36:26.285436
-COST,Consumer Defensive,Discount Stores,Costco Wholesale Corporation,382842503168.0,EQUITY,2026-01-02T11:36:26.383909
-LULU,Consumer Cyclical,Apparel Retail,lululemon athletica inc.,24644012032.0,EQUITY,2026-01-02T11:36:26.538099
-CRWD,Technology,Software - Infrastructure,"CrowdStrike Holdings, Inc.",118173663232.0,EQUITY,2026-01-02T11:36:26.818656
-AEE,Utilities,Utilities - Regulated Electric,Ameren Corporation,27011622912.0,EQUITY,2026-01-02T11:36:26.897540
-MMM,Industrials,Conglomerates,3M Company,85274017792.0,EQUITY,2026-01-02T11:36:27.069269
-AON,Financial Services,Insurance Brokers,Aon plc,76090310656.0,EQUITY,2026-01-02T11:36:27.178014
-MPC,Energy,Oil & Gas Refining & Marketing,Marathon Petroleum Corporation,49442824192.0,EQUITY,2026-01-02T11:36:27.277184
-BKR,Energy,Oil & Gas Equipment & Services,Baker Hughes Company,44937682944.0,EQUITY,2026-01-02T11:36:27.402412
-PPL,Utilities,Utilities - Regulated Electric,PPL Corporation,25905668096.0,EQUITY,2026-01-02T11:36:27.572323
-FSLR,Technology,Solar,"First Solar, Inc.",28032108544.0,EQUITY,2026-01-02T11:36:27.674468
-SBUX,Consumer Cyclical,Restaurants,Starbucks Corporation,95755190272.0,EQUITY,2026-01-02T11:36:27.777021
-WFC,Financial Services,Banks - Diversified,Wells Fargo & Company,298560716800.0,EQUITY,2026-01-02T11:36:27.847705
-KLAC,Technology,Semiconductor Equipment & Materials,KLA Corporation,160007225344.0,EQUITY,2026-01-02T11:36:28.184035
-LIN,Basic Materials,Specialty Chemicals,Linde plc,199938342912.0,EQUITY,2026-01-02T11:36:28.283838
-JNJ,Healthcare,Drug Manufacturers - General,Johnson & Johnson,498603622400.0,EQUITY,2026-01-02T11:36:28.363528
-ATVI,,,,,NONE,2026-01-02T11:36:28.433675
-SPG,Real Estate,REIT - Retail,"Simon Property Group, Inc.",69824790528.0,EQUITY,2026-01-02T11:36:28.510839
-NEM,Basic Materials,Gold,Newmont Corporation,109680197632.0,EQUITY,2026-01-02T11:36:28.688130
-MDT,Healthcare,Medical Devices,Medtronic plc.,123208097792.0,EQUITY,2026-01-02T11:36:28.762337
-PFE,Healthcare,Drug Manufacturers - General,"Pfizer, Inc.",141574127616.0,EQUITY,2026-01-02T11:36:28.831369
-GD,Industrials,Aerospace & Defense,General Dynamics Corporation,90938753024.0,EQUITY,2026-01-02T11:36:28.904925
-PLUG,Industrials,Electrical Equipment & Parts,"Plug Power, Inc.",2741521408.0,EQUITY,2026-01-02T11:36:28.989852
-HD,Consumer Cyclical,Home Improvement Retail,"Home Depot, Inc. (The)",342555525120.0,EQUITY,2026-01-02T11:36:29.297163
-SLV,Precious Metals,Exchange Traded Fund,iShares Silver Trust,21996208128.0,ETF,2026-01-02T11:36:29.376716
-RIVN,Consumer Cyclical,Auto Manufacturers,"Rivian Automotive, Inc.",24162746368.0,EQUITY,2026-01-02T11:36:29.460872
-NIO,Consumer Cyclical,Auto Manufacturers,NIO Inc.,12896161792.0,EQUITY,2026-01-02T11:36:29.541243
-TSM,Technology,Semiconductors,Taiwan Semiconductor Manufactur,1576127037440.0,EQUITY,2026-01-02T11:36:29.695447
-FANG,Energy,Oil & Gas E&P,"Diamondback Energy, Inc.",43518447616.0,EQUITY,2026-01-02T11:36:29.764577
-SMR,Industrials,Specialty Industrial Machinery,NuScale Power Corporation,4007892224.0,EQUITY,2026-01-02T11:36:29.833640
-ADBE,Technology,Software - Application,Adobe Inc.,148465745920.0,EQUITY,2026-01-02T11:36:29.903886
-CB,Financial Services,Insurance - Property & Casualty,Chubb Limited,124439216128.0,EQUITY,2026-01-02T11:36:29.973327
-BLK,Financial Services,Asset Management,"BlackRock, Inc.",166064226304.0,EQUITY,2026-01-02T11:36:30.046714
-EQR,Real Estate,REIT - Residential,Equity Residential,24810141696.0,EQUITY,2026-01-02T11:36:30.325950
-PATH,Technology,Software - Infrastructure,"UiPath, Inc.",8764547072.0,EQUITY,2026-01-02T11:36:30.393018
-LOW,Consumer Cyclical,Home Improvement Retail,"Lowe's Companies, Inc.",135279058944.0,EQUITY,2026-01-02T11:36:30.495617
-SILJ,Precious Metals,Exchange Traded Fund,Amplify Junior Silver Miners ET,,ETF,2026-01-02T11:36:30.626754
-AMC,Communication Services,Entertainment,"AMC Entertainment Holdings, Inc",800191936.0,EQUITY,2026-01-02T11:36:30.829619
-LCID,Consumer Cyclical,Auto Manufacturers,"Lucid Group, Inc.",3426460416.0,EQUITY,2026-01-02T11:36:30.917138
-MDB,Technology,Software - Infrastructure,"MongoDB, Inc.",34159308800.0,EQUITY,2026-01-02T11:36:31.118818
-IBM,Technology,Information Technology Services,International Business Machines,276877901824.0,EQUITY,2026-01-02T11:36:31.269384
-ELV,Healthcare,Healthcare Plans,"Elevance Health, Inc.",78936252416.0,EQUITY,2026-01-02T11:36:31.367269
-AEP,Utilities,Utilities - Regulated Electric,American Electric Power Company,61721473024.0,EQUITY,2026-01-02T11:36:31.452907
-LRCX,Technology,Semiconductor Equipment & Materials,Lam Research Corporation,215863508992.0,EQUITY,2026-01-02T11:36:31.820705
-CI,Healthcare,Healthcare Plans,The Cigna Group,73521045504.0,EQUITY,2026-01-02T11:36:31.909162
-SO,Utilities,Utilities - Regulated Electric,Southern Company (The),96016343040.0,EQUITY,2026-01-02T11:36:32.003852
-AVB,Real Estate,REIT - Residential,"AvalonBay Communities, Inc.",25815465984.0,EQUITY,2026-01-02T11:36:32.105644
-A,Healthcare,Diagnostics & Research,"Agilent Technologies, Inc.",38575902720.0,EQUITY,2026-01-02T11:36:32.183997
-CDNS,Technology,Software - Application,"Cadence Design Systems, Inc.",85174919168.0,EQUITY,2026-01-02T11:36:32.337945
-STZ,Consumer Defensive,Beverages - Brewers,"Constellation Brands, Inc.",24014243840.0,EQUITY,2026-01-02T11:36:32.405643
-AMD,Technology,Semiconductors,"Advanced Micro Devices, Inc.",348661383168.0,EQUITY,2026-01-02T11:36:32.482397
-WM,Industrials,Waste Management,"Waste Management, Inc.",88513921024.0,EQUITY,2026-01-02T11:36:32.555124
-AMT,Real Estate,REIT - Specialty,American Tower Corporation (REI,82210873344.0,EQUITY,2026-01-02T11:36:32.636615
-MSFT,Technology,Software - Infrastructure,Microsoft Corporation,3594827857920.0,EQUITY,2026-01-02T11:36:32.914618
-NXE,Energy,Uranium,Nexgen Energy Ltd.,6021961728.0,EQUITY,2026-01-02T11:36:33.006729
-ECL,Basic Materials,Specialty Chemicals,Ecolab Inc.,74457202688.0,EQUITY,2026-01-02T11:36:33.080312
-IAU,Precious Metals,Exchange Traded Fund,iShares Gold Trust Shares,78747074560.0,ETF,2026-01-02T11:36:33.153630
-SYK,Healthcare,Medical Devices,Stryker Corporation,134410436608.0,EQUITY,2026-01-02T11:36:33.233372
-PH,Industrials,Specialty Industrial Machinery,Parker-Hannifin Corporation,111227183104.0,EQUITY,2026-01-02T11:36:33.398264
-CVX,Energy,Oil & Gas Integrated,Chevron Corporation,307079086080.0,EQUITY,2026-01-02T11:36:33.484259
-HUM,Healthcare,Healthcare Plans,Humana Inc.,30805542912.0,EQUITY,2026-01-02T11:36:33.556647
-AAPL,Technology,Consumer Electronics,Apple Inc.,4034508095488.0,EQUITY,2026-01-02T11:36:33.627448
-DIA,Broad Market ETF,Exchange Traded Fund,SPDR Dow Jones Industrial Avera,39042899968.0,ETF,2026-01-02T11:36:33.735242
-GS,Financial Services,Capital Markets,"Goldman Sachs Group, Inc. (The)",266091839488.0,EQUITY,2026-01-02T11:36:34.026595
-BIIB,Healthcare,Drug Manufacturers - General,Biogen Inc.,25818134528.0,EQUITY,2026-01-02T11:36:34.104648
-WBA,,,,,,2026-01-02T11:36:34.743404
-CVS,Healthcare,Healthcare Plans,CVS Health Corporation,100742160384.0,EQUITY,2026-01-02T11:36:34.910287
-PXD,,,,,NONE,2026-01-02T11:36:35.039045
-BTG,Basic Materials,Gold,B2Gold Corp,6025981440.0,EQUITY,2026-01-02T11:36:35.127355
-CDE,Basic Materials,Gold,"Coeur Mining, Inc.",11450513408.0,EQUITY,2026-01-02T11:36:35.219384
-PAAS,Basic Materials,Gold,Pan American Silver Corp.,21866256384.0,EQUITY,2026-01-02T11:36:35.294546
-DLTR,Consumer Defensive,Discount Stores,"Dollar Tree, Inc.",25090084864.0,EQUITY,2026-01-02T11:36:35.461631
-FCX,Basic Materials,Copper,"Freeport-McMoRan, Inc.",72930918400.0,EQUITY,2026-01-02T11:36:35.547575
-PSX,Energy,Oil & Gas Refining & Marketing,Phillips 66,52148191232.0,EQUITY,2026-01-02T11:36:35.846574
-ISRG,Healthcare,Medical Instruments & Supplies,"Intuitive Surgical, Inc.",203026759680.0,EQUITY,2026-01-02T11:36:36.005712
-PDD,Consumer Cyclical,Internet Retail,PDD Holdings Inc.,160973717504.0,EQUITY,2026-01-02T11:36:36.082707
-URA,Energy,Exchange Traded Fund,Global X Uranium ETF,,ETF,2026-01-02T11:36:36.161315
-PLD,Real Estate,REIT - Industrial,"Prologis, Inc.",118579167232.0,EQUITY,2026-01-02T11:36:36.233070
-LEN,Consumer Cyclical,Residential Construction,Lennar Corporation,25388613632.0,EQUITY,2026-01-02T11:36:36.329452
-XOM,Energy,Oil & Gas Integrated,Exxon Mobil Corporation,513039138816.0,EQUITY,2026-01-02T11:36:36.512995
-CCJ,Energy,Uranium,Cameco Corporation,39949291520.0,EQUITY,2026-01-02T11:36:36.588662
-TMUS,Communication Services,Telecom Services,"T-Mobile US, Inc.",228505075712.0,EQUITY,2026-01-02T11:36:36.702742
-ASML,Technology,Semiconductor Equipment & Materials,ASML Holding N.V. - New York Re,415263686656.0,EQUITY,2026-01-02T11:36:36.816642
-VMC,Basic Materials,Building Materials,Vulcan Materials Company (Holdi,37686378496.0,EQUITY,2026-01-02T11:36:37.104917
-CLOV,Healthcare,Healthcare Plans,"Clover Health Investments, Corp",1214193408.0,EQUITY,2026-01-02T11:36:37.174322
-D,Utilities,Utilities - Regulated Electric,"Dominion Energy, Inc.",50030780416.0,EQUITY,2026-01-02T11:36:37.253337
-COP,Energy,Oil & Gas E&P,ConocoPhillips,116913496064.0,EQUITY,2026-01-02T11:36:37.337280
-TEAM,Technology,Software - Application,Atlassian Corporation,42680328192.0,EQUITY,2026-01-02T11:36:37.417768
-TSLA,Consumer Cyclical,Auto Manufacturers,"Tesla, Inc.",1495687364608.0,EQUITY,2026-01-02T11:36:37.596904
-PNC,Financial Services,Banks - Regional,"PNC Financial Services Group, I",82017738752.0,EQUITY,2026-01-02T11:36:37.713119
-EQIX,Real Estate,REIT - Specialty,"Equinix, Inc.",75226243072.0,EQUITY,2026-01-02T11:36:37.792117
-SHOP,Technology,Software - Application,Shopify Inc.,209557667840.0,EQUITY,2026-01-02T11:36:37.862619
-TAN,ETF - Other,Exchange Traded Fund,Invesco Solar ETF,,ETF,2026-01-02T11:36:37.949428
-AVGO,Technology,Semiconductors,Broadcom Inc.,1640954855424.0,EQUITY,2026-01-02T11:36:38.235713
-IWM,Broad Market ETF,Exchange Traded Fund,iShares Russell 2000 ETF,69183266816.0,ETF,2026-01-02T11:36:38.317711
-DE,Industrials,Farm & Heavy Construction Machinery,Deere & Company,125911285760.0,EQUITY,2026-01-02T11:36:38.433973
-ACN,Technology,Information Technology Services,Accenture plc,166383255552.0,EQUITY,2026-01-02T11:36:38.602704
-BDX,Healthcare,Medical Instruments & Supplies,"Becton, Dickinson and Company",55391182848.0,EQUITY,2026-01-02T11:36:38.679410
-PLTR,Technology,Software - Infrastructure,Palantir Technologies Inc.,423655800832.0,EQUITY,2026-01-02T11:36:38.768542
-PPG,Basic Materials,Specialty Chemicals,"PPG Industries, Inc.",23125221376.0,EQUITY,2026-01-02T11:36:38.864409
-QCLN,ETF - Other,Exchange Traded Fund,First Trust NASDAQ Clean Edge G,,ETF,2026-01-02T11:36:38.953334
-DDOG,Technology,Software - Application,"Datadog, Inc.",47687716864.0,EQUITY,2026-01-02T11:36:39.136972
-DHI,Consumer Cyclical,Residential Construction,"D.R. Horton, Inc.",42065481728.0,EQUITY,2026-01-02T11:36:39.219467
-GLDM,Precious Metals,Exchange Traded Fund,SPDR Gold MiniShares Trust,,ETF,2026-01-02T11:36:39.496617
-V,Financial Services,Credit Services,Visa Inc.,676834246656.0,EQUITY,2026-01-02T11:36:39.656197
-REGN,Healthcare,Biotechnology,"Regeneron Pharmaceuticals, Inc.",81808523264.0,EQUITY,2026-01-02T11:36:39.726083
-F,Consumer Cyclical,Auto Manufacturers,Ford Motor Company,52276621312.0,EQUITY,2026-01-02T11:36:39.803158
-PGR,Financial Services,Insurance - Property & Casualty,Progressive Corporation (The),133489467392.0,EQUITY,2026-01-02T11:36:39.884112
-SHW,Basic Materials,Specialty Chemicals,Sherwin-Williams Company (The),80791470080.0,EQUITY,2026-01-02T11:36:39.960735
-CHTR,Communication Services,Telecom Services,"Charter Communications, Inc.",28513370112.0,EQUITY,2026-01-02T11:36:40.028190
-TRUE,Communication Services,Internet Content & Information,"TrueCar, Inc.",201004512.0,EQUITY,2026-01-02T11:36:40.174953
-RUN,Technology,Solar,Sunrun Inc.,4269569536.0,EQUITY,2026-01-02T11:36:40.257545
-WEC,Utilities,Utilities - Regulated Electric,"WEC Energy Group, Inc.",34305529856.0,EQUITY,2026-01-02T11:36:40.334207
-UEC,Energy,Uranium,Uranium Energy Corp.,5645848064.0,EQUITY,2026-01-02T11:36:40.696881
-LAZR,Consumer Cyclical,Auto Parts,"Luminar Technologies, Inc.",14668649.0,EQUITY,2026-01-02T11:36:40.787177
-NOC,Industrials,Aerospace & Defense,Northrop Grumman Corporation,81644371968.0,EQUITY,2026-01-02T11:36:40.863665
-CSX,Industrials,Railroads,CSX Corporation,67580039168.0,EQUITY,2026-01-02T11:36:40.938877
-GIS,Consumer Defensive,Packaged Foods,"General Mills, Inc.",24811567104.0,EQUITY,2026-01-02T11:36:41.018686
-T,Communication Services,Telecom Services,AT&T Inc.,177615585280.0,EQUITY,2026-01-02T11:36:41.092206
-XLF,Financial Services,Exchange Traded Fund,State Street Financial Select S,48386281472.0,ETF,2026-01-02T11:36:41.244207
-VST,Utilities,Utilities - Independent Power Producers,Vistra Corp.,54662717440.0,EQUITY,2026-01-02T11:36:41.329468
-MRVL,Technology,Semiconductors,"Marvell Technology, Inc.",73261260800.0,EQUITY,2026-01-02T11:36:41.402058
-USB,Financial Services,Banks - Regional,U.S. Bancorp,83038273536.0,EQUITY,2026-01-02T11:36:41.467330
-MDLZ,Consumer Defensive,Confectioners,"Mondelez International, Inc.",69653086208.0,EQUITY,2026-01-02T11:36:41.814169
-SIRI,Communication Services,Entertainment,SiriusXM Holdings Inc.,6733125632.0,EQUITY,2026-01-02T11:36:41.896713
-ROK,Industrials,Specialty Industrial Machinery,"Rockwell Automation, Inc.",43744378880.0,EQUITY,2026-01-02T11:36:41.969925
-SNOW,Technology,Software - Application,Snowflake Inc.,75064991744.0,EQUITY,2026-01-02T11:36:42.040232
-SCHW,Financial Services,Capital Markets,Charles Schwab Corporation (The,181358575616.0,EQUITY,2026-01-02T11:36:42.118239
-AG,Basic Materials,Silver,First Majestic Silver Corp.,8169331712.0,EQUITY,2026-01-02T11:36:42.289300
-BSX,Healthcare,Medical Devices,Boston Scientific Corporation,141350846464.0,EQUITY,2026-01-02T11:36:42.363952
-LMT,Industrials,Aerospace & Defense,Lockheed Martin Corporation,112920043520.0,EQUITY,2026-01-02T11:36:42.428800
-SYY,Consumer Defensive,Food Distribution,Sysco Corporation,35287273472.0,EQUITY,2026-01-02T11:36:42.495307
-CEG,Utilities,Utilities - Independent Power Producers,Constellation Energy Corporatio,110363508736.0,EQUITY,2026-01-02T11:36:42.566616
-OXY,Energy,Oil & Gas E&P,Occidental Petroleum Corporatio,40511852544.0,EQUITY,2026-01-02T11:36:42.887054
-HMY,Basic Materials,Gold,Harmony Gold Mining Company Lim,12429209600.0,EQUITY,2026-01-02T11:36:42.968464
-MAG,,,,,,2026-01-02T11:36:43.550090
-ICE,Financial Services,Financial Data & Stock Exchanges,Intercontinental Exchange Inc.,92709650432.0,EQUITY,2026-01-02T11:36:43.627461
-SLB,Energy,Oil & Gas Equipment & Services,SLB Limited,57336786944.0,EQUITY,2026-01-02T11:36:43.704110
-KGC,Basic Materials,Gold,Kinross Gold Corporation,34426265600.0,EQUITY,2026-01-02T11:36:43.848840
-VZ,Communication Services,Telecom Services,Verizon Communications Inc.,171735007232.0,EQUITY,2026-01-02T11:36:43.915313
-HUBS,Technology,Software - Application,"HubSpot, Inc.",21145745408.0,EQUITY,2026-01-02T11:36:43.977271
-IR,Industrials,Specialty Industrial Machinery,Ingersoll Rand Inc.,31486187520.0,EQUITY,2026-01-02T11:36:44.040856
-EMR,Industrials,Specialty Industrial Machinery,Emerson Electric Company,74628734976.0,EQUITY,2026-01-02T11:36:44.103931
-TFC,Financial Services,Banks - Regional,Truist Financial Corporation,63453102080.0,EQUITY,2026-01-02T11:36:44.411526
-EXC,Utilities,Utilities - Regulated Electric,Exelon Corporation,44025344000.0,EQUITY,2026-01-02T11:36:44.477507
-XPEV,Consumer Cyclical,Auto Manufacturers,XPeng Inc.,19346339840.0,EQUITY,2026-01-02T11:36:44.542346
-AXP,Financial Services,Credit Services,American Express Company,257441644544.0,EQUITY,2026-01-02T11:36:44.622491
-DIS,Communication Services,Entertainment,Walt Disney Company (The),204550930432.0,EQUITY,2026-01-02T11:36:44.687536
-MU,Technology,Semiconductors,"Micron Technology, Inc.",321231585280.0,EQUITY,2026-01-02T11:36:44.753604
-NLR,Energy,Exchange Traded Fund,VanEck Uranium and Nuclear ETF,,ETF,2026-01-02T11:36:44.907047
-FDX,Industrials,Integrated Freight & Logistics,FedEx Corporation,68158091264.0,EQUITY,2026-01-02T11:36:45.001511
-ALL,Financial Services,Insurance - Property & Casualty,Allstate Corporation (The),54848630784.0,EQUITY,2026-01-02T11:36:45.132479
-XLP,ETF - Other,Exchange Traded Fund,State Street Consumer Staples S,16326161408.0,ETF,2026-01-02T11:36:45.227326
-DHR,Healthcare,Diagnostics & Research,Danaher Corporation,163918528512.0,EQUITY,2026-01-02T11:36:45.509924
-PANW,Technology,Software - Infrastructure,"Palo Alto Networks, Inc.",128387399680.0,EQUITY,2026-01-02T11:36:45.590882
-XLV,Healthcare,Exchange Traded Fund,State Street Health Care Select,30559844352.0,ETF,2026-01-02T11:36:45.676435
-EGO,Basic Materials,Gold,Eldorado Gold Corporation,7252613120.0,EQUITY,2026-01-02T11:36:45.760975
-ODFL,Industrials,Trucking,"Old Dominion Freight Line, Inc.",32954365952.0,EQUITY,2026-01-02T11:36:45.831053
-NVDA,Technology,Semiconductors,NVIDIA Corporation,4540715761664.0,EQUITY,2026-01-02T11:36:46.007836
-TJX,Consumer Cyclical,Apparel Retail,"TJX Companies, Inc. (The)",170958520320.0,EQUITY,2026-01-02T11:36:46.094183
-SGOL,Precious Metals,Exchange Traded Fund,abrdn Physical Gold Shares ETF,,ETF,2026-01-02T11:36:46.168842
-DLR,Real Estate,REIT - Specialty,"Digital Realty Trust, Inc.",54102794240.0,EQUITY,2026-01-02T11:36:46.241942
-TRV,Financial Services,Insurance - Property & Casualty,"The Travelers Companies, Inc.",65302319104.0,EQUITY,2026-01-02T11:36:46.340218
-MMC,Financial Services,Insurance Brokers,"Marsh & McLennan Companies, Inc",91206090752.0,EQUITY,2026-01-02T11:36:46.625146
-ITW,Industrials,Specialty Industrial Machinery,Illinois Tool Works Inc.,71796449280.0,EQUITY,2026-01-02T11:36:46.735044
-ZTS,Healthcare,Drug Manufacturers - Specialty & Generic,Zoetis Inc.,55761346560.0,EQUITY,2026-01-02T11:36:46.838138
-INTU,Technology,Software - Application,Intuit Inc.,184417730560.0,EQUITY,2026-01-02T11:36:47.035655
-GEHC,Healthcare,Health Information Services,GE HealthCare Technologies Inc.,37447217152.0,EQUITY,2026-01-02T11:36:47.123142
-SWK,Industrials,Tools & Accessories,"Stanley Black & Decker, Inc.",11504855040.0,EQUITY,2026-01-02T11:36:47.211375
-ABT,Healthcare,Medical Devices,Abbott Laboratories,218062110720.0,EQUITY,2026-01-02T11:36:47.326476
-DTE,Utilities,Utilities - Regulated Electric,DTE Energy Company,26786953216.0,EQUITY,2026-01-02T11:36:47.494574
-ZS,Technology,Software - Infrastructure,"Zscaler, Inc.",35868262400.0,EQUITY,2026-01-02T11:36:47.562362
-GFS,Technology,Semiconductors,GlobalFoundries Inc.,19404404736.0,EQUITY,2026-01-02T11:36:47.633468
-K,Consumer Defensive,Packaged Foods,Kellanova,29031499776.0,EQUITY,2026-01-02T11:36:47.905823
-GOLD,Financial Services,Capital Markets,"Gold.com, Inc.",839141376.0,EQUITY,2026-01-02T11:36:48.105078
-FTNT,Technology,Software - Infrastructure,"Fortinet, Inc.",60849188864.0,EQUITY,2026-01-02T11:36:48.171126
-GDXJ,Precious Metals,Exchange Traded Fund,VanEck Junior Gold Miners ETF,,ETF,2026-01-02T11:36:48.238970
-BRK.B,,,,,EQUITY,2026-01-02T11:36:48.307882
-EOG,Energy,Oil & Gas E&P,"EOG Resources, Inc.",57334767616.0,EQUITY,2026-01-02T11:36:48.377716
-MAR,Consumer Cyclical,Lodging,Marriott International,84217069568.0,EQUITY,2026-01-02T11:36:48.445058
-PCAR,Industrials,Farm & Heavy Construction Machinery,PACCAR Inc.,57515130880.0,EQUITY,2026-01-02T11:36:48.587641
-SMCI,Technology,Computer Hardware,"Super Micro Computer, Inc.",17473345536.0,EQUITY,2026-01-02T11:36:48.673453
-BAC,Financial Services,Banks - Diversified,Bank of America Corporation,407382097920.0,EQUITY,2026-01-02T11:36:48.755093
-EVGO,Consumer Cyclical,Specialty Retail,EVgo Inc.,896229760.0,EQUITY,2026-01-02T11:36:49.123610
-SIL,Precious Metals,Exchange Traded Fund,Global X Silver Miners ETF,,ETF,2026-01-02T11:36:49.236879
-UPST,Financial Services,Credit Services,"Upstart Holdings, Inc.",4254337792.0,EQUITY,2026-01-02T11:36:49.324878
-WMT,Consumer Defensive,Discount Stores,Walmart Inc.,888255348736.0,EQUITY,2026-01-02T11:36:49.442599
-XLI,ETF - Other,Exchange Traded Fund,State Street Industrial Select ,21193424896.0,ETF,2026-01-02T11:36:49.616117
-LLY,Healthcare,Drug Manufacturers - General,Eli Lilly and Company,963404234752.0,EQUITY,2026-01-02T11:36:49.682901
-AZO,Consumer Cyclical,Auto Parts,"AutoZone, Inc.",56409681920.0,EQUITY,2026-01-02T11:36:49.746483
-KHC,Consumer Defensive,Packaged Foods,The Kraft Heinz Company,28703647744.0,EQUITY,2026-01-02T11:36:49.819231
-TWLO,Technology,Software - Infrastructure,Twilio Inc.,21824395264.0,EQUITY,2026-01-02T11:36:49.885007
-INTC,Technology,Semiconductors,Intel Corporation,176013000704.0,EQUITY,2026-01-02T11:36:49.965379
-BA,Industrials,Aerospace & Defense,Boeing Company (The),170020421632.0,EQUITY,2026-01-02T11:36:50.321389
-CMCSA,Communication Services,Telecom Services,Comcast Corporation,110360051712.0,EQUITY,2026-01-02T11:36:50.390250
-QCOM,Technology,Semiconductors,QUALCOMM Incorporated,184562958336.0,EQUITY,2026-01-02T11:36:50.452685
-VEEV,Healthcare,Health Information Services,Veeva Systems Inc.,36694962176.0,EQUITY,2026-01-02T11:36:50.513250
 CCI,Real Estate,REIT - Specialty,Crown Castle Inc.,38701019136.0,EQUITY,2026-01-02T11:36:50.657730
-STEM,Utilities,Utilities - Renewable,"Stem, Inc.",126272632.0,EQUITY,2026-01-02T11:36:50.727194
-YUM,Consumer Cyclical,Restaurants,"Yum! Brands, Inc.",42003320832.0,EQUITY,2026-01-02T11:36:50.807761
-CSCO,Technology,Communication Equipment,"Cisco Systems, Inc.",304352821248.0,EQUITY,2026-01-02T11:36:50.878858
-META,Communication Services,Internet Content & Information,"Meta Platforms, Inc.",1663775145984.0,EQUITY,2026-01-02T11:36:50.952168
-GOOG,Communication Services,Internet Content & Information,Alphabet Inc.,3788141232128.0,EQUITY,2026-01-02T11:36:51.032380
-LI,Consumer Cyclical,Auto Manufacturers,Li Auto Inc.,17154903040.0,EQUITY,2026-01-02T11:36:51.307926
-MNST,Consumer Defensive,Beverages - Non-Alcoholic,Monster Beverage Corporation,74908213248.0,EQUITY,2026-01-02T11:36:51.381961
-PSA,Real Estate,REIT - Industrial,Public Storage,45532651520.0,EQUITY,2026-01-02T11:36:51.447571
-AFRM,Technology,Software - Infrastructure,"Affirm Holdings, Inc.",24567379968.0,EQUITY,2026-01-02T11:36:51.511774
-DXCM,Healthcare,Medical Devices,"DexCom, Inc.",26027345920.0,EQUITY,2026-01-02T11:36:51.575816
-RKT,Financial Services,Mortgage Finance,"Rocket Companies, Inc.",54515630080.0,EQUITY,2026-01-02T11:36:51.723474
-NET,Technology,Software - Infrastructure,"Cloudflare, Inc.",69057929216.0,EQUITY,2026-01-02T11:36:51.806131
-SPGI,Financial Services,Financial Data & Stock Exchanges,S&P Global Inc.,159546736640.0,EQUITY,2026-01-02T11:36:51.874971
+HUBS,Technology,Software - Application,"HubSpot, Inc.",21145745408.0,EQUITY,2026-01-02T11:36:43.977271
+GEHC,Healthcare,Health Information Services,GE HealthCare Technologies Inc.,37447217152.0,EQUITY,2026-01-02T11:36:47.123142
+AIG,Financial Services,Insurance - Diversified,"American International Group, I",47395028992.0,EQUITY,2026-01-02T11:36:15.919791
 BIDU,Communication Services,Internet Content & Information,"Baidu, Inc.",45548810240.0,EQUITY,2026-01-02T11:36:51.969160
-WELL,Real Estate,REIT - Healthcare Facilities,Welltower Inc.,127389351936.0,EQUITY,2026-01-02T11:36:52.044163
-SPY,Broad Market ETF,Exchange Traded Fund,SPDR S&P 500,625853923328.0,ETF,2026-01-02T11:36:52.325454
-QQQ,Technology,Exchange Traded Fund,"Invesco QQQ Trust, Series 1",241485266944.0,ETF,2026-01-02T11:36:52.431661
-ABBV,Healthcare,Drug Manufacturers - General,AbbVie Inc.,403829719040.0,EQUITY,2026-01-02T11:36:52.519227
-AU,Basic Materials,Gold,AngloGold Ashanti PLC,43056873472.0,EQUITY,2026-01-02T11:36:52.589631
-MELI,Consumer Cyclical,Internet Retail,"MercadoLibre, Inc.",102117310464.0,EQUITY,2026-01-02T11:36:52.752073
+WBA,,,,,,2026-01-02T11:36:34.743404
+PSA,Real Estate,REIT - Industrial,Public Storage,45532651520.0,EQUITY,2026-01-02T11:36:51.447571
+AGI,Basic Materials,Gold,Alamos Gold Inc.,16197204992.0,EQUITY,2026-01-02T11:36:25.857288
+PLTR,Technology,Software - Infrastructure,Palantir Technologies Inc.,423655800832.0,EQUITY,2026-01-02T11:36:38.768542
+JNJ,Healthcare,Drug Manufacturers - General,Johnson & Johnson,498603622400.0,EQUITY,2026-01-02T11:36:28.363528
+IAU,Precious Metals,Exchange Traded Fund,iShares Gold Trust Shares,78747074560.0,ETF,2026-01-02T11:36:33.153630
+ALL,Financial Services,Insurance - Property & Casualty,Allstate Corporation (The),54848630784.0,EQUITY,2026-01-02T11:36:45.132479
+SMR,Industrials,Specialty Industrial Machinery,NuScale Power Corporation,4007892224.0,EQUITY,2026-01-02T11:36:29.833640
+BIIB,Healthcare,Drug Manufacturers - General,Biogen Inc.,25818134528.0,EQUITY,2026-01-02T11:36:34.104648
+CTAS,Industrials,Specialty Business Services,Cintas Corporation,75782430720.0,EQUITY,2026-01-02T11:36:10.794332
+XLE,Energy,Exchange Traded Fund,State Street Energy Select Sect,8335016960.0,ETF,2026-01-02T11:36:14.610460
+LLY,Healthcare,Drug Manufacturers - General,Eli Lilly and Company,963404234752.0,EQUITY,2026-01-02T11:36:49.682901
+UEC,Energy,Uranium,Uranium Energy Corp.,5645848064.0,EQUITY,2026-01-02T11:36:40.696881
+EVGO,Consumer Cyclical,Specialty Retail,EVgo Inc.,896229760.0,EQUITY,2026-01-02T11:36:49.123610
+PRU,Financial Services,Insurance - Life,"Prudential Financial, Inc.",39727316992.0,EQUITY,2026-01-02T11:36:15.146056
+TJX,Consumer Cyclical,Apparel Retail,"TJX Companies, Inc. (The)",170958520320.0,EQUITY,2026-01-02T11:36:46.094183
+ETN,Industrials,Specialty Industrial Machinery,"Eaton Corporation, PLC",123995947008.0,EQUITY,2026-01-02T11:36:19.254175
+FANG,Energy,Oil & Gas E&P,"Diamondback Energy, Inc.",43518447616.0,EQUITY,2026-01-02T11:36:29.764577
+CDNS,Technology,Software - Application,"Cadence Design Systems, Inc.",85174919168.0,EQUITY,2026-01-02T11:36:32.337945
+RKT,Financial Services,Mortgage Finance,"Rocket Companies, Inc.",54515630080.0,EQUITY,2026-01-02T11:36:51.723474
+K,Consumer Defensive,Packaged Foods,Kellanova,29031499776.0,EQUITY,2026-01-02T11:36:47.905823
+NUE,Basic Materials,Steel,Nucor Corporation,37329133568.0,EQUITY,2026-01-02T11:36:18.514184
+HAL,Energy,Oil & Gas Equipment & Services,Halliburton Company,24094535680.0,EQUITY,2026-01-02T11:36:17.839037
+CHTR,Communication Services,Telecom Services,"Charter Communications, Inc.",28513370112.0,EQUITY,2026-01-02T11:36:40.028190
+IDXX,Healthcare,Diagnostics & Research,"IDEXX Laboratories, Inc.",54125580288.0,EQUITY,2026-01-02T11:36:17.500912
+XLF,Financial Services,Exchange Traded Fund,State Street Financial Select S,48386281472.0,ETF,2026-01-02T11:36:41.244207
 ALGN,Healthcare,Medical Instruments & Supplies,"Align Technology, Inc.",11318746112.0,EQUITY,2026-01-02T11:36:52.832958
-JPM,Financial Services,Banks - Diversified,JP Morgan Chase & Co.,886025682944.0,EQUITY,2026-01-02T11:36:52.906197
+VEEV,Healthcare,Health Information Services,Veeva Systems Inc.,36694962176.0,EQUITY,2026-01-02T11:36:50.513250
+TMUS,Communication Services,Telecom Services,"T-Mobile US, Inc.",228505075712.0,EQUITY,2026-01-02T11:36:36.702742
+NFLX,Communication Services,Entertainment,"Netflix, Inc.",397291454464.0,EQUITY,2026-01-02T11:36:23.113030
+PGR,Financial Services,Insurance - Property & Casualty,Progressive Corporation (The),133489467392.0,EQUITY,2026-01-02T11:36:39.884112
+LIN,Basic Materials,Specialty Chemicals,Linde plc,199938342912.0,EQUITY,2026-01-02T11:36:28.283838
+WPM,Basic Materials,Gold,Wheaton Precious Metals Corp,53426860032.0,EQUITY,2026-01-02T11:36:23.629863
+NVDA,Technology,Semiconductors,NVIDIA Corporation,4540715761664.0,EQUITY,2026-01-02T11:36:46.007836
+PEP,Consumer Defensive,Beverages - Non-Alcoholic,"Pepsico, Inc.",196489969664.0,EQUITY,2026-01-02T11:36:21.921002
+HMY,Basic Materials,Gold,Harmony Gold Mining Company Lim,12429209600.0,EQUITY,2026-01-02T11:36:42.968464
+TEAM,Technology,Software - Application,Atlassian Corporation,42680328192.0,EQUITY,2026-01-02T11:36:37.417768
+MLM,Basic Materials,Building Materials,"Martin Marietta Materials, Inc.",37550845952.0,EQUITY,2026-01-02T11:36:11.218966
+ENPH,Technology,Solar,"Enphase Energy, Inc.",4194053632.0,EQUITY,2026-01-02T11:36:20.846368
+DLTR,Consumer Defensive,Discount Stores,"Dollar Tree, Inc.",25090084864.0,EQUITY,2026-01-02T11:36:35.461631
+LULU,Consumer Cyclical,Apparel Retail,lululemon athletica inc.,24644012032.0,EQUITY,2026-01-02T11:36:26.538099
+GE,Industrials,Aerospace & Defense,GE Aerospace,326647119872.0,EQUITY,2026-01-02T11:36:11.561451
+KLAC,Technology,Semiconductor Equipment & Materials,KLA Corporation,160007225344.0,EQUITY,2026-01-02T11:36:28.184035
+IBM,Technology,Information Technology Services,International Business Machines,276877901824.0,EQUITY,2026-01-02T11:36:31.269384
+DIS,Communication Services,Entertainment,Walt Disney Company (The),204550930432.0,EQUITY,2026-01-02T11:36:44.687536
+LOW,Consumer Cyclical,Home Improvement Retail,"Lowe's Companies, Inc.",135279058944.0,EQUITY,2026-01-02T11:36:30.495617
+MS,Financial Services,Capital Markets,Morgan Stanley,283397488640.0,EQUITY,2026-01-02T11:36:12.950121
+BRK.B,,,,,EQUITY,2026-01-02T11:36:48.307882
+AZO,Consumer Cyclical,Auto Parts,"AutoZone, Inc.",56409681920.0,EQUITY,2026-01-02T11:36:49.746483
+ES,Utilities,Utilities - Regulated Electric,Eversource Energy (D/B/A),25261486080.0,EQUITY,2026-01-02T11:36:19.882527
+VRSK,Industrials,Consulting Services,"Verisk Analytics, Inc.",31252842496.0,EQUITY,2026-01-02T11:36:24.747798
+PXD,,,,,NONE,2026-01-02T11:36:35.039045
+ZBH,Healthcare,Medical Devices,"Zimmer Biomet Holdings, Inc.",17820485632.0,EQUITY,2026-01-02T11:36:09.854572
+DLR,Real Estate,REIT - Specialty,"Digital Realty Trust, Inc.",54102794240.0,EQUITY,2026-01-02T11:36:46.241942
+RING,Precious Metals,Exchange Traded Fund,iShares MSCI Global Gold Miners,846859968.0,ETF,2026-01-02T11:36:18.756374
+OXY,Energy,Oil & Gas E&P,Occidental Petroleum Corporatio,40511852544.0,EQUITY,2026-01-02T11:36:42.887054
+WELL,Real Estate,REIT - Healthcare Facilities,Welltower Inc.,127389351936.0,EQUITY,2026-01-02T11:36:52.044163
+XLP,ETF - Other,Exchange Traded Fund,State Street Consumer Staples S,16326161408.0,ETF,2026-01-02T11:36:45.227326
+KGC,Basic Materials,Gold,Kinross Gold Corporation,34426265600.0,EQUITY,2026-01-02T11:36:43.848840
+WDAY,Technology,Software - Application,"Workday, Inc.",57346260992.0,EQUITY,2026-01-02T11:36:16.393083
+WEC,Utilities,Utilities - Regulated Electric,"WEC Energy Group, Inc.",34305529856.0,EQUITY,2026-01-02T11:36:40.334207
+SMCI,Technology,Computer Hardware,"Super Micro Computer, Inc.",17473345536.0,EQUITY,2026-01-02T11:36:48.673453
+FCX,Basic Materials,Copper,"Freeport-McMoRan, Inc.",72930918400.0,EQUITY,2026-01-02T11:36:35.547575
+MSFT,Technology,Software - Infrastructure,Microsoft Corporation,3594827857920.0,EQUITY,2026-01-02T11:36:32.914618
+PDD,Consumer Cyclical,Internet Retail,PDD Holdings Inc.,160973717504.0,EQUITY,2026-01-02T11:36:36.082707
+ADBE,Technology,Software - Application,Adobe Inc.,148465745920.0,EQUITY,2026-01-02T11:36:29.903886
+CEG,Utilities,Utilities - Independent Power Producers,Constellation Energy Corporatio,110363508736.0,EQUITY,2026-01-02T11:36:42.566616
+PANW,Technology,Software - Infrastructure,"Palo Alto Networks, Inc.",128387399680.0,EQUITY,2026-01-02T11:36:45.590882
+NKE,Consumer Cyclical,Footwear & Accessories,"Nike, Inc.",94176206848.0,EQUITY,2026-01-02T11:36:20.912074
+GOOGL,Communication Services,Internet Content & Information,Alphabet Inc.,3791094022144.0,EQUITY,2026-01-02T11:36:24.992216
+NXE,Energy,Uranium,Nexgen Energy Ltd.,6021961728.0,EQUITY,2026-01-02T11:36:33.006729
+TMO,Healthcare,Diagnostics & Research,Thermo Fisher Scientific Inc,217704038400.0,EQUITY,2026-01-02T11:36:18.689933
+MPC,Energy,Oil & Gas Refining & Marketing,Marathon Petroleum Corporation,49442824192.0,EQUITY,2026-01-02T11:36:27.277184
+FDX,Industrials,Integrated Freight & Logistics,FedEx Corporation,68158091264.0,EQUITY,2026-01-02T11:36:45.001511
+COST,Consumer Defensive,Discount Stores,Costco Wholesale Corporation,382842503168.0,EQUITY,2026-01-02T11:36:26.383909
+PH,Industrials,Specialty Industrial Machinery,Parker-Hannifin Corporation,111227183104.0,EQUITY,2026-01-02T11:36:33.398264
+XPEV,Consumer Cyclical,Auto Manufacturers,XPeng Inc.,19346339840.0,EQUITY,2026-01-02T11:36:44.542346
+SNOW,Technology,Software - Application,Snowflake Inc.,75064991744.0,EQUITY,2026-01-02T11:36:42.040232
+TSLA,Consumer Cyclical,Auto Manufacturers,"Tesla, Inc.",1495687364608.0,EQUITY,2026-01-02T11:36:37.596904
+MRNA,Healthcare,Biotechnology,"Moderna, Inc.",11522735104.0,EQUITY,2026-01-02T11:36:20.991141
+BMY,Healthcare,Drug Manufacturers - General,Bristol-Myers Squibb Company,109808517120.0,EQUITY,2026-01-02T11:36:21.137634
+ANSS,,,,,,2026-01-02T11:36:18.441145
+AMD,Technology,Semiconductors,"Advanced Micro Devices, Inc.",348661383168.0,EQUITY,2026-01-02T11:36:32.482397
+KHC,Consumer Defensive,Packaged Foods,The Kraft Heinz Company,28703647744.0,EQUITY,2026-01-02T11:36:49.819231
+MCD,Consumer Cyclical,Restaurants,McDonald's Corporation,218098925568.0,EQUITY,2026-01-02T11:36:09.573265
+PAYX,Technology,Software - Application,"Paychex, Inc.",40268967936.0,EQUITY,2026-01-02T11:36:10.288420
+ZTS,Healthcare,Drug Manufacturers - Specialty & Generic,Zoetis Inc.,55761346560.0,EQUITY,2026-01-02T11:36:46.838138
+AMAT,Technology,Semiconductor Equipment & Materials,"Applied Materials, Inc.",204729122816.0,EQUITY,2026-01-02T11:36:25.750848
+ELV,Healthcare,Healthcare Plans,"Elevance Health, Inc.",78936252416.0,EQUITY,2026-01-02T11:36:31.367269
+ZS,Technology,Software - Infrastructure,"Zscaler, Inc.",35868262400.0,EQUITY,2026-01-02T11:36:47.562362
+TFC,Financial Services,Banks - Regional,Truist Financial Corporation,63453102080.0,EQUITY,2026-01-02T11:36:44.411526
+SLV,Precious Metals,Exchange Traded Fund,iShares Silver Trust,21996208128.0,ETF,2026-01-02T11:36:29.376716
+MDLZ,Consumer Defensive,Confectioners,"Mondelez International, Inc.",69653086208.0,EQUITY,2026-01-02T11:36:41.814169
+XLV,Healthcare,Exchange Traded Fund,State Street Health Care Select,30559844352.0,ETF,2026-01-02T11:36:45.676435
+BKR,Energy,Oil & Gas Equipment & Services,Baker Hughes Company,44937682944.0,EQUITY,2026-01-02T11:36:27.402412
+DNN,Energy,Uranium,Denison Mines Corp,2386792960.0,EQUITY,2026-01-02T11:36:12.655554
+EQR,Real Estate,REIT - Residential,Equity Residential,24810141696.0,EQUITY,2026-01-02T11:36:30.325950
+CDE,Basic Materials,Gold,"Coeur Mining, Inc.",11450513408.0,EQUITY,2026-01-02T11:36:35.219384
+PFE,Healthcare,Drug Manufacturers - General,"Pfizer, Inc.",141574127616.0,EQUITY,2026-01-02T11:36:28.831369
+UPS,Industrials,Integrated Freight & Logistics,"United Parcel Service, Inc.",84151369728.0,EQUITY,2026-01-02T11:36:09.379143
+CME,Financial Services,Financial Data & Stock Exchanges,CME Group Inc.,98472583168.0,EQUITY,2026-01-02T11:36:22.565458
+ON,Technology,Semiconductors,ON Semiconductor Corporation,22145941504.0,EQUITY,2026-01-02T11:36:13.754739
+MDB,Technology,Software - Infrastructure,"MongoDB, Inc.",34159308800.0,EQUITY,2026-01-02T11:36:31.118818
+VZ,Communication Services,Telecom Services,Verizon Communications Inc.,171735007232.0,EQUITY,2026-01-02T11:36:43.915313
+RTX,Industrials,Aerospace & Defense,RTX Corporation,245897576448.0,EQUITY,2026-01-02T11:36:23.451738
+TAN,ETF - Other,Exchange Traded Fund,Invesco Solar ETF,,ETF,2026-01-02T11:36:37.949428
+SPY,Broad Market ETF,Exchange Traded Fund,SPDR S&P 500,625853923328.0,ETF,2026-01-02T11:36:52.325454
+UNH,Healthcare,Healthcare Plans,UnitedHealth Group Incorporated,299026350080.0,EQUITY,2026-01-02T11:36:20.597912
+CVS,Healthcare,Healthcare Plans,CVS Health Corporation,100742160384.0,EQUITY,2026-01-02T11:36:34.910287
+VLO,Energy,Oil & Gas Refining & Marketing,Valero Energy Corporation,50570993664.0,EQUITY,2026-01-02T11:36:09.744648
+O,Real Estate,REIT - Retail,Realty Income Corporation,51855089664.0,EQUITY,2026-01-02T11:36:25.060516
+GLD,Precious Metals,Exchange Traded Fund,SPDR Gold Shares,103159488512.0,ETF,2026-01-02T11:36:23.533271
+SILJ,Precious Metals,Exchange Traded Fund,Amplify Junior Silver Miners ET,,ETF,2026-01-02T11:36:30.626754
+RUN,Technology,Solar,Sunrun Inc.,4269569536.0,EQUITY,2026-01-02T11:36:40.257545
+HD,Consumer Cyclical,Home Improvement Retail,"Home Depot, Inc. (The)",342555525120.0,EQUITY,2026-01-02T11:36:29.297163
+TRUE,Communication Services,Internet Content & Information,"TrueCar, Inc.",201004512.0,EQUITY,2026-01-02T11:36:40.174953
+TWLO,Technology,Software - Infrastructure,Twilio Inc.,21824395264.0,EQUITY,2026-01-02T11:36:49.885007
+DTE,Utilities,Utilities - Regulated Electric,DTE Energy Company,26786953216.0,EQUITY,2026-01-02T11:36:47.494574
+GILD,Healthcare,Drug Manufacturers - General,"Gilead Sciences, Inc.",152296636416.0,EQUITY,2026-01-02T11:36:13.845943
+SPLK,,,,,NONE,2026-01-02T11:36:19.358444
+MA,Financial Services,Credit Services,Mastercard Incorporated,516082270208.0,EQUITY,2026-01-02T11:36:25.498254
+GS,Financial Services,Capital Markets,"Goldman Sachs Group, Inc. (The)",266091839488.0,EQUITY,2026-01-02T11:36:34.026595
+KR,Consumer Defensive,Grocery Stores,Kroger Company (The),41404133376.0,EQUITY,2026-01-02T11:36:25.636267
+MAR,Consumer Cyclical,Lodging,Marriott International,84217069568.0,EQUITY,2026-01-02T11:36:48.445058
+COIN,Financial Services,Financial Data & Stock Exchanges,"Coinbase Global, Inc. - 3",60980371456.0,EQUITY,2026-01-02T11:36:19.963504
+DVN,Energy,Oil & Gas E&P,Devon Energy Corporation,23252723712.0,EQUITY,2026-01-02T11:36:26.285436
+FTNT,Technology,Software - Infrastructure,"Fortinet, Inc.",60849188864.0,EQUITY,2026-01-02T11:36:48.171126
+XLI,ETF - Other,Exchange Traded Fund,State Street Industrial Select ,21193424896.0,ETF,2026-01-02T11:36:49.616117
+IWM,Broad Market ETF,Exchange Traded Fund,iShares Russell 2000 ETF,69183266816.0,ETF,2026-01-02T11:36:38.317711
+KMB,Consumer Defensive,Household & Personal Products,Kimberly-Clark Corporation,33484697600.0,EQUITY,2026-01-02T11:36:13.446226
+EOG,Energy,Oil & Gas E&P,"EOG Resources, Inc.",57334767616.0,EQUITY,2026-01-02T11:36:48.377716
+INTU,Technology,Software - Application,Intuit Inc.,184417730560.0,EQUITY,2026-01-02T11:36:47.035655
+LEN,Consumer Cyclical,Residential Construction,Lennar Corporation,25388613632.0,EQUITY,2026-01-02T11:36:36.329452
+BKNG,Consumer Cyclical,Travel Services,Booking Holdings Inc. Common St,173565640704.0,EQUITY,2026-01-02T11:36:17.927359
+NSC,Industrials,Railroads,Norfolk Southern Corporation,64784908288.0,EQUITY,2026-01-02T11:36:18.838089
+PPL,Utilities,Utilities - Regulated Electric,PPL Corporation,25905668096.0,EQUITY,2026-01-02T11:36:27.572323
+HUM,Healthcare,Healthcare Plans,Humana Inc.,30805542912.0,EQUITY,2026-01-02T11:36:33.556647
+REGN,Healthcare,Biotechnology,"Regeneron Pharmaceuticals, Inc.",81808523264.0,EQUITY,2026-01-02T11:36:39.726083
+SGOL,Precious Metals,Exchange Traded Fund,abrdn Physical Gold Shares ETF,,ETF,2026-01-02T11:36:46.168842
+GDX,Precious Metals,Exchange Traded Fund,VanEck Gold Miners ETF,,ETF,2026-01-02T11:36:14.804468
+BA,Industrials,Aerospace & Defense,Boeing Company (The),170020421632.0,EQUITY,2026-01-02T11:36:50.321389
+URA,Energy,Exchange Traded Fund,Global X Uranium ETF,,ETF,2026-01-02T11:36:36.161315
+OKTA,Technology,Software - Infrastructure,"Okta, Inc.",15325097984.0,EQUITY,2026-01-02T11:36:23.269542
+AMT,Real Estate,REIT - Specialty,American Tower Corporation (REI,82210873344.0,EQUITY,2026-01-02T11:36:32.636615
+PAAS,Basic Materials,Gold,Pan American Silver Corp.,21866256384.0,EQUITY,2026-01-02T11:36:35.294546
+TRV,Financial Services,Insurance - Property & Casualty,"The Travelers Companies, Inc.",65302319104.0,EQUITY,2026-01-02T11:36:46.340218
+SCHW,Financial Services,Capital Markets,Charles Schwab Corporation (The,181358575616.0,EQUITY,2026-01-02T11:36:42.118239
+PM,Consumer Defensive,Tobacco,Philip Morris International Inc,249684836352.0,EQUITY,2026-01-02T11:36:20.781547
+SYY,Consumer Defensive,Food Distribution,Sysco Corporation,35287273472.0,EQUITY,2026-01-02T11:36:42.495307
+BBBY,,,"Bed Bath & Beyond, Inc.",375914144.0,EQUITY,2026-01-02T11:36:14.191967
+JD,Consumer Cyclical,Internet Retail,"JD.com, Inc.",42344157184.0,EQUITY,2026-01-02T11:36:10.027896
+EMR,Industrials,Specialty Industrial Machinery,Emerson Electric Company,74628734976.0,EQUITY,2026-01-02T11:36:44.103931
+ILMN,Healthcare,Diagnostics & Research,"Illumina, Inc.",20159293440.0,EQUITY,2026-01-02T11:36:17.392314
+SIL,Precious Metals,Exchange Traded Fund,Global X Silver Miners ETF,,ETF,2026-01-02T11:36:49.236879
+ORLY,Consumer Cyclical,Auto Parts,"O'Reilly Automotive, Inc.",77166608384.0,EQUITY,2026-01-02T11:36:14.513217
+EA,Communication Services,Electronic Gaming & Multimedia,Electronic Arts Inc.,51104186368.0,EQUITY,2026-01-02T11:36:10.646222
+AEM,Basic Materials,Gold,Agnico Eagle Mines Limited,85111955456.0,EQUITY,2026-01-02T11:36:11.468199
+CRWD,Technology,Software - Infrastructure,"CrowdStrike Holdings, Inc.",118173663232.0,EQUITY,2026-01-02T11:36:26.818656
+SHW,Basic Materials,Specialty Chemicals,Sherwin-Williams Company (The),80791470080.0,EQUITY,2026-01-02T11:36:39.960735
+SHOP,Technology,Software - Application,Shopify Inc.,209557667840.0,EQUITY,2026-01-02T11:36:37.862619
+MO,Consumer Defensive,Tobacco,"Altria Group, Inc.",96862511104.0,EQUITY,2026-01-02T11:36:22.006023
+TSM,Technology,Semiconductors,Taiwan Semiconductor Manufactur,1576127037440.0,EQUITY,2026-01-02T11:36:29.695447
+QCOM,Technology,Semiconductors,QUALCOMM Incorporated,184562958336.0,EQUITY,2026-01-02T11:36:50.452685
+CMS,Utilities,Utilities - Regulated Electric,CMS Energy Corporation,21281081344.0,EQUITY,2026-01-02T11:36:13.039433
+ARKK,Technology,Exchange Traded Fund,ARK Innovation ETF,,ETF,2026-01-02T11:36:15.553800
+XOM,Energy,Oil & Gas Integrated,Exxon Mobil Corporation,513039138816.0,EQUITY,2026-01-02T11:36:36.512995
+PPG,Basic Materials,Specialty Chemicals,"PPG Industries, Inc.",23125221376.0,EQUITY,2026-01-02T11:36:38.864409
+ATVI,,,,,NONE,2026-01-02T11:36:28.433675
+GIS,Consumer Defensive,Packaged Foods,"General Mills, Inc.",24811567104.0,EQUITY,2026-01-02T11:36:41.018686
+SEDG,Technology,Solar,"SolarEdge Technologies, Inc.",1725231488.0,EQUITY,2026-01-02T11:36:26.004133
+AMGN,Healthcare,Drug Manufacturers - General,Amgen Inc.,176250093568.0,EQUITY,2026-01-02T11:36:25.126882
+MRVL,Technology,Semiconductors,"Marvell Technology, Inc.",73261260800.0,EQUITY,2026-01-02T11:36:41.402058
+CSX,Industrials,Railroads,CSX Corporation,67580039168.0,EQUITY,2026-01-02T11:36:40.938877
+ECL,Basic Materials,Specialty Chemicals,Ecolab Inc.,74457202688.0,EQUITY,2026-01-02T11:36:33.080312
+CB,Financial Services,Insurance - Property & Casualty,Chubb Limited,124439216128.0,EQUITY,2026-01-02T11:36:29.973327
+CL,Consumer Defensive,Household & Personal Products,Colgate-Palmolive Company,63865606144.0,EQUITY,2026-01-02T11:36:23.900702
+KO,Consumer Defensive,Beverages - Non-Alcoholic,Coca-Cola Company (The),300869386240.0,EQUITY,2026-01-02T11:36:22.460977
+RSG,Industrials,Waste Management,"Republic Services, Inc.",66167894016.0,EQUITY,2026-01-02T11:36:12.216401
+GFS,Technology,Semiconductors,GlobalFoundries Inc.,19404404736.0,EQUITY,2026-01-02T11:36:47.633468
+LMT,Industrials,Aerospace & Defense,Lockheed Martin Corporation,112920043520.0,EQUITY,2026-01-02T11:36:42.428800
+AG,Basic Materials,Silver,First Majestic Silver Corp.,8169331712.0,EQUITY,2026-01-02T11:36:42.289300
+NEM,Basic Materials,Gold,Newmont Corporation,109680197632.0,EQUITY,2026-01-02T11:36:28.688130
+IR,Industrials,Specialty Industrial Machinery,Ingersoll Rand Inc.,31486187520.0,EQUITY,2026-01-02T11:36:44.040856
+GOOG,Communication Services,Internet Content & Information,Alphabet Inc.,3788141232128.0,EQUITY,2026-01-02T11:36:51.032380
+NOW,Technology,Software - Application,"ServiceNow, Inc.",159071076352.0,EQUITY,2026-01-02T11:36:19.801861
+MRK,Healthcare,Drug Manufacturers - General,"Merck & Company, Inc.",262916669440.0,EQUITY,2026-01-02T11:36:11.136774
+OPEN,Real Estate,Real Estate Services,Opendoor Technologies Inc,5560584704.0,EQUITY,2026-01-02T11:36:23.188483
+LCID,Consumer Cyclical,Auto Manufacturers,"Lucid Group, Inc.",3426460416.0,EQUITY,2026-01-02T11:36:30.917138
+FSLR,Technology,Solar,"First Solar, Inc.",28032108544.0,EQUITY,2026-01-02T11:36:27.674468
+ODFL,Industrials,Trucking,"Old Dominion Freight Line, Inc.",32954365952.0,EQUITY,2026-01-02T11:36:45.831053
+MELI,Consumer Cyclical,Internet Retail,"MercadoLibre, Inc.",102117310464.0,EQUITY,2026-01-02T11:36:52.752073
+D,Utilities,Utilities - Regulated Electric,"Dominion Energy, Inc.",50030780416.0,EQUITY,2026-01-02T11:36:37.253337
+XEL,Utilities,Utilities - Regulated Electric,Xcel Energy Inc.,43691126784.0,EQUITY,2026-01-02T11:36:20.052901
+WM,Industrials,Waste Management,"Waste Management, Inc.",88513921024.0,EQUITY,2026-01-02T11:36:32.555124
+BILL,Technology,Software - Application,"BILL Holdings, Inc.",5474662400.0,EQUITY,2026-01-02T11:36:19.557168
+BDX,Healthcare,Medical Instruments & Supplies,"Becton, Dickinson and Company",55391182848.0,EQUITY,2026-01-02T11:36:38.679410
+F,Consumer Cyclical,Auto Manufacturers,Ford Motor Company,52276621312.0,EQUITY,2026-01-02T11:36:39.803158
+AON,Financial Services,Insurance Brokers,Aon plc,76090310656.0,EQUITY,2026-01-02T11:36:27.178014
+AI,Technology,Software - Infrastructure,"C3.ai, Inc.",1897354112.0,EQUITY,2026-01-02T11:36:24.598483
+NEE,Utilities,Utilities - Regulated Electric,"NextEra Energy, Inc.",167191904256.0,EQUITY,2026-01-02T11:36:18.906985
+PCAR,Industrials,Farm & Heavy Construction Machinery,PACCAR Inc.,57515130880.0,EQUITY,2026-01-02T11:36:48.587641
+SPGI,Financial Services,Financial Data & Stock Exchanges,S&P Global Inc.,159546736640.0,EQUITY,2026-01-02T11:36:51.874971
+YUM,Consumer Cyclical,Restaurants,"Yum! Brands, Inc.",42003320832.0,EQUITY,2026-01-02T11:36:50.807761
+WFC,Financial Services,Banks - Diversified,Wells Fargo & Company,298560716800.0,EQUITY,2026-01-02T11:36:27.847705
+STZ,Consumer Defensive,Beverages - Brewers,"Constellation Brands, Inc.",24014243840.0,EQUITY,2026-01-02T11:36:32.405643
+CI,Healthcare,Healthcare Plans,The Cigna Group,73521045504.0,EQUITY,2026-01-02T11:36:31.909162
+DOCU,Technology,Software - Application,"DocuSign, Inc.",11596792832.0,EQUITY,2026-01-17T00:18:00.044143
+ROKU,Communication Services,Entertainment,"Roku, Inc.",15494728704.0,EQUITY,2026-01-17T00:18:00.125250
+BRK-B,Financial Services,Insurance - Diversified,Berkshire Hathaway Inc. New,1065680240640.0,EQUITY,2026-01-17T00:18:00.278974
+ME8U.SI,Real Estate,REIT - Industrial,Mapletree Ind Tr,5992067072.0,EQUITY,2026-01-17T00:18:00.349586
+C38U.SI,Real Estate,REIT - Retail,CapLand IntCom T,18161664000.0,EQUITY,2026-01-17T00:18:00.422887
+ZM,Technology,Software - Application,"Zoom Communications, Inc.",24422012928.0,EQUITY,2026-01-17T00:18:00.498497

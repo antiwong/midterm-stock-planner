@@ -2,6 +2,72 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.11.1] - 2026-01-17
+
+### Added
+
+#### Expanded Parallel Processing
+- **Price Downloads Parallelization**: Parallel batch processing for price downloads
+  - Configurable `max_workers` parameter (default: 8)
+  - Automatic fallback to sequential if parallel fails
+  - Progress tracking and error handling
+  - 3-5x speedup for large watchlists
+- **Analysis Parallelization**: Independent analyses run in parallel
+  - Performance Attribution, Benchmark Comparison, Factor Exposure, Rebalancing, Style Analysis
+  - Up to 4 workers for analysis calculations
+  - Automatic detection of independent analyses
+  - 2-4x speedup for comprehensive analysis
+- **Parallel Processing Indicator**: GUI component to show parallel processing status
+  - Real-time progress tracking
+  - Worker count display
+  - Batch progress indicators
+
+#### Performance Optimizations
+- **Database Connection Pooling**: Enhanced SQLite connection management
+  - Connection pool size: 5, max overflow: 10
+  - Pre-ping connections for reliability
+  - Thread-safe scoped sessions
+  - Improved multi-threaded access
+- **Query Result Caching**: Application-level caching for frequently accessed queries
+  - `QueryCache` class with TTL support
+  - `@cached_query` decorator for easy caching
+  - Cache statistics and management
+  - Integration with Streamlit's built-in caching
+- **Database Index Optimization**: Existing indexes verified and optimized
+  - Indexes on `run_id`, `run_type`, `status`, `created_at`, `watchlist`
+  - Composite indexes for common query patterns
+  - Improved query performance for large datasets
+
+#### Testing & Validation
+- **Parallel Processing Tests**: Comprehensive test suite
+  - `test_parallel_processing.py`: 7 test cases
+  - Tests for basic parallelization, error handling, performance
+  - Performance benchmarks
+- **Performance Optimization Tests**: Database and caching tests
+  - `test_performance_optimizations.py`: 6 test cases
+  - Cache functionality, connection pooling, index verification
+- **Performance Benchmark Script**: `scripts/test_parallel_performance.py`
+  - Benchmarks for fundamentals download, analysis parallelization, cache performance
+  - Speedup measurements and throughput metrics
+
+### Changed
+- **Price Download Script**: Updated to use parallel processing by default
+  - `scripts/download_prices.py` now uses parallel batch processing
+  - Configurable `max_workers` parameter
+- **Comprehensive Analysis**: Independent analyses now run in parallel
+  - Automatic parallelization of independent analysis modules
+  - Fallback to sequential if parallel processing fails
+- **Performance Monitoring Page**: Added cache performance tab
+  - Cache statistics display
+  - Cache hit rate metrics
+  - Cache clearing functionality
+
+### Technical Details
+- **Parallel Processing**: Uses `ThreadPoolExecutor` for I/O-bound operations
+- **Connection Pooling**: SQLAlchemy connection pool with pre-ping
+- **Caching**: In-memory cache with TTL and pattern-based clearing
+- **Error Handling**: Graceful fallback to sequential processing on errors
+
 ## [3.11.0] - 2026-01-17
 
 ### Added

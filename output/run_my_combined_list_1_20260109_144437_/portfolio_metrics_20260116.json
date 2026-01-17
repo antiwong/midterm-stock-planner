@@ -1,0 +1,16 @@
+{
+  "date": "20260116",
+  "n_candidates": 106,
+  "n_selected": 0,
+  "metrics": {
+    "volatility": 0.0,
+    "diversification_score": 0.0
+  },
+  "config": {
+    "w_model": 0.49,
+    "w_value": 0.2,
+    "w_quality": 0.31,
+    "portfolio_size": 10,
+    "selection_method": "heuristic"
+  }
+}
