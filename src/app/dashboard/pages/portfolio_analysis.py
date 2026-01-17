@@ -49,89 +49,8 @@ HEATMAP_SCALE = [
 
 def render_portfolio_analysis():
     """Render the portfolio analysis page."""
-    # Custom CSS for this page
-    st.markdown("""
-    <style>
-    .portfolio-hero {
-        background: var(--secondary-color);
-        padding: 2rem 2.5rem;
-        border-radius: var(--card-radius);
-        margin-bottom: 2rem;
-        color: white;
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.3);
-    }
-    .portfolio-hero h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
-        margin: 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
-    }
-    .portfolio-hero p {
-        font-size: 1.1rem;
-        opacity: 0.9;
-        margin-top: 0.5rem;
-    }
-    .metric-glass {
-        background: rgba(255,255,255,0.1);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255,255,255,0.2);
-        border-radius: var(--card-radius);
-        padding: 1.5rem;
-        text-align: center;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .metric-glass:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-    }
-    .metric-glass .value {
-        font-size: 2rem;
-        font-weight: 700;
-        color: white;
-    }
-    .metric-glass .label {
-        font-size: 0.85rem;
-        color: rgba(255,255,255,0.8);
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .chart-container {
-        background: #ffffff;
-        border-radius: var(--card-radius);
-        padding: 1rem;
-        margin: 0.5rem 0;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-        border: 1px solid #e2e8f0;
-    }
-    .section-title {
-        font-size: 1.5rem !important;
-        font-weight: 700 !important;
-        color: #1e1e2e !important;
-        margin: 2rem 0 1rem 0;
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        background: #f7f7f9 !important;
-        padding: 0.75rem 1rem;
-        border-radius: var(--card-radius);
-        border-left: 4px solid var(--primary-color);
-    }
-    .stock-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: #f7f7f9;
-        border: 1px solid #e5e5ea;
-        border-radius: 50px;
-        padding: 0.5rem 1rem;
-        margin: 0.25rem;
-        font-weight: 600;
-        color: #1e293b;
-    }
-    .positive { color: #059669 !important; }
-    .negative { color: #dc2626 !important; }
-    </style>
-    """, unsafe_allow_html=True)
+    # Use standard page header
+    render_page_header("Portfolio Analysis", "Comprehensive insights and performance metrics")
     
     runs = load_runs()
     completed_runs = [r for r in runs if r['status'] == 'completed']
@@ -140,7 +59,7 @@ def render_portfolio_analysis():
         st.warning("No completed runs found. Run an analysis first!")
         return
     
-    # Hero section with run selector
+    # Run selector
     def format_run(run_id):
         run = next((r for r in completed_runs if r['run_id'] == run_id), None)
         if not run:
@@ -164,8 +83,8 @@ def render_portfolio_analysis():
     
     run = next((r for r in completed_runs if r['run_id'] == selected_run_id), None)
     
-    # Hero metrics section
-    _render_hero_section(run)
+    # Key metrics section using standard components
+    _render_key_metrics(run)
     
     # Tabs for different views
     tabs = st.tabs([
@@ -196,39 +115,47 @@ def render_portfolio_analysis():
         _render_ai_tab(selected_run_id)
 
 
-def _render_hero_section(run: dict):
-    """Render stunning hero section with key metrics."""
+def _render_key_metrics(run: dict):
+    """Render key metrics using standard components."""
     total_return = run.get('total_return', 0) or 0
     sharpe = run.get('sharpe_ratio', 0) or 0
     win_rate = run.get('win_rate', 0) or 0
     max_dd = run.get('max_drawdown', 0) or 0
     
-    ret_color = '#10b981' if total_return >= 0 else '#ef4444'
+    # Use standard metric cards
+    col1, col2, col3, col4 = st.columns(4)
     
-    st.markdown(f"""
-    <div class="portfolio-hero">
-        <h1>Portfolio Analysis</h1>
-        <p>Comprehensive insights and performance metrics</p>
-        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-top: 1.5rem;">
-            <div class="metric-glass">
-                <div class="value" style="color: {ret_color}">{total_return*100:+.2f}%</div>
-                <div class="label">Total Return</div>
-            </div>
-            <div class="metric-glass">
-                <div class="value">{sharpe:.2f}</div>
-                <div class="label">Sharpe Ratio</div>
-            </div>
-            <div class="metric-glass">
-                <div class="value">{win_rate*100:.1f}%</div>
-                <div class="label">Win Rate</div>
-            </div>
-            <div class="metric-glass">
-                <div class="value" style="color: #ef4444">{max_dd*100:.2f}%</div>
-                <div class="label">Max Drawdown</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    with col1:
+        render_metric_card(
+            label="Total Return",
+            value=format_percent(total_return),
+            delta=None,
+            help_text="Total portfolio return over the analysis period"
+        )
+    
+    with col2:
+        render_metric_card(
+            label="Sharpe Ratio",
+            value=format_number(sharpe, decimals=2),
+            delta=None,
+            help_text="Risk-adjusted return metric"
+        )
+    
+    with col3:
+        render_metric_card(
+            label="Win Rate",
+            value=format_percent(win_rate),
+            delta=None,
+            help_text="Percentage of winning periods"
+        )
+    
+    with col4:
+        render_metric_card(
+            label="Max Drawdown",
+            value=format_percent(max_dd),
+            delta=None,
+            help_text="Maximum peak-to-trough decline"
+        )
 
 
 def _render_overview_tab(run: dict, run_id: str):
@@ -303,7 +230,7 @@ def _render_all_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: d
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Equity Curve</div>', unsafe_allow_html=True)
+        render_section_header("Equity Curve")
         if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
             dates = returns_df['date'].tolist()
             values = returns_df['cumulative'].tolist() if 'cumulative' in returns_df.columns else (1 + returns_df['portfolio_return']).cumprod().tolist()
@@ -312,7 +239,7 @@ def _render_all_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: d
             _render_chart_insight("equity_curve", returns_df, scores_df, run)
     
     with col2:
-        st.markdown('<div class="section-title">Sector Allocation</div>', unsafe_allow_html=True)
+        render_section_header("Sector Allocation")
         if 'sector' in scores_df.columns:
             sector_counts = scores_df['sector'].value_counts().to_dict()
             fig = create_sector_pie(sector_counts)
@@ -325,14 +252,14 @@ def _render_all_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: d
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Score Distribution</div>', unsafe_allow_html=True)
+        render_section_header("Score Distribution")
         if 'score' in scores_df.columns:
             fig = create_score_distribution(scores_df['score'].dropna().tolist())
             st.plotly_chart(fig, use_container_width=True)
             _render_chart_insight("score_distribution", returns_df, scores_df, run)
     
     with col2:
-        st.markdown('<div class="section-title">Top Performers</div>', unsafe_allow_html=True)
+        render_section_header("Top Performers")
         if 'score' in scores_df.columns:
             top10 = scores_df.nlargest(10, 'score')
             if 'ticker' in top10.columns and 'score' in top10.columns:
@@ -358,7 +285,7 @@ def _render_all_charts(returns_df: pd.DataFrame, scores_df: pd.DataFrame, run: d
     
     # Row 3: Drawdown Chart
     if 'portfolio_return' in returns_df.columns and 'date' in returns_df.columns:
-        st.markdown('<div class="section-title">Drawdown Analysis</div>', unsafe_allow_html=True)
+        render_section_header("Drawdown Analysis")
         # Calculate drawdown
         cumulative = (1 + returns_df['portfolio_return']).cumprod()
         running_max = cumulative.expanding().max()
@@ -545,7 +472,7 @@ def _render_holdings_pills(scores_df: pd.DataFrame):
     if scores_df.empty:
         return
     
-    st.markdown('<div class="section-title">All Holdings</div>', unsafe_allow_html=True)
+    render_section_header("All Holdings")
     
     # Sort by score descending
     sorted_df = scores_df.sort_values('score', ascending=False).copy()
@@ -734,7 +661,7 @@ def _generate_chart_insight(chart_type: str, returns_df: pd.DataFrame, scores_df
 def _render_ai_portfolio_summary(run: dict, scores_df: pd.DataFrame, returns_df: pd.DataFrame):
     """Render AI-generated portfolio summary."""
     
-    st.markdown('<div class="section-title">AI Portfolio Summary</div>', unsafe_allow_html=True)
+    render_section_header("AI Portfolio Summary")
     
     # Generate summary using local analysis (no API call needed)
     summary = _generate_portfolio_summary(run, scores_df, returns_df)
@@ -908,12 +835,12 @@ def _render_performance_tab(run: dict, run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Cumulative Returns</div>', unsafe_allow_html=True)
+        render_section_header("Cumulative Returns")
         fig = _create_area_returns(returns_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Underwater Plot</div>', unsafe_allow_html=True)
+        render_section_header("Underwater Plot")
         fig = _create_underwater_chart(returns_df)
         st.plotly_chart(fig, use_container_width=True)
     
@@ -921,12 +848,12 @@ def _render_performance_tab(run: dict, run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Rolling 20-Day Returns</div>', unsafe_allow_html=True)
+        render_section_header("Rolling 20-Day Returns")
         fig = _create_rolling_returns(returns_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Rolling Volatility</div>', unsafe_allow_html=True)
+        render_section_header("Rolling Volatility")
         fig = _create_rolling_volatility(returns_df)
         st.plotly_chart(fig, use_container_width=True)
     
@@ -934,16 +861,16 @@ def _render_performance_tab(run: dict, run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Returns Distribution</div>', unsafe_allow_html=True)
+        render_section_header("Returns Distribution")
         fig = _create_returns_histogram(returns_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Performance Statistics</div>', unsafe_allow_html=True)
+        render_section_header("Performance Statistics")
         _render_performance_stats(returns_df)
     
     # Monthly returns calendar
-    st.markdown('<div class="section-title">Monthly Performance Calendar</div>', unsafe_allow_html=True)
+    render_section_header("Monthly Performance Calendar")
     fig = _create_monthly_calendar(returns_df)
     st.plotly_chart(fig, use_container_width=True)
 
@@ -966,12 +893,12 @@ def _render_sector_tab(run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Sector Treemap</div>', unsafe_allow_html=True)
+        render_section_header("Sector Treemap")
         fig = _create_sector_treemap(scores_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Sector Scores Radar</div>', unsafe_allow_html=True)
+        render_section_header("Sector Scores Radar")
         fig = _create_sector_radar(scores_df)
         st.plotly_chart(fig, use_container_width=True)
     
@@ -979,16 +906,16 @@ def _render_sector_tab(run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Holdings by Sector</div>', unsafe_allow_html=True)
+        render_section_header("Holdings by Sector")
         fig = _create_sector_bar(scores_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Sector Statistics</div>', unsafe_allow_html=True)
+        render_section_header("Sector Statistics")
         _render_sector_stats(scores_df)
     
     # Top stocks by sector
-    st.markdown('<div class="section-title">Top Stocks by Sector</div>', unsafe_allow_html=True)
+    render_section_header("Top Stocks by Sector")
     _render_sector_top_stocks(scores_df)
 
 
@@ -999,14 +926,14 @@ def _render_risk_tab(run: dict, run_id: str):
     scores = load_run_scores(run_id)
     
     # Risk metrics cards
-    st.markdown('<div class="section-title">Risk Metrics</div>', unsafe_allow_html=True)
+    render_section_header("Risk Metrics")
     _render_risk_metrics_cards(run)
     
     # Row 1: VaR + Risk-Return scatter
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Value at Risk Analysis</div>', unsafe_allow_html=True)
+        render_section_header("Value at Risk Analysis")
         if returns_df is not None and 'portfolio_return' in returns_df.columns:
             fig = _create_var_chart(returns_df)
             st.plotly_chart(fig, use_container_width=True)
@@ -1014,7 +941,7 @@ def _render_risk_tab(run: dict, run_id: str):
             st.info("No returns data")
     
     with col2:
-        st.markdown('<div class="section-title">Risk-Return Scatter</div>', unsafe_allow_html=True)
+        render_section_header("Risk-Return Scatter")
         if scores:
             scores_df = pd.DataFrame(scores)
             fig = _create_risk_return_scatter(scores_df)
@@ -1024,7 +951,7 @@ def _render_risk_tab(run: dict, run_id: str):
     
     # Risk gauge
     if returns_df is not None:
-        st.markdown('<div class="section-title">Portfolio Risk Gauge</div>', unsafe_allow_html=True)
+        render_section_header("Portfolio Risk Gauge")
         col1, col2, col3 = st.columns(3)
         
         ret = returns_df['portfolio_return'].dropna()
@@ -1059,17 +986,17 @@ def _render_holdings_tab(run_id: str):
     col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown('<div class="section-title">Score Distribution</div>', unsafe_allow_html=True)
+        render_section_header("Score Distribution")
         fig = _create_score_histogram(scores_df)
         st.plotly_chart(fig, use_container_width=True)
     
     with col2:
-        st.markdown('<div class="section-title">Top 10 by Score</div>', unsafe_allow_html=True)
+        render_section_header("Top 10 by Score")
         fig = _create_top10_lollipop(scores_df)
         st.plotly_chart(fig, use_container_width=True)
     
     # Holdings table
-    st.markdown('<div class="section-title">All Holdings</div>', unsafe_allow_html=True)
+    render_section_header("All Holdings")
     _render_holdings_table(scores_df)
 
 
@@ -1159,7 +1086,7 @@ def _render_ai_tab(run_id: str):
     # Overall assessment
     overall = profiles.get('overall_assessment')
     if overall and isinstance(overall, str):
-        st.markdown('<div class="section-title">Overall Assessment</div>', unsafe_allow_html=True)
+        render_section_header("Overall Assessment")
         st.markdown(f"""
         <div style="background: #ffffff; padding: 1.5rem; 
                     border-radius: 16px; border-left: 4px solid #667eea; color: #334155;
@@ -1169,7 +1096,7 @@ def _render_ai_tab(run_id: str):
         """, unsafe_allow_html=True)
     
     # Detailed holdings tables
-    st.markdown('<div class="section-title">Portfolio Holdings Comparison</div>', unsafe_allow_html=True)
+    render_section_header("Portfolio Holdings Comparison")
     
     for profile_name, profile_data in portfolio_profiles.items():
         style = profile_styles.get(profile_name.lower(), profile_styles['balanced'])
