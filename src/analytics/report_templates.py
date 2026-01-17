@@ -326,6 +326,105 @@ class ReportTemplateEngine:
         finally:
             session.close()
     
+    def generate_reports_batch(
+        self,
+        template_id: int,
+        run_ids: List[str],
+        output_dir: Optional[Path] = None,
+        generated_by: Optional[str] = None,
+        parallel: bool = True,
+        max_workers: int = None
+    ) -> List[ReportGeneration]:
+        """
+        Generate reports for multiple runs in parallel.
+        
+        Args:
+            template_id: Template ID to use
+            run_ids: List of run IDs to generate reports for
+            output_dir: Base output directory
+            generated_by: Creator identifier
+            parallel: Whether to use parallel processing
+            max_workers: Maximum parallel workers
+            
+        Returns:
+            List of ReportGeneration objects
+        """
+        if parallel and len(run_ids) > 1:
+            try:
+                from src.app.dashboard.utils.parallel import parallel_analysis
+                
+                def generate_single_report(run_id: str):
+                    return self.generate_report(
+                        template_id=template_id,
+                        run_id=run_id,
+                        output_path=output_dir / f"{run_id}.pdf" if output_dir else None,
+                        generated_by=generated_by,
+                        parallel=False  # Don't nest parallel processing
+                    )
+                
+                # Generate reports in parallel
+                results = parallel_analysis(run_ids, generate_single_report, max_workers=max_workers)
+                
+                # Extract successful results
+                report_gens = []
+                for run_id, result, error in results:
+                    if error is None and result:
+                        report_gens.append(result)
+                    else:
+                        # Create failed ReportGeneration
+                        session = self.db.get_session()
+                        try:
+                            failed_gen = ReportGeneration(
+                                template_id=template_id,
+                                run_id=run_id,
+                                format='pdf',
+                                status='failed',
+                                error_message=str(error) if error else "Unknown error",
+                                generated_by=generated_by
+                            )
+                            session.add(failed_gen)
+                            session.commit()
+                            report_gens.append(failed_gen)
+                        finally:
+                            session.close()
+                
+                return report_gens
+            except ImportError:
+                # Fallback to sequential
+                parallel = False
+        
+        # Sequential processing
+        report_gens = []
+        for run_id in run_ids:
+            try:
+                report_gen = self.generate_report(
+                    template_id=template_id,
+                    run_id=run_id,
+                    output_path=output_dir / f"{run_id}.pdf" if output_dir else None,
+                    generated_by=generated_by,
+                    parallel=False
+                )
+                report_gens.append(report_gen)
+            except Exception as e:
+                # Create failed ReportGeneration
+                session = self.db.get_session()
+                try:
+                    failed_gen = ReportGeneration(
+                        template_id=template_id,
+                        run_id=run_id,
+                        format='pdf',
+                        status='failed',
+                        error_message=str(e),
+                        generated_by=generated_by
+                    )
+                    session.add(failed_gen)
+                    session.commit()
+                    report_gens.append(failed_gen)
+                finally:
+                    session.close()
+        
+        return report_gens
+    
     def get_templates(
         self,
         enabled_only: bool = False
