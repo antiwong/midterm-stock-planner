@@ -277,7 +277,7 @@ def validate_before_analysis(
     if required_data is None:
         required_data = ['prices', 'benchmark']
     
-    from ..utils import get_project_root
+    from . import get_project_root
     checker = DataQualityChecker(get_project_root())
     
     issues = []

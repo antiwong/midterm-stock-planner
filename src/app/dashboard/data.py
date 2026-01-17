@@ -206,7 +206,7 @@ def get_database():
     return get_db(str(db_path))
 
 
-from ..utils.cache import cached_query
+from .utils.cache import cached_query
 
 @st.cache_data(ttl=60, show_spinner=False)  # Streamlit cache for 60 seconds
 @cached_query(ttl=60)  # Additional application-level cache

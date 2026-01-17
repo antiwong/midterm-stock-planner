@@ -333,7 +333,7 @@ def _render_cache_performance():
         col1, col2 = st.columns(2)
         with col1:
             if st.button("🗑️ Clear All Cache", use_container_width=True):
-                from ..utils.cache import clear_cache
+                from ...utils.cache import clear_cache
                 clear_cache()
                 st.success("✅ Cache cleared!")
                 st.rerun()
