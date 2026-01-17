@@ -2,6 +2,43 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [3.11.2] - 2026-01-17
+
+### Added
+
+#### Multiple Run Processing
+- **Parallel Multiple Run Analysis**: Run comprehensive analysis on multiple runs simultaneously
+  - Multi-select UI in Comprehensive Analysis page
+  - Parallel execution of analysis across selected runs
+  - Progress tracking and error handling per run
+  - 2-4x speedup when analyzing multiple runs
+- **Batch Report Generation**: Generate reports for multiple runs in parallel
+  - `generate_reports_batch()` method in ReportTemplateEngine
+  - Parallel fetching of analysis results
+  - Configurable max_workers parameter
+  - Error handling for individual report failures
+
+#### Testing & Validation
+- **Core Features Validation Script**: `scripts/validate_core_features.py`
+  - Tests all core utilities without requiring full dashboard
+  - Validates parallel processing, caching, retry logic
+  - Checks integration of parallel processing in price downloads and analysis
+  - 6/6 tests passing
+
+### Changed
+- **Report Generation**: Now uses parallel processing by default
+  - Parallel fetching of analysis results when generating reports
+  - Faster report generation for reports with multiple analysis types
+- **Comprehensive Analysis Page**: Added multi-run analysis capability
+  - Checkbox to enable multi-run mode
+  - Multi-select dropdown for selecting runs
+  - Parallel execution with progress indicators
+
+### Fixed
+- **Import Errors**: Fixed import paths for utils submodules
+  - Corrected relative imports in data.py, performance_monitoring.py, data_validation.py
+  - All imports now work correctly
+
 ## [3.11.1] - 2026-01-17
 
 ### Added
