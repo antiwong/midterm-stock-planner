@@ -99,6 +99,41 @@ The dashboard is organized into four main sections:
 
 **Expected Time**: 1-2 minutes
 
+## Performance & Optimization Features (v3.11+)
+
+### Lazy Loading
+
+The application now includes lazy loading for improved performance:
+
+- **Charts**: Large charts load on-demand using expanders
+- **DataFrames**: Large tables show previews with "Load Full Data" buttons
+- **Progressive Loading**: Multiple charts load sequentially or in batches
+
+**How to Use:**
+- Charts in Portfolio Analysis have a "Lazy Load" mode option
+- Large tables automatically show pagination controls
+- Use "Load More" buttons for virtual scrolling on very large datasets
+
+### Performance Optimizations
+
+**Automatic Optimizations:**
+- Charts with 1000+ data points are automatically downsampled
+- Database queries are cached (5-minute TTL)
+- API requests are batched to respect rate limits
+- Large cached data is compressed to save memory
+
+**Manual Controls:**
+- Adjust "Items per page" slider in Analysis Runs and Stock Explorer
+- Use "Lazy Load" mode for charts when working with large datasets
+- Clear cache from Performance Monitoring page if needed
+
+### Request Batching
+
+API requests are automatically batched to:
+- Improve performance (parallel execution)
+- Respect rate limits (configurable per-second limits)
+- Reduce API costs (fewer individual requests)
+
 ### Workflow 3: Comprehensive Analysis
 
 **Goal**: Get deep insights into portfolio performance.
