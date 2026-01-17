@@ -185,7 +185,8 @@ class ReportTemplateEngine:
         template_id: int,
         run_id: str,
         output_path: Optional[Path] = None,
-        generated_by: Optional[str] = None
+        generated_by: Optional[str] = None,
+        parallel: bool = False
     ) -> ReportGeneration:
         """
         Generate a report from a template.

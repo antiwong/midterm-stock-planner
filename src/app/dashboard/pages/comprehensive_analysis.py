@@ -17,6 +17,7 @@ from pathlib import Path
 from ..components.sidebar import render_page_header
 from ..components.enhanced_charts import create_attribution_waterfall, create_factor_exposure_heatmap
 from ..components.tooltips import get_tooltip
+from ..components.parallel_indicator import render_parallel_indicator
 from ..data import load_runs, get_run_folder
 from ..utils import format_percent, format_number
 from src.analytics.analysis_service import AnalysisService
