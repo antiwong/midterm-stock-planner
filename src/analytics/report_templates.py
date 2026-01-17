@@ -218,13 +218,44 @@ class ReportTemplateEngine:
                             'rebalancing', 'style', 'event_analysis', 'tax_optimization',
                             'monte_carlo', 'turnover_analysis', 'earnings_calendar']
             
-            for analysis_type in analysis_types:
-                result = analysis_service.get_analysis_result(run_id, analysis_type)
-                if result:
-                    all_results[analysis_type] = {
-                        'results': result.get_results() if hasattr(result, 'get_results') else result.results_json,
-                        'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
-                    }
+            # Use parallel processing if enabled and multiple analysis types
+            if parallel and len(analysis_types) > 1:
+                try:
+                    from src.app.dashboard.utils.parallel import parallel_map
+                    
+                    def fetch_analysis(analysis_type: str):
+                        result = analysis_service.get_analysis_result(run_id, analysis_type)
+                        if result:
+                            return (analysis_type, {
+                                'results': result.get_results() if hasattr(result, 'get_results') else result.results_json,
+                                'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
+                            })
+                        return None
+                    
+                    # Fetch analyses in parallel
+                    results = parallel_map(analysis_types, fetch_analysis, max_workers=min(4, len(analysis_types)))
+                    for item in results:
+                        if item:
+                            analysis_type, data = item
+                            all_results[analysis_type] = data
+                except ImportError:
+                    # Fallback to sequential
+                    for analysis_type in analysis_types:
+                        result = analysis_service.get_analysis_result(run_id, analysis_type)
+                        if result:
+                            all_results[analysis_type] = {
+                                'results': result.get_results() if hasattr(result, 'get_results') else result.results_json,
+                                'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
+                            }
+            else:
+                # Sequential processing
+                for analysis_type in analysis_types:
+                    result = analysis_service.get_analysis_result(run_id, analysis_type)
+                    if result:
+                        all_results[analysis_type] = {
+                            'results': result.get_results() if hasattr(result, 'get_results') else result.results_json,
+                            'summary': result.get_summary() if hasattr(result, 'get_summary') else result.summary_json
+                        }
             
             # Get run info
             from src.analytics.models import Run
