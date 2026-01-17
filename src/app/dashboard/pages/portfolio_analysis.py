@@ -428,43 +428,43 @@ def _render_portfolio_details_panel(run: dict, scores_df: pd.DataFrame):
         avg_score = avg_score * 100
     top_sector = scores_df['sector'].value_counts().index[0] if not scores_df.empty and 'sector' in scores_df.columns else 'N/A'
     
-    st.markdown(f"""
-    <div style="background: #ffffff; border-radius: 20px; 
-                padding: 2rem; margin-bottom: 1rem; border: 1px solid #cbd5e1;
-                box-shadow: 0 4px 16px rgba(0,0,0,0.08);">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap;">
-            <div style="flex: 2; min-width: 300px;">
-                <h2 style="margin: 0; color: #1e293b; font-size: 1.75rem; font-weight: 700;">
-                    📁 {portfolio_name}
-                </h2>
-                <p style="color: #475569; margin: 0.5rem 0 0 0; font-size: 0.9rem;">
-                    📋 Watchlist: <span style="color: #4f46e5; font-weight: 600;">{watchlist}</span>
-                    &nbsp;•&nbsp;
-                    🗓️ Run ID: <span style="color: #64748b;">{run.get('run_id', 'N/A')[:16]}...</span>
-                </p>
-            </div>
-            <div style="display: flex; gap: 2rem; flex-wrap: wrap; margin-top: 1rem;">
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: #4f46e5;">{num_stocks}</div>
-                    <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Holdings</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: #7c3aed;">{sectors}</div>
-                    <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Sectors</div>
-                </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 2rem; font-weight: 800; color: #059669;">{avg_score:.1f}</div>
-                    <div style="font-size: 0.75rem; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">Avg Score</div>
-                </div>
-            </div>
-        </div>
-        <div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #cbd5e1;">
-            <span style="color: #475569; font-size: 0.85rem;">
-                🏆 Top Sector: <span style="color: #d97706; font-weight: 600;">{top_sector}</span>
-            </span>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    # Use standard info card component
+    render_info_card(
+        title=portfolio_name,
+        content=f"Watchlist: {watchlist} • Run ID: {run.get('run_id', 'N/A')[:16]}...",
+        icon="📁"
+    )
+    
+    # Portfolio stats using standard metric cards
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        render_metric_card(
+            label="Holdings",
+            value=str(num_stocks),
+            help_text="Number of stocks in portfolio"
+        )
+    
+    with col2:
+        render_metric_card(
+            label="Sectors",
+            value=str(sectors),
+            help_text="Number of sectors represented"
+        )
+    
+    with col3:
+        render_metric_card(
+            label="Avg Score",
+            value=format_number(avg_score, decimals=1),
+            help_text="Average portfolio score"
+        )
+    
+    with col4:
+        render_metric_card(
+            label="Top Sector",
+            value=top_sector[:15] if len(top_sector) > 15 else top_sector,
+            help_text="Sector with most holdings"
+        )
 
 
 def _render_holdings_pills(scores_df: pd.DataFrame):
