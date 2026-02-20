@@ -314,7 +314,24 @@ Output:
   └────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.4 compare-runs
+### 5.4 transfer-report (Transfer & Robustness Testing)
+
+Runs backtest on primary and transfer universes with the same config (zero-shot). Outputs side-by-side metrics.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  $ python scripts/transfer_report.py --watchlist nasdaq_100 \               │
+│        --transfer-watchlist sp500 --output output/transfer.json              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Options:
+  --config PATH           Config file (default: config/config.yaml)
+  --watchlist NAME        Primary watchlist (default: universe.txt)
+  --transfer-watchlist NAME  Transfer watchlist (required)
+  --output PATH           JSON output for comparison
+```
+
+### 5.5 compare-runs
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐

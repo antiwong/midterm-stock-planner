@@ -49,7 +49,8 @@
 
 | Document | Description |
 |----------|-------------|
-| [Technical Indicators](technical-indicators.md) | RSI, MACD, Bollinger Bands, ATR, ADX, OBV |
+| [QuantaAlpha Feature Proposal](quantaalpha-feature-proposal.md) | Gap/overnight features, transfer testing, evolutionary roadmap |
+| [Technical Indicators](technical-indicators.md) | RSI, MACD, Bollinger Bands, ATR, ADX, OBV, gap features |
 | [Sentiment Analysis](sentiment.md) | Multi-source news sentiment with Gemini LLM |
 | [Fundamental Data](fundamental-data.md) | SEC filings, PE/PB/ROE data fetching |
 | [AI Insights](ai-insights.md) | Gemini-powered analysis and recommendations |

@@ -542,6 +542,18 @@ backtest:
 python scripts/download_prices.py --watchlist your_watchlist --start-date 2010-01-01
 ```
 
+### 8.5 Transfer & Robustness Testing
+
+Run the same backtest config on a primary and transfer universe to assess strategy robustness:
+
+```bash
+python scripts/transfer_report.py --watchlist nasdaq_100 --transfer-watchlist sp500 --output output/transfer.json
+```
+
+- Uses zero-shot transfer (no re-optimization).
+- Compares Total Return, Sharpe, Max DD, Hit Rate side-by-side.
+- See [configuration-cli.md](configuration-cli.md#54-transfer-report-transfer--robustness-testing) for full usage.
+
 ---
 
 ## 9. Overfitting Control
@@ -622,4 +634,5 @@ print(f"Annual Return: {results.metrics['annual_return']:.2%}")
 - **Risk Metrics**: [risk-management.md](risk-management.md) - Detailed risk calculations
 - **Visualization**: [visualization-analytics.md](visualization-analytics.md) - Performance charts
 - **Diagnostics**: `scripts/diagnose_backtest_data.py` - Backtest data diagnostic tool
+- **Transfer Testing**: `scripts/transfer_report.py` - Same config, different universe robustness check
 - **Back to**: [design.md](design.md) - Main overview

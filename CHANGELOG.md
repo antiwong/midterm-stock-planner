@@ -2,6 +2,27 @@
 
 All notable changes to the Mid-term Stock Planner project are documented here.
 
+## [Unreleased]
+
+### Added
+
+#### QuantaAlpha-Inspired Features (2026-02-20)
+- **Gap/Overnight Features**: `src/features/gap_features.py`
+  - `overnight_gap_pct`: (open - prev_close) / prev_close
+  - `gap_vs_true_range`: Overnight gap normalized by rolling true range (robust under volatility regime shifts)
+  - `gap_acceptance_score`: Intraday acceptance/rejection of overnight gap
+  - `gap_acceptance_vol_weighted`: Volume-weighted gap acceptance
+  - Wired into `compute_all_features_extended` when OHLC available
+- **Transfer & Robustness Testing**: `scripts/transfer_report.py`
+  - Run backtest on primary universe, then on transfer universe (same config, zero-shot)
+  - Side-by-side metrics (Total Return, Sharpe, Max DD, etc.)
+  - Optional JSON output for comparison
+  - Usage: `python scripts/transfer_report.py --watchlist nasdaq_100 --transfer-watchlist sp500`
+- **Documentation**: `docs/quantaalpha-feature-proposal.md` — Feature proposals adapted from QuantaAlpha paper (arXiv:2602.07085)
+
+### Changed
+- Feature pipeline now includes gap features by default when open prices available
+
 ## [3.11.2] - 2026-01-17
 
 ### Added

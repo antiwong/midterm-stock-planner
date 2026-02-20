@@ -519,6 +519,9 @@ python scripts/download_fundamentals.py
 
 # Convert Tiger symbols
 python scripts/convert_tiger_symbols.py
+
+# Transfer testing (same config, different universe)
+python scripts/transfer_report.py --watchlist nasdaq_100 --transfer-watchlist sp500
 ```
 
 ### Integration

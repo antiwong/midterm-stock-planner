@@ -2,6 +2,7 @@
 
 Interactive backtesting interface for buy/sell trigger strategies on individual stocks.
 Supports RSI, MACD, and Bollinger Band signals with configurable parameters.
+Real-time monitoring with live indicators and buy/sell signal notifications.
 """
 
 import streamlit as st
@@ -14,6 +15,7 @@ from plotly.subplots import make_subplots
 
 from ..components.sidebar import render_page_header, render_section_header
 from ..components.metrics import render_metric_card
+from ..components.notifications import NotificationManager
 from ..config import COLORS, CHART_COLORS
 
 from src.backtest.trigger_backtest import (
@@ -263,6 +265,73 @@ def _create_signal_subplot(results) -> go.Figure:
         fig.add_hline(y=0, line_dash="dash", line_color="#10b981", row=2, col=1)
         fig.add_hline(y=1, line_dash="dash", line_color="#ef4444", row=2, col=1)
 
+    elif config.signal_type == "combined":
+        # Show first available indicator subplot (priority: RSI > MACD > BB)
+        if config.combined_use_rsi and "rsi" in signals.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=signals["date"], y=signals["rsi"],
+                    mode="lines", name="RSI",
+                    line=dict(color=CHART_COLORS["categorical"][5], width=1.5),
+                ),
+                row=2, col=1,
+            )
+            fig.add_hline(
+                y=config.rsi_oversold, line_dash="dash", line_color="#10b981",
+                row=2, col=1,
+            )
+            fig.add_hline(
+                y=config.rsi_overbought, line_dash="dash", line_color="#ef4444",
+                row=2, col=1,
+            )
+            fig.update_yaxes(range=[0, 100], row=2, col=1)
+        elif config.combined_use_macd and "macd" in signals.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=signals["date"], y=signals["macd"],
+                    mode="lines", name="MACD",
+                    line=dict(color=CHART_COLORS["categorical"][0], width=1.5),
+                ),
+                row=2, col=1,
+            )
+            fig.add_trace(
+                go.Scatter(
+                    x=signals["date"], y=signals["macd_signal"],
+                    mode="lines", name="Signal",
+                    line=dict(color=CHART_COLORS["categorical"][4], width=1.5),
+                ),
+                row=2, col=1,
+            )
+            colors = ["#10b981" if v >= 0 else "#ef4444" for v in signals["macd_histogram"].fillna(0)]
+            fig.add_trace(
+                go.Bar(
+                    x=signals["date"], y=signals["macd_histogram"],
+                    name="Histogram", marker_color=colors, opacity=0.4,
+                ),
+                row=2, col=1,
+            )
+        elif config.combined_use_bollinger and "bb_pct" in signals.columns:
+            fig.add_trace(
+                go.Scatter(
+                    x=signals["date"], y=signals["bb_pct"],
+                    mode="lines", name="%B",
+                    line=dict(color=CHART_COLORS["categorical"][5], width=1.5),
+                ),
+                row=2, col=1,
+            )
+            fig.add_hline(y=0, line_dash="dash", line_color="#10b981", row=2, col=1)
+            fig.add_hline(y=1, line_dash="dash", line_color="#ef4444", row=2, col=1)
+        else:
+            fig.add_trace(
+                go.Scatter(
+                    x=signals["date"], y=signals["signal"],
+                    mode="lines", name="Signal",
+                    line=dict(color=CHART_COLORS["categorical"][5], width=1.5),
+                ),
+                row=2, col=1,
+            )
+            fig.add_hline(y=0, line_dash="dash", line_color="gray", row=2, col=1)
+
     fig.update_layout(
         template="plotly_white",
         height=550,
@@ -274,8 +343,110 @@ def _create_signal_subplot(results) -> go.Figure:
 
 
 def _indicator_label(signal_type: str) -> str:
-    labels = {"rsi": "RSI (14)", "macd": "MACD", "bollinger": "Bollinger %B"}
+    labels = {
+        "rsi": "RSI (14)",
+        "macd": "MACD",
+        "bollinger": "Bollinger %B",
+        "combined": "Combined",
+    }
     return labels.get(signal_type, signal_type.upper())
+
+
+def _render_realtime_indicator(ticker: str, refresh_seconds: int, refresh_label: str):
+    """Render a prominent real-time monitoring status indicator."""
+    st.markdown(
+        """
+        <style>
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+        .realtime-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 12px;
+        }
+        .realtime-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: white;
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+    with st.container():
+        st.markdown(
+            f'<div class="realtime-badge">'
+            f'<span class="realtime-dot"></span>'
+            f'LIVE – Monitoring <strong>{ticker}</strong> • Refreshing every {refresh_label}'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
+def _check_and_notify_signals(
+    results,
+    ticker: str,
+    signal_type: str,
+    is_realtime: bool,
+) -> None:
+    """Check for new BUY/SELL signals and show notifications (toast + notification center)."""
+    if not is_realtime or results is None or len(results.signals) == 0:
+        return
+
+    signals = results.signals
+    last_row = signals.iloc[-1]
+    new_signal = int(last_row.get("signal", 0))
+    last_date_val = last_row.get("date", "")
+    if last_date_val is not None and hasattr(last_date_val, "strftime"):
+        last_date = last_date_val.strftime("%Y-%m-%d %H:%M")
+    else:
+        last_date = str(last_date_val) if last_date_val else ""
+
+    # Session state key for tracking last signal per ticker
+    key = f"trigger_last_signal_{ticker}_{signal_type}"
+    prev_signal = st.session_state.get(key, None)
+
+    if new_signal == 1:  # BUY
+        if prev_signal != 1:
+            msg = f"🟢 BUY signal for {ticker} | {signal_type} | {last_date}"
+            try:
+                st.toast(msg, icon="🟢")
+            except Exception:
+                pass
+            NotificationManager().add_notification(
+                message=msg,
+                type="success",
+                category="trigger_signals",
+                action="trigger_backtester",
+                action_label="View",
+            )
+    elif new_signal == -1:  # SELL
+        if prev_signal != -1:
+            msg = f"🔴 SELL signal for {ticker} | {signal_type} | {last_date}"
+            try:
+                st.toast(msg, icon="🔴")
+            except Exception:
+                pass
+            NotificationManager().add_notification(
+                message=msg,
+                type="warning",
+                category="trigger_signals",
+                action="trigger_backtester",
+                action_label="View",
+            )
+
+    st.session_state[key] = new_signal
 
 
 def _display_optimization_results(opt_results, signal_key: str):
@@ -313,6 +484,8 @@ def _display_optimization_results(opt_results, signal_key: str):
             render_metric_card("BB Period", str(best_c.bb_period))
         with param_cols[1]:
             render_metric_card("Std Dev", f"{best_c.bb_std:.2f}")
+    elif signal_key == "combined":
+        st.caption("Optimization not available for Combined.")
 
     # Best metrics
     st.markdown("##### Best Performance")
@@ -417,11 +590,16 @@ def render_trigger_backtester():
     with col4:
         signal_type = st.selectbox(
             "Signal Type",
-            options=["RSI", "MACD", "Bollinger Bands"],
+            options=["RSI", "MACD", "Bollinger Bands", "Combined"],
             key="trigger_signal_type",
         )
 
-    signal_map = {"RSI": "rsi", "MACD": "macd", "Bollinger Bands": "bollinger"}
+    signal_map = {
+        "RSI": "rsi",
+        "MACD": "macd",
+        "Bollinger Bands": "bollinger",
+        "Combined": "combined",
+    }
     signal_key = signal_map[signal_type]
 
     # --- Signal Parameters ---
@@ -439,37 +617,97 @@ def render_trigger_backtester():
         ]:
             st.session_state.pop(_wk, None)
 
-    def _pd(key, fallback):
-        """Get pending param value or fallback default."""
-        return _pending.get(key, fallback) if _pending else fallback
+    def _default(key: str, static_default):
+        """Prefer: pending params > last-saved session state > static default."""
+        if _pending and key in _pending:
+            return _pending[key]
+        ss_key = f"trigger_last_{key}"
+        if ss_key in st.session_state:
+            return st.session_state[ss_key]
+        return static_default
+
+    def _int_default(key: str, static: int):
+        v = _default(key, static)
+        if v is None:
+            return static
+        try:
+            return int(float(v))  # handle float/numpy from session state
+        except (ValueError, TypeError):
+            return static
+
+    def _float_default(key: str, static: float):
+        v = _default(key, static)
+        if v is None:
+            return static
+        try:
+            return float(v)  # handle int/numpy from session state
+        except (ValueError, TypeError):
+            return static
 
     if signal_key == "rsi":
         with pcol1:
-            rsi_period = st.slider("RSI Period", 5, 30, _pd("rsi_period", 14), key="trigger_rsi_period")
+            rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period")
         with pcol2:
-            rsi_oversold = st.slider("Oversold Threshold", 10, 50, _pd("rsi_oversold", 30), key="trigger_rsi_os")
+            rsi_oversold = st.slider("Oversold Threshold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os")
         with pcol3:
-            rsi_overbought = st.slider("Overbought Threshold", 50, 90, _pd("rsi_overbought", 70), key="trigger_rsi_ob")
+            rsi_overbought = st.slider("Overbought Threshold", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob")
         with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, 0.1, step=0.05, key="trigger_txcost")
+            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
     elif signal_key == "macd":
         with pcol1:
-            macd_fast = st.slider("Fast Period", 5, 20, _pd("macd_fast", 12), key="trigger_macd_fast")
+            macd_fast = st.slider("Fast Period", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast")
         with pcol2:
-            macd_slow = st.slider("Slow Period", 15, 40, _pd("macd_slow", 26), key="trigger_macd_slow")
+            macd_slow = st.slider("Slow Period", 15, 40, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow")
         with pcol3:
-            macd_signal_p = st.slider("Signal Period", 5, 15, _pd("macd_signal", 9), key="trigger_macd_sig")
+            macd_signal_p = st.slider("Signal Period", 5, 15, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig")
         with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, 0.1, step=0.05, key="trigger_txcost")
+            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
     elif signal_key == "bollinger":
         with pcol1:
-            bb_period = st.slider("BB Period", 10, 50, _pd("bb_period", 20), key="trigger_bb_period")
+            bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period")
         with pcol2:
-            bb_std = st.slider("Std Deviation", 1.0, 3.0, _pd("bb_std", 2.0), step=0.25, key="trigger_bb_std")
+            bb_std = st.slider("Std Deviation", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std")
         with pcol3:
             st.empty()
         with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, 0.1, step=0.05, key="trigger_txcost")
+            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+    elif signal_key == "combined":
+        st.caption(
+            "Combined uses voting: BUY when enough indicators agree, SELL when enough agree. "
+            "**All** = strict (all must agree). **Majority** = 2 of 3 (default). **Any** = 1 agrees."
+        )
+        agreement_mode = st.radio(
+            "Agreement",
+            options=["majority", "all", "any"],
+            index=0,
+            format_func=lambda x: {"majority": "Majority (2 of 3)", "all": "All must agree", "any": "Any (1 agrees)"}[x],
+            key="trigger_comb_agreement",
+            horizontal=True,
+        )
+        comb_col1, comb_col2, comb_col3, comb_col4 = st.columns(4)
+        with comb_col1:
+            use_rsi = st.checkbox("Use RSI", value=True, key="trigger_comb_rsi")
+        with comb_col2:
+            use_macd = st.checkbox("Use MACD", value=True, key="trigger_comb_macd")
+        with comb_col3:
+            use_bollinger = st.checkbox("Use Bollinger", value=True, key="trigger_comb_bb")
+        with comb_col4:
+            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+        if not (use_rsi or use_macd or use_bollinger):
+            st.warning("Select at least one indicator for combined signals.")
+        st.markdown("**Indicator parameters** (used for selected indicators)")
+        p2col1, p2col2, p2col3, p2col4 = st.columns(4)
+        with p2col1:
+            rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period", disabled=not use_rsi)
+            rsi_oversold = st.slider("RSI Oversold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os", disabled=not use_rsi)
+            rsi_overbought = st.slider("RSI Overbought", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob", disabled=not use_rsi)
+        with p2col2:
+            macd_fast = st.slider("MACD Fast", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast", disabled=not use_macd)
+            macd_slow = st.slider("MACD Slow", 15, 40, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow", disabled=not use_macd)
+            macd_signal_p = st.slider("MACD Signal", 5, 15, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig", disabled=not use_macd)
+        with p2col3:
+            bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period", disabled=not use_bollinger)
+            bb_std = st.slider("BB Std Dev", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std", disabled=not use_bollinger)
 
     initial_capital = 10000.0
 
@@ -485,9 +723,10 @@ def render_trigger_backtester():
     with dcol2:
         if live_mode:
             auto_refresh = st.checkbox(
-                "Auto-refresh",
+                "Real-time monitoring",
                 value=False,
                 key="trigger_auto_refresh",
+                help="Continuously monitor and refresh data; shows live indicator and buy/sell notifications",
             )
         else:
             auto_refresh = False
@@ -605,6 +844,13 @@ def render_trigger_backtester():
 
     # --- Optimization Flow ---
     if optimize_clicked:
+        if signal_key == "combined":
+            st.info(
+                "Parameter optimization is not available for Combined signals. "
+                "Use single indicators (RSI, MACD, or Bollinger) to optimize, "
+                "then apply the best parameters manually in Combined mode."
+            )
+            return
         objective_key = objective_map[objective_label]
         progress_bar = st.progress(0, text="Optimizing parameters...")
 
@@ -635,6 +881,10 @@ def render_trigger_backtester():
         return
 
     # --- Build Config ---
+    if signal_key == "combined" and not (use_rsi or use_macd or use_bollinger):
+        st.error("Select at least one indicator (RSI, MACD, or Bollinger) for combined signals.")
+        return
+
     config = TriggerConfig(
         signal_type=signal_key,
         initial_capital=initial_capital,
@@ -651,6 +901,19 @@ def render_trigger_backtester():
     elif signal_key == "bollinger":
         config.bb_period = bb_period
         config.bb_std = bb_std
+    elif signal_key == "combined":
+        config.combined_use_rsi = use_rsi
+        config.combined_use_macd = use_macd
+        config.combined_use_bollinger = use_bollinger
+        config.combined_agreement = agreement_mode
+        config.rsi_period = rsi_period
+        config.rsi_oversold = rsi_oversold
+        config.rsi_overbought = rsi_overbought
+        config.macd_fast = macd_fast
+        config.macd_slow = macd_slow
+        config.macd_signal = macd_signal_p
+        config.bb_period = bb_period
+        config.bb_std = bb_std
 
     # --- Run Backtest ---
     with st.spinner(f"Running {signal_type} backtest on {ticker}..."):
@@ -659,6 +922,35 @@ def render_trigger_backtester():
         except Exception as e:
             st.error(f"Backtest failed: {e}")
             return
+
+    # --- Persist params so they're remembered when switching modes ---
+    c = config
+    st.session_state["trigger_last_rsi_period"] = int(c.rsi_period)
+    st.session_state["trigger_last_rsi_oversold"] = float(c.rsi_oversold)
+    st.session_state["trigger_last_rsi_overbought"] = float(c.rsi_overbought)
+    st.session_state["trigger_last_macd_fast"] = int(c.macd_fast)
+    st.session_state["trigger_last_macd_slow"] = int(c.macd_slow)
+    st.session_state["trigger_last_macd_signal"] = int(c.macd_signal)
+    st.session_state["trigger_last_bb_period"] = int(c.bb_period)
+    st.session_state["trigger_last_bb_std"] = float(c.bb_std)
+    st.session_state["trigger_last_tx_cost"] = float(tx_cost)
+
+    # --- Real-time indicator (when live + auto-refresh) ---
+    is_realtime = live_mode and auto_refresh
+    if is_realtime:
+        _render_realtime_indicator(ticker, refresh_seconds, refresh_label)
+        rcol1, rcol2 = st.columns([4, 1])
+        with rcol2:
+            if st.button(
+                "⏹ Stop real-time",
+                key="trigger_stop_realtime",
+                use_container_width=True,
+            ):
+                st.session_state["trigger_auto_refresh"] = False
+                st.rerun()
+
+    # --- Buy/Sell signal notifications (real-time mode) ---
+    _check_and_notify_signals(results, ticker, signal_type, is_realtime)
 
     # --- Metrics ---
     m = results.metrics
@@ -723,7 +1015,12 @@ def render_trigger_backtester():
             )
             st.dataframe(display_df, use_container_width=True, hide_index=True)
         else:
-            st.info("No trades were generated. Try adjusting the signal parameters or date range.")
+            hint = (
+                "For **Combined** mode: try **Any (1 agrees)** and ensure at least one indicator is checked. "
+                if signal_key == "combined"
+                else ""
+            )
+            st.info(f"No trades were generated. {hint}Try adjusting the signal parameters or date range.")
 
     # --- Auto-refresh ---
     if live_mode and auto_refresh:

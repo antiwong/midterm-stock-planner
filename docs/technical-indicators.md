@@ -19,14 +19,14 @@
 │                    TECHNICAL INDICATORS                                      │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-┌─────────────────┬─────────────────┬─────────────────┬─────────────────┐
-│    MOMENTUM     │    VOLATILITY   │      TREND      │     VOLUME      │
-├─────────────────┼─────────────────┼─────────────────┼─────────────────┤
-│ • RSI           │ • ATR           │ • ADX           │ • OBV           │
-│ • MACD          │ • Bollinger     │ • +DI / -DI     │ • Volume Ratio  │
-│ • Stochastic    │   Bands         │ • EMA/SMA       │ • Accumulation  │
-│ • ROC           │ • Keltner       │ • Trend Lines   │   Distribution  │
-└─────────────────┴─────────────────┴─────────────────┴─────────────────┘
+┌─────────────────┬─────────────────┬─────────────────┬─────────────────┬─────────────────┐
+│    MOMENTUM     │    VOLATILITY   │      TREND      │     VOLUME      │   GAP/OVERNIGHT  │
+├─────────────────┼─────────────────┼─────────────────┼─────────────────┼─────────────────┤
+│ • RSI           │ • ATR           │ • ADX           │ • OBV           │ • overnight_gap  │
+│ • MACD          │ • Bollinger     │ • +DI / -DI     │ • Volume Ratio  │ • gap_vs_tr     │
+│ • Stochastic    │   Bands         │ • EMA/SMA       │ • Accumulation  │ • gap_acceptance │
+│ • ROC           │ • Keltner       │ • Trend Lines   │   Distribution  │ • (QuantaAlpha)  │
+└─────────────────┴─────────────────┴─────────────────┴─────────────────┴─────────────────┘
 ```
 
 ---
@@ -392,7 +392,29 @@ def calculate_all_technical_indicators(
 
 ---
 
-## 8. Feature Summary
+## 8. Gap/Overnight Features (QuantaAlpha-Inspired)
+
+Gap and overnight features capture information released during non-trading hours and auction-driven price discovery. Empirical evidence (QuantaAlpha, arXiv:2602.07085) shows they remain predictive under regime shifts.
+
+| Feature | Description | Module |
+|---------|-------------|--------|
+| `overnight_gap_pct` | (open - prev_close) / prev_close | `src/features/gap_features.py` |
+| `gap_vs_true_range` | Overnight gap / rolling mean(TR), 10d lookback | `gap_features.py` |
+| `gap_acceptance_raw` | +1 if intraday continues gap direction, -1 if reverses | `gap_features.py` |
+| `gap_acceptance_score_20d` | Rolling mean of acceptance | `gap_features.py` |
+| `gap_acceptance_vol_weighted_20d` | Volume-weighted acceptance (emphasizes high-participation openings) | `gap_features.py` |
+
+```python
+from src.features.gap_features import add_gap_features
+
+df = add_gap_features(df)  # Adds all gap features
+```
+
+Wired into `compute_all_features_extended()` when OHLC data is available.
+
+---
+
+## 9. Feature Summary
 
 | Indicator | Function | Output Columns |
 |-----------|----------|----------------|
@@ -403,6 +425,7 @@ def calculate_all_technical_indicators(
 | ADX | `calculate_adx()` | `adx_14`, `plus_di`, `minus_di` |
 | EMA | `calculate_ema()` | `ema_9`, `ema_21`, `ema_50`, `ema_200` |
 | OBV | `calculate_obv()` | `obv` |
+| Gap/Overnight | `add_gap_features()` | `overnight_gap_pct`, `gap_vs_true_range`, `gap_acceptance_*` |
 | Momentum | `calculate_momentum_score()` | `momentum_score` |
 | Rel Strength | `calculate_relative_strength()` | `rel_strength_*` |
 | Z-Score | `calculate_z_score()` | `zscore_20d` |

@@ -10,7 +10,7 @@ This document describes all tests implemented to ensure the integrity and correc
 # Activate virtual environment
 source ~/venv/bin/activate
 
-# Run all tests (76 tests)
+# Run all tests
 cd midterm-stock-planner
 pytest tests/ -v
 
@@ -25,13 +25,24 @@ pytest tests/ --cov=src --cov-report=html
 pytest tests/ -v -m "not slow"
 ```
 
-**Latest Results**: 76 passed, 1 skipped
+**Latest Results**: See `pytest tests/ -v` output. Includes gap-features tests (`test_gap_features.py`).
 
 ---
 
 ## Test Categories
 
-### 1. Data Integrity Tests (`test_data_integrity.py`)
+### 1. Gap Features Tests (`test_gap_features.py`)
+
+**Purpose**: Validate overnight/gap features (QuantaAlpha-inspired).
+
+| Test | Description | Criticality |
+|------|-------------|-------------|
+| `test_overnight_gap_pct` | overnight_gap_pct = (open - prev_close) / prev_close | HIGH |
+| `test_gap_vs_true_range` | gap_vs_true_range normalized by rolling TR | MEDIUM |
+| `test_gap_acceptance_score` | gap_acceptance_raw in {-1, 0, 1} | MEDIUM |
+| `test_add_gap_features_integration` | add_gap_features adds all columns | HIGH |
+
+### 2. Data Integrity Tests (`test_data_integrity.py`)
 
 **Purpose**: Ensure raw data files are valid and consistent before running backtests.
 
@@ -60,7 +71,7 @@ pytest tests/ -v -m "not slow"
 
 ---
 
-### 2. Backtest Configuration Tests (`test_backtest_config.py`)
+### 3. Backtest Configuration Tests (`test_backtest_config.py`)
 
 **Purpose**: Validate backtest parameters are correctly applied.
 
@@ -85,7 +96,7 @@ pytest tests/ -v -m "not slow"
 
 ---
 
-### 3. Metric Scaling Tests (`test_metric_scaling.py`)
+### 4. Metric Scaling Tests (`test_metric_scaling.py`)
 
 **Purpose**: Ensure financial metrics are correctly calculated and stored as decimals.
 
@@ -119,7 +130,7 @@ Hit Rate: Decimal in [0, 1]
 
 ---
 
-### 4. Safeguards Validation Tests (`test_safeguards.py`)
+### 5. Safeguards Validation Tests (`test_safeguards.py`)
 
 **Purpose**: Validate automated safeguards that fail runs if criteria aren't met.
 
@@ -158,7 +169,7 @@ Hit Rate: Decimal in [0, 1]
 
 ---
 
-### 5. Pipeline Integration Tests (`test_pipeline.py`)
+### 6. Pipeline Integration Tests (`test_pipeline.py`)
 
 **Purpose**: Validate end-to-end data flow from loading to output.
 

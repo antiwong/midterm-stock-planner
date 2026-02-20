@@ -140,6 +140,9 @@ python scripts/run_portfolio_optimizer.py --profile moderate --with-ai
 
 # Run comprehensive analysis on a completed run
 python scripts/run_comprehensive_analysis.py --run-id <run_id>
+
+# Transfer & robustness testing (same config, different universe)
+python scripts/transfer_report.py --watchlist nasdaq_100 --transfer-watchlist sp500
 ```
 
 **Expected CLI output:**

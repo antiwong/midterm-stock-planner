@@ -8,6 +8,7 @@ Features include:
 - Volatility features (20d, 60d rolling std)
 - Volume features (dollar volume, turnover)
 - Valuation features (PE, PB from fundamentals)
+- Gap/overnight features (overnight_gap_pct, gap_vs_true_range, gap_acceptance_score)
 - Technical indicators (RSI, MACD, Bollinger Bands, ATR, ADX)
 - Momentum features (composite score, relative strength, trend)
 - Mean reversion features (z-scores, distance from MA)
@@ -591,7 +592,15 @@ def compute_all_features_extended(
     df = add_volatility_features(df)
     df = add_volume_features(df)
     df = add_valuation_features(df, fundamental_df)
-    
+
+    # Add gap/overnight features (QuantaAlpha-inspired, robust under regime shifts)
+    if "open" in df.columns:
+        try:
+            from .gap_features import add_gap_features
+            df = add_gap_features(df)
+        except ImportError:
+            pass
+
     # Add technical indicators
     if include_technical:
         try:

@@ -218,7 +218,8 @@ src/
 │
 ├── features/                  # Feature engineering
 │   ├── __init__.py            # See: data-engineering.md
-│   └── engineering.py
+│   ├── engineering.py        # Core features (returns, vol, volume, valuation)
+│   └── gap_features.py       # Gap/overnight features (QuantaAlpha-inspired)
 │
 ├── models/                    # Model training & prediction
 │   ├── __init__.py            # See: model-training.md

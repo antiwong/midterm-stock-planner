@@ -9,6 +9,7 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 ### Core Analysis
 - **Stock Ranking**: Predict 3-month forward excess return vs benchmark using ensemble ML models
 - **Factor-Style Features**: Returns, volatility, volume, valuation ratios
+- **Gap/Overnight Features**: overnight_gap_pct, gap_vs_true_range, gap_acceptance_score (QuantaAlpha-inspired, robust under regime shifts)
 - **Technical Indicators**: RSI, MACD, Bollinger Bands, ATR, ADX, OBV
 - **Sentiment Analysis**: Multi-source news sentiment with Gemini LLM analysis
 - **Walk-Forward Backtesting**: Rolling window training with realistic transaction costs
@@ -104,6 +105,7 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Batch Report Generation**: Generate reports across multiple runs in parallel
 
 ### Other Features
+- **Transfer & Robustness Testing**: Run same config on primary + transfer universe, compare metrics (`scripts/transfer_report.py`)
 - **A/B Testing**: Compare strategies with and without sentiment features
 - **Diversified Watchlists**: Tech, Blue-chip, Nuclear/Energy, Clean Energy, ETFs
 - **Run-Specific Output**: Each backtest creates its own folder with all outputs

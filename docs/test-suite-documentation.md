@@ -54,7 +54,12 @@ The test suite provides comprehensive coverage for all major components of the m
    - Error recovery
    - Complete vs partial data scenarios
 
-8. **`test_advanced_analytics.py`** - Advanced analytics modules tests (NEW)
+8. **`test_gap_features.py`** - Gap/overnight features tests (QuantaAlpha-inspired)
+   - overnight_gap_pct, gap_vs_true_range
+   - gap_acceptance_raw (-1, 0, 1), gap_acceptance_score, gap_acceptance_vol_weighted
+   - add_gap_features() integration
+
+9. **`test_advanced_analytics.py`** - Advanced analytics modules tests
    - **Event-Driven Analysis** (10 tests)
      - Fed meeting impact analysis
      - Custom event dates
@@ -121,7 +126,7 @@ The test suite provides comprehensive coverage for all major components of the m
 
 ## Test Statistics
 
-- **Total Test Files:** 8
+- **Total Test Files:** 9+ (includes `test_gap_features.py`, `test_data_integrity.py`, `test_metric_scaling.py`, etc.)
 - **Total Test Cases:** 208+ (151 existing + 57 new advanced analytics tests)
 - **Pass Rate:** 100% (all tests passing)
 - **Coverage:** All major components including 6 advanced analytics modules

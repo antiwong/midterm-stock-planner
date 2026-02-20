@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 @dataclass
 class TriggerConfig:
     """Configuration for a trigger-based backtest."""
-    signal_type: str = "rsi"          # "rsi", "macd", "bollinger"
+    signal_type: str = "rsi"          # "rsi", "macd", "bollinger", "combined"
     initial_capital: float = 10000.0
     transaction_cost: float = 0.001   # 0.1% per trade
 
@@ -32,6 +32,13 @@ class TriggerConfig:
     # Bollinger Band parameters
     bb_period: int = 20
     bb_std: float = 2.0
+
+    # Combined signal: which indicators to use
+    combined_use_rsi: bool = True
+    combined_use_macd: bool = True
+    combined_use_bollinger: bool = True
+    # Agreement: "all" = all must agree (strict), "majority" = 2 of 3, "any" = 1 agrees (relaxed)
+    combined_agreement: str = "majority"
 
 
 @dataclass
@@ -105,7 +112,9 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
     df = df.sort_values("date").reset_index(drop=True)
     close = df["close"]
 
-    if config.signal_type == "rsi":
+    signal_type = (config.signal_type or "rsi").lower().strip()
+
+    if signal_type == "rsi":
         df["rsi"] = _compute_rsi(close, period=config.rsi_period)
         df["signal"] = 0
         rsi_prev = df["rsi"].shift(1)
@@ -118,7 +127,7 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             "signal",
         ] = -1
 
-    elif config.signal_type == "macd":
+    elif signal_type == "macd":
         macd_df = _compute_macd(
             close,
             fast=config.macd_fast,
@@ -140,7 +149,7 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             "signal",
         ] = -1
 
-    elif config.signal_type == "bollinger":
+    elif signal_type == "bollinger":
         bb_df = _compute_bollinger(close, period=config.bb_period, std_dev=config.bb_std)
         df["bb_upper"] = bb_df["bb_upper"].values
         df["bb_middle"] = bb_df["bb_middle"].values
@@ -159,8 +168,111 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             "signal",
         ] = -1
 
+    elif signal_type == "combined":
+        # Confluence (AND) logic: BUY/SELL only when all selected indicators agree
+        sig_rsi = np.zeros(len(df), dtype=int)
+        sig_macd = np.zeros(len(df), dtype=int)
+        sig_bb = np.zeros(len(df), dtype=int)
+
+        if config.combined_use_rsi:
+            df["rsi"] = _compute_rsi(close, period=config.rsi_period)
+            rsi_prev = df["rsi"].shift(1)
+            sig_rsi[
+                (rsi_prev >= config.rsi_oversold) & (df["rsi"] < config.rsi_oversold)
+            ] = 1
+            sig_rsi[
+                (rsi_prev <= config.rsi_overbought) & (df["rsi"] > config.rsi_overbought)
+            ] = -1
+
+        if config.combined_use_macd:
+            macd_df = _compute_macd(
+                close,
+                fast=config.macd_fast,
+                slow=config.macd_slow,
+                signal=config.macd_signal,
+            )
+            df["macd"] = macd_df["macd"].values
+            df["macd_signal"] = macd_df["macd_signal"].values
+            df["macd_histogram"] = macd_df["macd_histogram"].values
+            macd_prev = df["macd"].shift(1)
+            signal_prev = df["macd_signal"].shift(1)
+            sig_macd[
+                (macd_prev <= signal_prev) & (df["macd"] > df["macd_signal"])
+            ] = 1
+            sig_macd[
+                (macd_prev >= signal_prev) & (df["macd"] < df["macd_signal"])
+            ] = -1
+
+        if config.combined_use_bollinger:
+            bb_df = _compute_bollinger(close, period=config.bb_period, std_dev=config.bb_std)
+            df["bb_upper"] = bb_df["bb_upper"].values
+            df["bb_middle"] = bb_df["bb_middle"].values
+            df["bb_lower"] = bb_df["bb_lower"].values
+            df["bb_pct"] = bb_df["bb_pct"].values
+            close_prev = df["close"].shift(1)
+            lower_prev = df["bb_lower"].shift(1)
+            upper_prev = df["bb_upper"].shift(1)
+            sig_bb[
+                (close_prev >= lower_prev) & (df["close"] < df["bb_lower"])
+            ] = 1
+            sig_bb[
+                (close_prev <= upper_prev) & (df["close"] > df["bb_upper"])
+            ] = -1
+
+        # Build masks: voting logic - how many indicators must agree
+        use_rsi = config.combined_use_rsi
+        use_macd = config.combined_use_macd
+        use_bb = config.combined_use_bollinger
+        n_active = sum([use_rsi, use_macd, use_bb])
+        if n_active == 0:
+            raise ValueError("Combined signal requires at least one indicator selected")
+
+        agreement = (config.combined_agreement or "majority").lower()
+        if agreement == "all":
+            min_agree = n_active
+        elif agreement == "majority":
+            min_agree = (n_active + 1) // 2  # 2 of 3, 1 of 1, 2 of 2
+        elif agreement == "any":
+            min_agree = 1
+        else:
+            min_agree = max(1, (n_active + 1) // 2)
+
+        # BUY: at least min_agree indicators must show 1
+        buy_count = np.zeros(len(df), dtype=int)
+        if use_rsi:
+            buy_count += (sig_rsi == 1).astype(int)
+        if use_macd:
+            buy_count += (sig_macd == 1).astype(int)
+        if use_bb:
+            buy_count += (sig_bb == 1).astype(int)
+        buy_mask = buy_count >= min_agree
+
+        # SELL: at least min_agree indicators must show -1
+        sell_count = np.zeros(len(df), dtype=int)
+        if use_rsi:
+            sell_count += (sig_rsi == -1).astype(int)
+        if use_macd:
+            sell_count += (sig_macd == -1).astype(int)
+        if use_bb:
+            sell_count += (sig_bb == -1).astype(int)
+        sell_mask = sell_count >= min_agree
+
+        # Conflict resolution: when both buy and sell fire on same bar (indicators disagree)
+        conflict = buy_mask & sell_mask
+        signal = np.zeros(len(df), dtype=np.int32)
+        if agreement == "any":
+            # "Any" = at least one agrees. On conflict (e.g. 1 buy + 1 sell), use tie-breaker:
+            # prefer the higher count; if tie, prefer BUY so we get entries.
+            signal[buy_mask & (buy_count >= sell_count)] = 1
+            signal[sell_mask & (sell_count > buy_count)] = -1
+        else:
+            # "majority" / "all": strict - no signal when indicators disagree
+            signal[buy_mask & ~conflict] = 1
+            signal[sell_mask & ~conflict] = -1
+        df["signal"] = signal
+
     else:
-        raise ValueError(f"Unknown signal type: {config.signal_type}")
+        raise ValueError(f"Unknown signal type: {config.signal_type!r}")
 
     return df
 
