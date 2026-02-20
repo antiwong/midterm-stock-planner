@@ -1,6 +1,6 @@
 # Mid-term Stock Planner
-**Version:** 3.10.0
 
+**Version:** 3.11.2
 
 An interpretable stock ranking and backtesting system for mid-term investors (3-month horizon) with monthly rebalancing.
 
@@ -94,6 +94,14 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Run Comparison**: Side-by-side comparison of two runs
 - **Reports Browser**: View all generated reports per run
 - **Database Management**: SQLite-backed run tracking with historical analysis storage
+
+### Performance & Scalability (v3.11)
+- **Lazy Loading**: On-demand DataFrames and charts with expander-based loading
+- **Progressive Chart Loading**: Sequential/batch chart rendering with automatic downsampling for 1000+ data points
+- **Request Batching**: Automatic API request batching with configurable rate limits and parallel execution
+- **Parallel Processing**: Multi-threaded batch processing for downloads, analysis, and report generation
+- **Smart Caching**: TTL-based query cache with automatic compression for large datasets
+- **Batch Report Generation**: Generate reports across multiple runs in parallel
 
 ### Other Features
 - **A/B Testing**: Compare strategies with and without sentiment features
@@ -468,6 +476,8 @@ pytest tests/ --lf
 
 ## Documentation
 
+> **Browse all 64 docs:** See [docs/README.md](docs/README.md) for the full categorized index.
+
 ### Core Documentation
 - [Design Overview](docs/design.md) - System architecture
 - [Sentiment Module](docs/sentiment.md) - News sentiment analysis
@@ -491,9 +501,47 @@ pytest tests/ --lf
   - Conscience filters
   - Sizing recommendations
 
+### Advanced Analytics (NEW)
+- [Turnover & Churn Analysis Guide](docs/turnover-churn-analysis-guide.md) - Complete guide to turnover analysis
+  - Portfolio turnover rate calculation (multiple methods)
+  - Churn rate analysis
+  - Holding period analysis
+  - Position stability metrics
+  - Best practices and optimization
+
+### Performance & Reports (v3.11)
+- [Report Templates Guide](docs/report-templates-guide.md) - Custom report generation
+- [v3.11 Complete Summary](docs/v3.11-complete-summary.md) - Full v3.11 release notes
+- [Migration Guide v3.11](docs/migration-guide-v3.11.md) - Upgrading from v3.10
+
+### API Documentation (NEW)
+- [API Documentation](docs/api-documentation.md) - Complete API reference
+  - All analysis modules with code examples
+  - Data loading and database models
+  - Export functions
+  - Utility functions
+  - Error handling and best practices
+
 ## Recent Changes
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+**v3.11.2 Highlights:**
+- ✅ **Lazy Loading**: On-demand DataFrames with pagination and virtual scrolling
+- ✅ **Progressive Charts**: Sequential/batch chart loading with automatic downsampling
+- ✅ **Request Batching**: API request batching with rate limiting and parallel execution
+- ✅ **Parallel Processing**: Multi-threaded batch processing with progress monitoring
+- ✅ **Smart Caching**: TTL-based query cache with automatic compression (5-min default)
+- ✅ **Batch Report Generation**: Generate reports across multiple runs in parallel
+- ✅ **Report Template Engine**: SQLAlchemy-backed template system with scheduling support
+
+**v3.10.1 Highlights (2026-01-16):**
+- ✅ **Sector Color Coding**: Stocks in Watchlist Manager now color-coded by sector with distinct colors
+- ✅ **Automatic Sector Assignment**: One-click sector fetching for unknown stocks from Yahoo Finance
+- ✅ **Sector Update Section**: New dedicated tab with statistics, progress tracking, and bulk updates
+- ✅ **Version Management**: Centralized version system - version stored in README.md, dynamically read by GUI
+- ✅ **Run vs Comprehensive Analysis Guide**: New comparison document explaining differences and use cases
+- ✅ **CSS Display Fix**: Fixed CSS code being displayed as text in Watchlist Manager
 
 **v3.9.2 Highlights (2026-01-16):**
 - ✅ **Sector Score Display Fix**: Fixed critical bug where all sectors showed 0.000 in AI insights - now correctly displays actual sector scores

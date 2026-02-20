@@ -14,6 +14,9 @@
 | [explainability.md](explainability.md) | SHAP explanations, interpretability |
 | [risk-management.md](risk-management.md) | Risk metrics, position sizing, portfolio risk |
 | [risk-parity.md](risk-parity.md) | Volatility-aware allocation, risk parity, beta control |
+| [garch-design.md](garch-design.md) | GARCH volatility modeling design and implementation plan |
+| [report-templates-guide.md](report-templates-guide.md) | **NEW** Custom report template engine (v3.11) |
+| [v3.11-complete-summary.md](v3.11-complete-summary.md) | **NEW** v3.11 performance features summary |
 | [technical-indicators.md](technical-indicators.md) | Technical indicators, strategy features |
 | [visualization-analytics.md](visualization-analytics.md) | Charts, performance visualization, analytics |
 | [fundamental-data.md](fundamental-data.md) | SEC filings, fundamental data fetching |
@@ -428,7 +431,74 @@ src/
 
 ---
 
-## 8. Non‑functional Constraints
+## 8. Performance Optimization Architecture (v3.11)
+
+The v3.11 release introduces a multi-layered performance optimization system across the UI, API, data processing, and caching layers.
+
+### 8.1 Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    PERFORMANCE OPTIMIZATION LAYERS                           │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           UI LAYER                                           │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │  Lazy DataFrames │  │ Progressive      │  │ Paginated        │          │
+│  │  (on-demand load)│  │ Charts (batch/   │  │ Tables (virtual  │          │
+│  │                  │  │ sequential)      │  │ scrolling)       │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+│  See: components/lazy_dataframes.py, components/progressive_charts.py       │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        API & DATA LAYER                                      │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │ Request Batching │  │ Parallel         │  │ Smart Cache      │          │
+│  │ (rate-limited,   │  │ Processing       │  │ (TTL, compress,  │          │
+│  │ batch_size=10)   │  │ (ThreadPool/     │  │ 5-min default)   │          │
+│  │                  │  │ ProcessPool)     │  │                  │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+│  See: utils/request_batching.py, utils/parallel.py, utils/cache.py         │
+└──────────────────────────────────┬──────────────────────────────────────────┘
+                                   │
+                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                      REPORT GENERATION LAYER                                 │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐          │
+│  │ Report Template  │  │ Batch Generation │  │ Parallel Report  │          │
+│  │ Engine (SQLAlch) │  │ (multi-run)      │  │ Analysis Fetch   │          │
+│  └──────────────────┘  └──────────────────┘  └──────────────────┘          │
+│  See: analytics/report_templates.py                                         │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 8.2 Key Components
+
+| Module | Location | Purpose |
+|--------|----------|---------|
+| Lazy DataFrames | `src/app/dashboard/components/lazy_dataframes.py` | On-demand DataFrame loading with pagination and virtual scrolling |
+| Progressive Charts | `src/app/dashboard/components/progressive_charts.py` | Sequential/batch chart loading with automatic downsampling (>1000 pts) |
+| Request Batching | `src/app/dashboard/utils/request_batching.py` | API request batching with configurable rate limits |
+| Parallel Processing | `src/app/dashboard/utils/parallel.py` | Thread/process pool execution with progress monitoring |
+| Query Cache | `src/app/dashboard/utils/cache.py` | TTL-based cache with automatic compression for large data |
+| Report Templates | `src/analytics/report_templates.py` | SQLAlchemy-backed report template engine with batch generation |
+
+### 8.3 Report Template System
+
+The report template engine supports:
+- **Template storage**: SQLAlchemy models for template definitions and generation records
+- **5 default sections**: Executive summary, performance metrics, portfolio composition, risk analysis, recommendations
+- **4 output formats**: PDF, Excel, CSV, JSON
+- **10 analysis types**: Attribution, benchmark, factor exposure, rebalancing, style, event, tax, Monte Carlo, turnover, earnings
+- **Batch generation**: Generate reports for multiple runs in parallel using `parallel_analysis()`
+- **Scheduling**: Optional schedule configuration per template
+
+---
+
+## 9. Non‑functional Constraints
 
 - **Performance**:
   - Training: may take minutes for thousands of stocks over years
@@ -442,7 +512,7 @@ src/
 
 ---
 
-## 9. Quick Start Guide
+## 10. Quick Start Guide
 
 ### 1. Run a Backtest
 
@@ -472,7 +542,7 @@ from src.visualization.charts import plot_price_with_indicators
 
 ---
 
-## 10. Related Documents
+## 11. Related Documents
 
 ### Core Documentation
 - **[data-engineering.md](data-engineering.md)** - Data loading, feature engineering, dataset assembly
@@ -493,3 +563,8 @@ from src.visualization.charts import plot_price_with_indicators
 - **[analytics-database.md](analytics-database.md)** - SQLite database schema and management
 - **[api-configuration.md](api-configuration.md)** - API key setup and configuration
 - **[comprehensive-analysis-system.md](comprehensive-analysis-system.md)** - Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis
+
+### Performance & Reports (v3.11)
+- **[report-templates-guide.md](report-templates-guide.md)** - Custom report template engine
+- **[v3.11-complete-summary.md](v3.11-complete-summary.md)** - Complete v3.11 release notes
+- **[migration-guide-v3.11.md](migration-guide-v3.11.md)** - Upgrading from v3.10 to v3.11

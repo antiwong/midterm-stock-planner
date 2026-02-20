@@ -1,13 +1,15 @@
 # API Documentation
 
-Complete API reference for all analysis modules and core functionality.
+Complete API reference for all analysis modules and core functionality (v3.11.2).
 
 ## Table of Contents
 
 - [Analysis Modules](#analysis-modules)
+- [Report Templates](#report-templates)
 - [Data Loading](#data-loading)
 - [Database Models](#database-models)
 - [Export Functions](#export-functions)
+- [Performance Utilities](#performance-utilities)
 - [Utility Functions](#utility-functions)
 
 ---
@@ -368,6 +370,75 @@ results = optimizer.analyze(
 
 ---
 
+## Report Templates
+
+**Module:** `src/analytics/report_templates.py`
+
+Manages report template definitions, generation, and batch processing.
+
+### `ReportTemplateEngine`
+
+```python
+from src.analytics.report_templates import ReportTemplateEngine
+
+engine = ReportTemplateEngine(db_path="data/analysis.db")
+
+# Create a template
+template = engine.create_template(
+    name="Monthly Portfolio Report",
+    format="pdf",  # "pdf", "excel", "csv", "json"
+    sections=[
+        {"name": "executive_summary", "enabled": True},
+        {"name": "performance_metrics", "enabled": True},
+        {"name": "portfolio_composition", "enabled": True},
+        {"name": "risk_analysis", "enabled": True},
+        {"name": "recommendations", "enabled": True}
+    ],
+    description="Standard monthly report",
+    created_by="user"
+)
+
+# Generate a single report
+report = engine.generate_report(
+    template_id=template.id,
+    run_id="20260116_235041_5286701f",
+    output_path="output/reports/",
+    parallel=True  # Fetch analyses in parallel
+)
+
+# Generate reports for multiple runs in parallel
+reports = engine.generate_reports_batch(
+    template_id=template.id,
+    run_ids=["run1", "run2", "run3"],
+    output_dir="output/reports/",
+    parallel=True,
+    max_workers=4
+)
+
+# List and manage templates
+templates = engine.get_templates(enabled_only=True)
+engine.update_template(template.id, name="Updated Name")
+engine.delete_template(template.id)
+
+# View report history
+history = engine.get_report_history(template_id=1, limit=50)
+```
+
+### `ReportFormat`
+
+```python
+from src.analytics.report_templates import ReportFormat
+
+# Available formats
+ReportFormat.PDF
+ReportFormat.EXCEL
+ReportFormat.CSV
+ReportFormat.JSON
+ReportFormat.HTML
+```
+
+---
+
 ## Data Loading
 
 ### `DataLoader`
@@ -524,6 +595,163 @@ json_bytes = export_to_json(data, indent=2)
 # Save to file
 with open('data.json', 'wb') as f:
     f.write(json_bytes)
+```
+
+---
+
+## Performance Utilities
+
+### Request Batching
+
+**Module:** `src/app/dashboard/utils/request_batching.py`
+
+Batches API requests with rate limiting and parallel execution.
+
+```python
+from src.app.dashboard.utils.request_batching import RequestBatcher, batch_api_requests
+
+# Using RequestBatcher class
+batcher = RequestBatcher(
+    batch_size=10,
+    max_wait_time=0.5,
+    rate_limit_per_second=5
+)
+result, error = batcher.add_request(my_api_func, arg1, arg2)
+results, errors = batcher.flush()
+
+# Using batch_api_requests helper
+requests = [
+    (fetch_price, ("AAPL",)),
+    (fetch_price, ("MSFT",)),
+    (fetch_price, ("GOOGL",)),
+]
+results = batch_api_requests(
+    requests,
+    batch_size=10,
+    max_workers=4,
+    rate_limit_per_second=5
+)
+# Returns: [(result, error), ...]
+```
+
+### Parallel Processing
+
+**Module:** `src/app/dashboard/utils/parallel.py`
+
+Multi-threaded/multi-process execution for batch operations.
+
+```python
+from src.app.dashboard.utils.parallel import (
+    ParallelProcessor,
+    parallel_download,
+    parallel_analysis,
+    parallel_map,
+    parallelize
+)
+
+# ParallelProcessor class
+processor = ParallelProcessor(max_workers=8, use_processes=False)
+results = processor.process_batch(items, my_func)
+# Returns: [(item, result, error), ...]
+
+successes, errors = processor.process_with_errors(items, my_func)
+
+# Convenience functions
+results = parallel_download(urls, download_func, batch_size=10)
+results = parallel_analysis(run_ids, analysis_func)
+results = parallel_map(items, transform_func, max_workers=4)
+
+# Decorator
+@parallelize(max_workers=4)
+def process_items(items):
+    return [transform(item) for item in items]
+```
+
+### Query Cache
+
+**Module:** `src/app/dashboard/utils/cache.py`
+
+TTL-based caching with automatic compression for large data.
+
+```python
+from src.app.dashboard.utils.cache import (
+    QueryCache,
+    cached_query,
+    cache_key_for_run,
+    clear_cache,
+    get_cache_stats
+)
+
+# QueryCache class
+cache = QueryCache(default_ttl=300)  # 5-minute TTL
+cache.set("my_key", large_data, compress=True)
+data = cache.get("my_key")  # Auto-decompresses
+cache.clear(pattern="run:*")
+
+# Decorator for caching function results
+@cached_query(ttl=300)
+def expensive_query(run_id):
+    return fetch_data(run_id)
+
+# Key generators
+key = cache_key_for_run("run123", "attribution")  # "run:run123:attribution"
+
+# Cache management
+stats = get_cache_stats()  # {total_entries, active_entries, ...}
+clear_cache(pattern="run:*")
+```
+
+### Lazy DataFrames
+
+**Module:** `src/app/dashboard/components/lazy_dataframes.py`
+
+On-demand DataFrame loading for Streamlit dashboards.
+
+```python
+from src.app.dashboard.components.lazy_dataframes import (
+    lazy_dataframe,
+    paginated_dataframe,
+    virtual_scroll_dataframe
+)
+
+# Lazy load - only loads when user expands
+df = lazy_dataframe("my_data", lambda: load_large_df(), max_rows_preview=10)
+
+# Paginated display
+displayed_df = paginated_dataframe(large_df, page_size=50)
+
+# Virtual scroll with "Load More" button
+displayed_df = virtual_scroll_dataframe(large_df, chunk_size=100, initial_rows=50)
+```
+
+### Progressive Charts
+
+**Module:** `src/app/dashboard/components/progressive_charts.py`
+
+Sequential/batch chart loading with automatic downsampling.
+
+```python
+from src.app.dashboard.components.progressive_charts import (
+    progressive_chart_loader,
+    optimized_chart
+)
+
+# Load multiple charts progressively
+charts = progressive_chart_loader(
+    "analysis_charts",
+    chart_funcs=[make_chart1, make_chart2, make_chart3],
+    chart_labels=["Returns", "Allocation", "Risk"],
+    loading_strategy="batch",  # or "sequential"
+    batch_size=2
+)
+
+# Optimize a single chart (auto-downsample large datasets)
+fig = optimized_chart(
+    make_chart,
+    data_points=50000,
+    max_points=1000,
+    downsample=True
+)
 ```
 
 ---

@@ -32,6 +32,7 @@ from .fundamentals_status import render_fundamentals_status
 from .performance_monitoring import render_performance_monitoring
 from .data_quality import render_data_quality
 from .notifications import render_notifications
+from .trigger_backtester import render_trigger_backtester
 
 __all__ = [
     'render_overview',
@@ -62,4 +63,5 @@ __all__ = [
     'render_performance_monitoring',
     'render_data_quality',
     'render_notifications',
+    'render_trigger_backtester',
 ]

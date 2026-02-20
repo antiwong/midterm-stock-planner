@@ -1,6 +1,6 @@
 # User Guide
 
-**Complete guide to using the Mid-term Stock Planner application.**
+**Complete guide to using the Mid-term Stock Planner v3.11.2 application.**
 
 ## Table of Contents
 
@@ -133,6 +133,33 @@ API requests are automatically batched to:
 - Improve performance (parallel execution)
 - Respect rate limits (configurable per-second limits)
 - Reduce API costs (fewer individual requests)
+
+### Report Templates
+
+Create reusable report templates for recurring analysis:
+
+1. **Create a Template**
+   - Go to "Report Templates" in the dashboard
+   - Click "Create Template"
+   - Name your template and select output format (PDF, Excel, CSV, JSON)
+   - Choose sections to include:
+     - Executive Summary
+     - Performance Metrics
+     - Portfolio Composition
+     - Risk Analysis
+     - Recommendations
+
+2. **Generate Reports**
+   - Select a template and a completed analysis run
+   - Click "Generate Report"
+   - Download the generated file
+
+3. **Batch Generation**
+   - Select a template and multiple runs
+   - Reports are generated in parallel for faster processing
+   - Results are saved to `output/reports/`
+
+**For detailed information**, see: [`docs/report-templates-guide.md`](report-templates-guide.md)
 
 ### Workflow 3: Comprehensive Analysis
 

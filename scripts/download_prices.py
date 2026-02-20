@@ -550,6 +550,22 @@ class PriceDownloader:
         else:
             return pd.DataFrame()
     
+    def _merge_with_existing(self, result_df: pd.DataFrame) -> pd.DataFrame:
+        """Merge new download data with existing prices.csv, deduplicating by (date, ticker)."""
+        if not self.output_path.exists():
+            return result_df
+        try:
+            existing_df = pd.read_csv(self.output_path, parse_dates=['date'])
+            existing_df['date'] = pd.to_datetime(existing_df['date']).dt.date
+            if 'date' in result_df.columns:
+                result_df['date'] = pd.to_datetime(result_df['date']).dt.date
+            combined = pd.concat([existing_df, result_df], ignore_index=True)
+            combined = combined.drop_duplicates(subset=['date', 'ticker'], keep='last')
+            combined = combined.sort_values(['ticker', 'date'])
+            return combined
+        except Exception:
+            return result_df
+
     def save(self, df: pd.DataFrame):
         """Save DataFrame to CSV."""
         self.output_path.parent.mkdir(parents=True, exist_ok=True)

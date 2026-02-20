@@ -1164,6 +1164,7 @@ MAIN_WORKFLOW = [
 STANDALONE_TOOLS = [
     ("Watchlist Manager", "watchlist_manager"),
     ("Stock Explorer", "stock_explorer"),
+    ("Trigger Backtester", "trigger_backtester"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
 ]
