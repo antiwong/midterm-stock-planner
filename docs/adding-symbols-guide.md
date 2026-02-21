@@ -101,3 +101,7 @@ asia_pacific:
 3. **Validate after editing**: Always validate watchlists after manual edits
 4. **Check format**: Singapore stocks need `.SI` or `.SG` suffix
 5. **Trailing characters**: Slashes, spaces are automatically cleaned
+
+## Related
+
+- **Per-ticker config** (RSI, MACD, VIX, volume/OBV filters for trigger backtest): [config/tickers/README.md](../config/tickers/README.md)

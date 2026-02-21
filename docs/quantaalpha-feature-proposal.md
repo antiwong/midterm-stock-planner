@@ -164,11 +164,11 @@ Identified from gap analysis of the QuantaAlpha paper vs current implementation.
 
 | ID | Task | Priority | Description |
 |----|------|----------|-------------|
-| 2.1 | IC threshold checking in pipeline | P1 | Auto-reject factors with \|IC\| < 0.01 across walk-forward windows |
-| 2.2 | Volume surge + OBV institutional filter | P2 | `volume_ratio > 2.0` + positive OBV slope as per-ticker filter (AMD, NVDA) |
-| 2.3 | Relative strength feature | P2 | `rel_strength_21d` — ticker outperformance vs SPY over 21d |
-| 2.4 | Regime-aware VIX gating for AI names | P2 | `vix_buy_max: 25` in AMD/NVDA per-ticker YAML |
-| 2.5 | Overfitting detection in walk-forward | P1 | Alert when train Sharpe >> test Sharpe (ratio > 2x) |
+| 2.1 | IC threshold checking in pipeline | P1 | **Done** — IC/rank_ic per window; `ic_min_threshold`, `ic_action` in BacktestConfig |
+| 2.2 | Volume surge + OBV institutional filter | P2 | **Done** — `volume_surge_min`, `obv_slope_positive` in TriggerConfig; AMD/NVDA YAML |
+| 2.3 | Relative strength feature | P2 | **Done** — `rel_strength_21d` in `compute_all_features_extended` when benchmark provided |
+| 2.4 | Regime-aware VIX gating for AI names | P2 | **Done** — `vix_buy_max: 25` in AMD.yaml and NVDA.yaml |
+| 2.5 | Overfitting detection in walk-forward | P1 | **Done** — per-window train/test Sharpe; `max_train_test_sharpe_ratio`; verbose warning when ≥ 2x |
 
 ---
 

@@ -32,7 +32,7 @@
 | [Design Overview](design.md) | System architecture, module structure, data flow |
 | [Data Engineering](data-engineering.md) | Data loading, feature engineering, dataset assembly |
 | [Model Training](model-training.md) | LightGBM training, prediction, model persistence |
-| [Backtesting](backtesting.md) | Walk-forward backtest, performance metrics, transaction costs |
+| [Backtesting](backtesting.md) | Walk-forward backtest, performance metrics, IC and overfitting detection, transaction costs |
 | [Explainability](explainability.md) | SHAP explanations, per-stock interpretability |
 | [Comparison](comparison.md) | Feature comparison: Stockbot vs Mid-term Stock Planner |
 
@@ -54,8 +54,8 @@
 | [QuantaAlpha Feature Proposal](quantaalpha-feature-proposal.md) | Gap features, transfer testing, evolutionary optimizer, diversified templates, lineage, complexity control. Scripts: `evolutionary_backtest.py`, `diversified_backtest.py`, `lineage_report.py`. See [backtesting.md](backtesting.md), [risk-management.md](risk-management.md) |
 | [QuantaAlpha Implementation Guide](quantaalpha-implementation-guide.md) | Concrete factor formulas, parameter tables, step-by-step workflows, silver vs gold, AMD regime signals, codebase mapping, transfer learning |
 | [QuantaAlpha Paper Summary](quantaalpha-paper-summary.md) | High-level summary of arXiv:2602.07085 (IC, ARR, MDD benchmarks, gap factors, transfer results) |
-| [Macro Indicators](macro-indicators.md) | DXY, VIX, GSR for Trigger Backtester. BUY/SELL bands, validate script. See [backtesting.md](backtesting.md#12-trigger-backtester), [config/tickers/README.md](../config/tickers/README.md) |
-| [Technical Indicators](technical-indicators.md) | RSI, MACD, Bollinger Bands, ATR, ADX, OBV, gap features |
+| [Macro Indicators](macro-indicators.md) | DXY, VIX, GSR, and institutional filter (volume surge + OBV slope) for Trigger Backtester. BUY/SELL bands, validate script. See [backtesting.md](backtesting.md#12-trigger-backtester), [config/tickers/README.md](../config/tickers/README.md) |
+| [Technical Indicators](technical-indicators.md) | RSI, MACD, Bollinger Bands, ATR, ADX, OBV, obv_slope_20d, relative strength (63d/21d), gap features |
 | [Sentiment Analysis](sentiment.md) | Multi-source news sentiment with Gemini LLM |
 | [Fundamental Data](fundamental-data.md) | SEC filings, PE/PB/ROE data fetching |
 | [AI Insights](ai-insights.md) | Gemini-powered analysis and recommendations |

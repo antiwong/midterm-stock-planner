@@ -38,6 +38,9 @@ trigger:
     vix_enabled: false
     vix_buy_max: 25     # BUY when VIX ≤ this (low fear)
     vix_sell_min: 30    # SELL when VIX ≥ this (high fear)
+    # Institutional filter (e.g. AMD/NVDA): volume surge + OBV slope
+    volume_surge_min: null   # e.g. 2.0 = require 2× average volume; null = off
+    obv_slope_positive: false  # require positive OBV slope (institutional accumulation)
 
 # Time forward windows (used in feature engineering and walk-forward backtest)
 horizon_days: 63
@@ -77,6 +80,8 @@ python scripts/validate_macro_influence.py --ticker SLV
 ```
 
 Then copy the values into `config/tickers/{TICKER}.yaml`.
+
+**AI names (AMD, NVDA):** For regime-aware behaviour, use `vix_enabled: true` and `vix_buy_max: 25`; optionally add `volume_surge_min: 2.0` and `obv_slope_positive: true` for an institutional filter. See [QuantaAlpha Implementation Guide](../docs/quantaalpha-implementation-guide.md) §6.
 
 ## Related
 

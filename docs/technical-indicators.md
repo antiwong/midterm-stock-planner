@@ -256,6 +256,8 @@ def calculate_obv(df: pd.DataFrame) -> pd.DataFrame:
     return df
 ```
 
+When technical indicators are included in the extended feature pipeline, **obv_slope_20d** is also computed: the 20-period slope of OBV, `(obv - obv.shift(20)) / 20`, per ticker. This is used as an institutional accumulation signal (e.g. with the Trigger Backtester’s `obv_slope_positive` filter). See [macro-indicators.md](macro-indicators.md) §5.
+
 ---
 
 ## 6. Strategy Features
@@ -287,15 +289,18 @@ def calculate_momentum_score(
 def calculate_relative_strength(
     df: pd.DataFrame,
     benchmark_df: pd.DataFrame,
-    periods: List[int] = [21, 63, 126]
+    lookback_days: int = 63,
+    output_col: str = "relative_strength",
 ) -> pd.DataFrame:
-    """Calculate relative strength vs benchmark."""
-    for period in periods:
-        stock_ret = df.groupby("ticker")["close"].pct_change(period)
-        bench_ret = benchmark_df["close"].pct_change(period)
-        df[f"rel_strength_{period}d"] = stock_ret - bench_ret
+    """Calculate relative strength vs benchmark (stock return - benchmark return over lookback)."""
+    # Adds output_col; call with lookback_days=21, output_col="rel_strength_21d" for 21d RS.
+    df[output_col] = stock_ret - bench_ret  # per (date, ticker)
     return df
+```
 
+The extended feature pipeline adds **relative_strength** (63d) and **rel_strength_21d** (21d) when `benchmark_df` is provided. The 21d variant is used for regime signals (e.g. AMD vs SPY over 21 days). See [QuantaAlpha Implementation Guide](quantaalpha-implementation-guide.md) §6.
+
+```python
 def calculate_52_week_high_low_distance(df: pd.DataFrame) -> pd.DataFrame:
     """Distance from 52-week high and low."""
     df["high_52w"] = df.groupby("ticker")["high"].transform(
@@ -427,10 +432,10 @@ Wired into `compute_all_features_extended()` when OHLC data is available.
 | Bollinger | `calculate_bollinger_bands()` | `bb_upper`, `bb_lower`, `bb_width`, `bb_pct_b` |
 | ADX | `calculate_adx()` | `adx_14`, `plus_di`, `minus_di` |
 | EMA | `calculate_ema()` | `ema_9`, `ema_21`, `ema_50`, `ema_200` |
-| OBV | `calculate_obv()` | `obv` |
+| OBV | `calculate_obv()` (+ pipeline) | `obv`, `obv_slope_20d` |
 | Gap/Overnight | `add_gap_features()` | `overnight_gap_pct`, `gap_vs_true_range`, `gap_acceptance_*` |
 | Momentum | `calculate_momentum_score()` | `momentum_score` |
-| Rel Strength | `calculate_relative_strength()` | `rel_strength_*` |
+| Rel Strength | `calculate_relative_strength()` | `relative_strength` (63d), `rel_strength_21d` |
 | Z-Score | `calculate_z_score()` | `zscore_20d` |
 
 ---

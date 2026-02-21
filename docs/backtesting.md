@@ -118,6 +118,7 @@ class BacktestConfig:
 | `transaction_cost` | 0.001 | Per-trade cost (0.1%) |
 | `ic_min_threshold` | None | If set (e.g. 0.01 or 0.02), log a warning when \|IC\| &lt; threshold in a window. See [IC threshold](#ic-information-coefficient-per-window). |
 | `ic_action` | "warn" | When \|IC\| &lt; ic_min_threshold: `warn` = log warning; `off` = no action |
+| `overfit_sharpe_ratio_threshold` | 2.0 | When max(train_sharpe/test_sharpe) ≥ this, a verbose overfitting warning is printed. See [Overfitting detection](#24-overfitting-detection-walk-forward). |
 
 ### 2.3 IC (Information Coefficient) per window
 
@@ -129,7 +130,16 @@ For each walk-forward window, the pipeline computes the **Information Coefficien
 
 Set `backtest.ic_min_threshold` (e.g. `0.01` or `0.02`) in `config/config.yaml` to enable per-window warnings when \|IC\| is below the threshold. See [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md) for recommended thresholds.
 
-### 2.4 Global vs Per-Ticker Config
+### 2.4 Overfitting detection (walk-forward)
+
+For each walk-forward window, the pipeline computes **train-period** and **test-period** portfolio Sharpe ratios. These are stored in `window_results[].train_sharpe` and `window_results[].test_sharpe`. When both are available and test Sharpe &gt; 0, the ratio `train_sharpe / test_sharpe` is computed per window.
+
+- **max_train_test_sharpe_ratio** — Maximum of (train_sharpe / test_sharpe) across windows (in `backtest_results.metrics` and run outputs).
+- **Verbose warning** — When this ratio is ≥ `overfit_sharpe_ratio_threshold` (default **2.0**), a warning is printed suggesting regularization or a shorter train window.
+
+Optional config (e.g. in `config/config.yaml` under `backtest` or per-ticker): `overfit_sharpe_ratio_threshold: 2.0`. See [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md) §8.
+
+### 2.5 Global vs Per-Ticker Config
 
 Backtest parameters can be set globally in `config/config.yaml` or **per ticker** in `config/tickers/{TICKER}.yaml`. When running analysis for a single ticker, the pipeline uses per-ticker overrides when present. See [Section 11: Per-Ticker Configuration](#11-per-ticker-configuration).
 
@@ -676,7 +686,7 @@ trigger:
   macd_signal: 13
   bb_period: 20
   bb_std: 2.0
-  # Optional: volume_trigger (CMF), macro_factors (GSR) — see Section 12.4
+  # Optional: volume_trigger (CMF), macro_factors (VIX, DXY, GSR, volume_surge_min, obv_slope_positive) — see Section 12.4 and [macro-indicators.md](macro-indicators.md)
 
 # Time forward windows (feature engineering)
 horizon_days: 63

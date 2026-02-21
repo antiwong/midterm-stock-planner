@@ -12,6 +12,7 @@
 | **GSR** | Macro | Gold/silver relative value; for commodities (e.g. SLV) |
 | **DXY** | Macro | US dollar strength; weak dollar can support risk assets |
 | **VIX** | Macro | Market fear/volatility; high VIX blocks new BUY signals |
+| **Volume surge + OBV slope** | Volume | Institutional filter: BUY when volume ≥ N× average and OBV slope &gt; 0 (e.g. AMD/NVDA) |
 
 The Trigger Backtester displays **DXY** and **VIX** as separate visual charts below the main results, regardless of whether filters are enabled. All indicators can be configured per ticker in `config/tickers/{TICKER}.yaml`.
 
@@ -187,9 +188,36 @@ python scripts/optimize_macd_rsi_bayesian.py --optimize-dxy --tickers SLV --n-ca
 
 VIX and DXY can be optimized together: `--optimize-vix --optimize-dxy`.
 
+**AI names (AMD, NVDA):** For regime-aware behaviour, use `vix_buy_max: 25` so BUY is allowed only in lower-vol regimes. See [QuantaAlpha Implementation Guide](quantaalpha-implementation-guide.md) §6.
+
 ---
 
-## 5. Regime-Based Performance Split
+## 5. Institutional filter (volume surge + OBV slope)
+
+For names where institutional accumulation is a useful signal (e.g. AMD, NVDA), the Trigger Backtester can gate BUY on **volume surge** and **positive OBV slope**:
+
+- **volume_surge_min** — BUY allowed only when current volume ≥ this multiple of the 20-day average (e.g. `2.0` = 2× average volume). Omit or set to `null` to disable.
+- **obv_slope_positive** — BUY allowed only when the 20-day OBV slope is positive (institutional accumulation). Set to `true` to enable.
+
+These are applied after technical and macro (GSR/DXY/VIX) filters. They require OHLCV data (volume column).
+
+### Per-Ticker YAML
+
+```yaml
+trigger:
+  macro_factors:
+    vix_enabled: true
+    vix_buy_max: 25
+    vix_sell_min: 30
+    volume_surge_min: 2.0    # BUY when volume ≥ 2× 20d average
+    obv_slope_positive: true # BUY when OBV slope (20d) > 0
+```
+
+See [config/tickers/README.md](../config/tickers/README.md) and [QuantaAlpha Implementation Guide](quantaalpha-implementation-guide.md) §6.
+
+---
+
+## 6. Regime-Based Performance Split
 
 When VIX data is available (e.g. live mode), the Trigger Backtester computes **metrics by VIX regime**:
 
@@ -203,7 +231,7 @@ This helps assess whether the strategy holds up in high-volatility periods. The 
 
 ---
 
-## 6. Visual Charts in the Trigger Backtester
+## 7. Visual Charts in the Trigger Backtester
 
 The Trigger Backtester UI shows **DXY** and **VIX** as separate charts below the main backtest results:
 
@@ -218,7 +246,7 @@ The **Price + Signals** chart shows executed trades (filled triangles) and **blo
 
 ---
 
-## 7. Single-Ticker UI Controls
+## 8. Single-Ticker UI Controls
 
 For single-ticker mode, the **Macro Filters (DXY, VIX)** expander in the Signal Parameters section provides:
 
