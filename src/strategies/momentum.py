@@ -64,25 +64,27 @@ def calculate_momentum_score(
 def calculate_relative_strength(
     df: pd.DataFrame,
     benchmark_df: pd.DataFrame,
-    lookback_days: int = 63
+    lookback_days: int = 63,
+    output_col: str = "relative_strength",
 ) -> pd.DataFrame:
     """
     Calculate relative strength vs benchmark per ticker.
-    
+
     RS = (stock return - benchmark return) over lookback period
-    
+
     Args:
         df: DataFrame with columns ['date', 'ticker', 'close']
         benchmark_df: DataFrame with columns ['date', 'close'] (or 'price', 'value')
         lookback_days: Lookback period in days
-    
+        output_col: Column name for the result (default 'relative_strength').
+
     Returns:
-        DataFrame with added 'relative_strength' column
+        DataFrame with added column (default 'relative_strength')
     """
     df = df.copy()
     benchmark = benchmark_df.copy()
     df = df.sort_values(["ticker", "date"])
-    
+
     # Identify benchmark price column
     price_cols = ["close", "price", "value"]
     benchmark_price_col = None
@@ -90,30 +92,30 @@ def calculate_relative_strength(
         if col in benchmark.columns:
             benchmark_price_col = col
             break
-    
+
     if benchmark_price_col is None:
         raise ValueError(f"benchmark_df must contain one of {price_cols}")
-    
+
     # Calculate stock returns
     df["_stock_return"] = df.groupby("ticker")["close"].pct_change(lookback_days, fill_method=None)
-    
+
     # Calculate benchmark returns
     benchmark = benchmark.sort_values("date")
     benchmark["_benchmark_return"] = benchmark[benchmark_price_col].pct_change(lookback_days, fill_method=None)
-    
+
     # Merge benchmark returns
     df = df.merge(
         benchmark[["date", "_benchmark_return"]],
         on="date",
         how="left"
     )
-    
+
     # Relative strength
-    df["relative_strength"] = df["_stock_return"] - df["_benchmark_return"]
-    
+    df[output_col] = df["_stock_return"] - df["_benchmark_return"]
+
     # Clean up
     df = df.drop(columns=["_stock_return", "_benchmark_return"])
-    
+
     return df
 
 

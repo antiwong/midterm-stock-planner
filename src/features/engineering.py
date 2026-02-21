@@ -634,6 +634,7 @@ def compute_all_features_extended(
                 calculate_bollinger_bands,
                 calculate_atr,
                 calculate_adx,
+                calculate_obv,
             )
             
             df = calculate_rsi(df, period=rsi_period)
@@ -644,6 +645,14 @@ def compute_all_features_extended(
             if all(col in df.columns for col in ['high', 'low', 'close']):
                 df = calculate_atr(df, period=14)
                 df = calculate_adx(df, period=14)
+            
+            # OBV and OBV slope (institutional accumulation signal)
+            if "volume" in df.columns:
+                df = calculate_obv(df)
+                w20 = max(2, int(20 * bars_per_day))
+                df["obv_slope_20d"] = df.groupby("ticker")["obv"].transform(
+                    lambda x: (x - x.shift(w20)) / w20
+                )
         except ImportError:
             pass  # Technical indicators module not available
     
@@ -661,6 +670,9 @@ def compute_all_features_extended(
             
             if benchmark_df is not None:
                 df = calculate_relative_strength(df, benchmark_df, lookback_days=63)
+                df = calculate_relative_strength(
+                    df, benchmark_df, lookback_days=21, output_col="rel_strength_21d"
+                )
         except ImportError:
             pass  # Momentum module not available
     

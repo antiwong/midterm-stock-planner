@@ -377,14 +377,45 @@ def run_walk_forward_backtest(
             if abs(ic) < ic_threshold:
                 print(f"  ⚠ IC |{ic:.4f}| < {ic_threshold} (below threshold)")
         
+        # Train-period Sharpe (for overfitting detection)
+        train_sharpe: Optional[float] = None
+        train_rebalance_dates = _get_rebalance_dates(train_start, test_start, config.rebalance_freq)
+        train_predictions_df = train_window[['date', 'ticker']].copy()
+        train_predictions_df['prediction'] = model.predict(train_window[feature_cols].fillna(0))
+        train_positions_list: List[pd.DataFrame] = []
+        for rebal_date in train_rebalance_dates:
+            if rebal_date >= test_start:
+                break
+            portfolio = _construct_portfolio(
+                train_predictions_df,
+                rebal_date,
+                config.top_n,
+                config.top_pct,
+                config.min_stocks
+            )
+            if len(portfolio) > 0:
+                portfolio['date'] = rebal_date
+                train_positions_list.append(portfolio[['date', 'ticker', 'weight']])
+        if train_positions_list:
+            train_positions_df = pd.concat(train_positions_list, ignore_index=True)
+            train_port_ret, train_bench_ret = _calculate_portfolio_returns(
+                train_positions_df, price_data, benchmark_data, benchmark_price_col
+            )
+            if len(train_port_ret) > 0:
+                train_metrics = _calculate_metrics(
+                    train_port_ret, train_bench_ret, train_positions_df
+                )
+                train_sharpe = train_metrics['sharpe_ratio']
+
         # Get rebalance dates in test window
         rebalance_dates = _get_rebalance_dates(test_start, test_end, config.rebalance_freq)
-        
+        window_positions_list: List[pd.DataFrame] = []
+
         # Construct portfolios
         for rebal_date in rebalance_dates:
             if rebal_date >= test_end:
                 break
-            
+
             # Construct portfolio
             portfolio = _construct_portfolio(
                 test_predictions,
@@ -393,11 +424,26 @@ def run_walk_forward_backtest(
                 config.top_pct,
                 config.min_stocks
             )
-            
+
             if len(portfolio) > 0:
                 portfolio['date'] = rebal_date
-                all_positions.append(portfolio[['date', 'ticker', 'weight']])
-        
+                block = portfolio[['date', 'ticker', 'weight']]
+                all_positions.append(block)
+                window_positions_list.append(block)
+
+        # Per-window test Sharpe (for overfitting detection)
+        test_sharpe: Optional[float] = None
+        if window_positions_list:
+            window_positions_df = pd.concat(window_positions_list, ignore_index=True)
+            window_port_ret, window_bench_ret = _calculate_portfolio_returns(
+                window_positions_df, price_data, benchmark_data, benchmark_price_col
+            )
+            if len(window_port_ret) > 0:
+                window_metrics = _calculate_metrics(
+                    window_port_ret, window_bench_ret, window_positions_df
+                )
+                test_sharpe = window_metrics['sharpe_ratio']
+
         # Store window results
         wr: Dict[str, Any] = {
             'window': window_num,
@@ -413,6 +459,10 @@ def run_walk_forward_backtest(
             wr['ic'] = ic
         if rank_ic is not None:
             wr['rank_ic'] = rank_ic
+        if train_sharpe is not None:
+            wr['train_sharpe'] = train_sharpe
+        if test_sharpe is not None:
+            wr['test_sharpe'] = test_sharpe
         window_results.append(wr)
         
         # Move to next window
@@ -508,7 +558,24 @@ def run_walk_forward_backtest(
             metrics["windows_below_ic_threshold"] = sum(
                 1 for w in window_results if w.get("ic") is not None and abs(w["ic"]) < _ic_thresh
             )
-    
+
+    # Overfitting detection: train Sharpe >> test Sharpe (e.g. ratio > 2)
+    train_test_ratios = []
+    for w in window_results:
+        ts = w.get("test_sharpe")
+        tr = w.get("train_sharpe")
+        if ts is not None and tr is not None and ts > 0:
+            train_test_ratios.append(tr / ts)
+    if train_test_ratios:
+        max_ratio = float(np.max(train_test_ratios))
+        metrics["max_train_test_sharpe_ratio"] = max_ratio
+        overfit_threshold = getattr(config, "overfit_sharpe_ratio_threshold", 2.0)
+        if max_ratio >= overfit_threshold and verbose:
+            print(
+                f"  ⚠ Overfitting: max(train_sharpe/test_sharpe) = {max_ratio:.2f} "
+                f"(threshold {overfit_threshold}). Consider regularization or shorter train window."
+            )
+
     if verbose:
         print(f"\nBacktest Results:")
         print(f"  Total Return: {metrics['total_return']:.2%}")

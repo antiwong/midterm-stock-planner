@@ -215,7 +215,7 @@ These items are identified as gaps that need implementation:
 | ID | Task | Status | Notes |
 |----|------|--------|-------|
 | 2.1 | Add IC threshold checking to the pipeline | Done | IC and Rank IC per window in `window_results`; `mean_ic`, `mean_rank_ic`, `windows_below_ic_threshold` in metrics; `ic_min_threshold` and `ic_action` in BacktestConfig. See [backtesting.md](backtesting.md) §2.3. |
-| 2.2 | Volume surge + OBV institutional filter for AMD | Planned | `volume_ratio > 2.0` + OBV slope in per-ticker config |
-| 2.3 | Relative strength feature (`rel_strength_21d`) | Planned | AMD outperformance vs SPY over 21d |
-| 2.4 | Regime-aware VIX gating for AI names | Planned | `vix_buy_max: 25` in AMD/NVDA per-ticker YAML |
-| 2.5 | Overfitting detection in walk-forward | Planned | Alert when train Sharpe >> test Sharpe |
+| 2.2 | Volume surge + OBV institutional filter for AMD/NVDA | Done | OBV + `obv_slope_20d` in extended features; `TriggerConfig.volume_surge_min`, `obv_slope_positive`; gate in `generate_signals()`; AMD/NVDA YAML use `macro_factors.volume_surge_min: 2.0`, `obv_slope_positive: true`. |
+| 2.3 | Relative strength feature (`rel_strength_21d`) | Done | `calculate_relative_strength(..., lookback_days=21, output_col="rel_strength_21d")` in `compute_all_features_extended` when `benchmark_df` is provided. |
+| 2.4 | Regime-aware VIX gating for AI names | Done | `vix_enabled: true`, `vix_buy_max: 25` in `config/tickers/AMD.yaml` and `config/tickers/NVDA.yaml` under `trigger.macro_factors`. |
+| 2.5 | Overfitting detection in walk-forward | Done | Per-window `train_sharpe` and `test_sharpe` in `window_results`; `metrics["max_train_test_sharpe_ratio"]`; verbose warning when ratio ≥ `overfit_sharpe_ratio_threshold` (default 2.0). |

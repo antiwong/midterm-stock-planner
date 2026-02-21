@@ -114,6 +114,10 @@ def _build_trigger_config(
                 cfg.macro_vix_enabled = True
                 cfg.macro_vix_buy_max = float(mf.get("vix_buy_max", cfg.macro_vix_buy_max))
                 cfg.macro_vix_sell_min = float(mf.get("vix_sell_min", cfg.macro_vix_sell_min))
+            if mf.get("volume_surge_min") is not None:
+                cfg.volume_surge_min = float(mf["volume_surge_min"])
+            if mf.get("obv_slope_positive"):
+                cfg.obv_slope_positive = True
         return cfg
 
     # Priority 2: fallback JSON (best_params)

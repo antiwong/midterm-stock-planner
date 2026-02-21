@@ -65,6 +65,11 @@ class TriggerConfig:
     macro_vix_buy_max: float = 25.0   # BUY when VIX below this (low fear)
     macro_vix_sell_min: float = 30.0  # SELL when VIX above this (high fear)
 
+    # Institutional filter (e.g. for AMD/NVDA): volume surge + OBV slope
+    # BUY only when volume_ratio >= volume_surge_min (if set) and obv_slope_20d > 0 (if obv_slope_positive)
+    volume_surge_min: Optional[float] = None   # e.g. 2.0 for 2x average volume
+    obv_slope_positive: bool = False           # require positive OBV slope (institutional accumulation)
+
 
 @dataclass
 class TriggerBacktestResults:
@@ -416,6 +421,26 @@ def generate_signals(
             signal[(df["signal"].values == -1) & ~sell_ok] = 0
             df["signal"] = signal
             df["vix"] = vix_vals
+
+    # Institutional filter: volume surge + OBV slope (e.g. for AMD/NVDA)
+    if (getattr(config, "volume_surge_min", None) is not None or getattr(config, "obv_slope_positive", False)):
+        if "volume" in df.columns:
+            vol = df["volume"]
+            avg_vol_20 = vol.rolling(window=20, min_periods=10).mean()
+            df["volume_ratio"] = (vol / avg_vol_20).replace(0, np.nan)
+            # OBV: cumulative signed volume
+            direction = np.sign(df["close"].diff())
+            obv = (vol * direction).fillna(0).cumsum()
+            obv_slope = (obv - obv.shift(20)) / 20
+            df["obv_slope_20d"] = obv_slope
+            signal = df["signal"].values.copy()
+            buy_ok = np.ones(len(df), dtype=bool)
+            if getattr(config, "volume_surge_min", None) is not None:
+                buy_ok &= (df["volume_ratio"].values >= config.volume_surge_min) | (df["volume_ratio"].values != df["volume_ratio"].values)
+            if getattr(config, "obv_slope_positive", False):
+                buy_ok &= (df["obv_slope_20d"].values > 0) | (df["obv_slope_20d"].values != df["obv_slope_20d"].values)
+            signal[(df["signal"].values == 1) & ~buy_ok] = 0
+            df["signal"] = signal
 
     return df
 

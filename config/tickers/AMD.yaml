@@ -15,6 +15,14 @@ trigger:
   macd_signal: 13
   bb_period: 20
   bb_std: 2.0
+  # Regime-aware VIX gating for AI name (QuantaAlpha §6)
+  macro_factors:
+    vix_enabled: true
+    vix_buy_max: 25
+    vix_sell_min: 30
+    # Institutional filter: volume surge + positive OBV slope
+    volume_surge_min: 2.0
+    obv_slope_positive: true
 
 # Time forward windows (used in feature engineering and walk-forward backtest)
 horizon_days: 63
