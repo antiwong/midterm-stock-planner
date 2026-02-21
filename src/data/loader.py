@@ -67,9 +67,15 @@ def _validate_date_column(df: pd.DataFrame, date_col: str = 'date') -> pd.DataFr
     
     # Check for invalid dates
     if df[date_col].isna().any():
-        n_invalid = df[date_col].isna().sum()
+        n_invalid = int(df[date_col].isna().sum())
+        hint = (
+            " Drop invalid rows or re-download: "
+            "python scripts/download_benchmark.py --start 2010-01-01 --no-merge"
+            if "benchmark" in str(path).lower()
+            else " Remove or fix invalid date rows in the file."
+        )
         raise DataValidationError(
-            f"Date column contains {n_invalid} invalid/null dates"
+            f"Date column contains {n_invalid} invalid/null dates.{hint}"
         )
     
     return df

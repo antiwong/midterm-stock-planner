@@ -199,6 +199,32 @@ Stores factor exposure analysis results.
 | contribution_to_risk | FLOAT | Contribution to portfolio risk |
 | created_at | DATETIME | Creation timestamp |
 
+### backtest_returns
+
+Daily portfolio and benchmark returns (reduces reliance on CSV).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| date | DATETIME | Trading date |
+| portfolio_return | FLOAT | Daily portfolio return |
+| benchmark_return | FLOAT | Daily benchmark return |
+
+### backtest_positions
+
+Portfolio positions per rebalance date (reduces reliance on CSV).
+
+| Column | Type | Description |
+|--------|------|-------------|
+| id | INTEGER | Primary key |
+| run_id | VARCHAR(50) | Foreign key to runs |
+| date | DATETIME | Rebalance date |
+| ticker | VARCHAR(20) | Stock symbol |
+| weight | FLOAT | Position weight |
+
+**Config:** Set `cli.save_backtest_csv: false` in config.yaml to store returns/positions only in DB.
+
 ### performance_attributions
 
 Stores performance attribution breakdowns.

@@ -4,6 +4,8 @@
 
 **Context**: This document extracts ideas from the QuantaAlpha paper and adapts them for the Mid-term Stock Planner, respecting the project's constraint: **deterministic, numeric pipeline only—no LLM override of tickers, weights, or metrics**.
 
+**Related documents**: [backtesting.md](backtesting.md) (Related Scripts), [risk-management.md](risk-management.md) (complexity), [design.md](design.md) (architecture), [configuration-cli.md](configuration-cli.md) (CLI), [docs/README.md](README.md) (full index)
+
 ---
 
 ## Paper Summary
@@ -37,7 +39,9 @@ QuantaAlpha treats alpha mining as an evolutionary process:
 - Store run history as trajectories: `(config_hash, metrics, param_vector)`.
 - Export best configs to YAML for reproducibility.
 
-**Beads**: `quantaalpha-1-evolutionary-optimizer`
+**Status**: ✅ Implemented (2026-02-21). `scripts/evolutionary_backtest.py`: population of backtest configs, fitness = sharpe_ratio/total_return/hit_rate, selection (elite), mutation (perturb params), crossover (swap param blocks). Trajectory history in `output/evolutionary/*.json` with parent_run_ids, mutation_type. Best config exported to YAML. `lineage_report.py` includes evolutionary trajectories.
+
+**Beads**: `quantaalpha-1-evolutionary-optimizer` (midterm-stock-planner-1.1)
 
 ---
 
@@ -54,7 +58,9 @@ QuantaAlpha treats alpha mining as an evolutionary process:
 - Add `config/strategy_templates/`: YAML templates for value-heavy, momentum-heavy, quality-heavy, low-vol, etc.
 - `scripts/diversified_backtest.py`: Run N templates in parallel, report correlation matrix of returns, select diversified subset for evolution pool.
 
-**Beads**: `quantaalpha-2-diversified-templates`
+**Status**: ✅ Implemented (2026-02-21). `config/strategy_templates/`: value_tilt, momentum_tilt, quality_tilt, balanced, low_vol. `scripts/diversified_backtest.py`: runs templates, correlation matrix of portfolio returns, greedy diversified subset selection (--max-correlation). Output JSON with metrics, correlation matrix, diversified_subset.
+
+**Beads**: `quantaalpha-2-diversified-templates` (midterm-stock-planner-1.2)
 
 ---
 
@@ -71,7 +77,9 @@ QuantaAlpha treats alpha mining as an evolutionary process:
 - Add `src/risk/complexity.py`: `compute_config_complexity(config)` and `compute_factor_redundancy(score_matrix)`.
 - In optimization loop: reject or penalize configs exceeding complexity/redundancy thresholds.
 
-**Beads**: `quantaalpha-3-complexity-redundancy`
+**Status**: ✅ Implemented (2026-02-21). `src/risk/complexity.py`: `compute_config_complexity` (AppConfig or param dict), `compute_factor_redundancy` (cross-sectional correlation of domain scores), `compute_penalty`, `exceeds_thresholds`. Evolutionary: `--complexity-penalty`, `--reject-complexity-above`. Tests in `tests/test_complexity.py`.
+
+**Beads**: `quantaalpha-3-complexity-redundancy` (midterm-stock-planner-1.3)
 
 ---
 
@@ -124,7 +132,9 @@ QuantaAlpha treats alpha mining as an evolutionary process:
 - Extend run output: JSON per run with `run_id`, `parent_run_ids`, `config_hash`, `mutation_type`, `metrics`.
 - `scripts/lineage_report.py`: DAG of runs, highlight best branches.
 
-**Beads**: `quantaalpha-6-lineage-audit`
+**Status**: ✅ Implemented (2026-02-21). `run_info.json` written for every run (even when `save_results=False`) with `run_id`, `config_hash`, `parent_run_ids`, `mutation_type`, `metrics`. `scripts/lineage_report.py` scans `output/run_*`, builds DAG, highlights best branches by `sharpe_ratio`/`total_return`/`hit_rate`. Fallback: loads `backtest_metrics.json` for legacy runs without metrics in run_info.
+
+**Beads**: `quantaalpha-6-lineage-audit` (closed)
 
 ---
 
@@ -141,14 +151,53 @@ QuantaAlpha treats alpha mining as an evolutionary process:
 
 ## Priority Suggestion
 
-1. **P0**: Gap features (#4) — low risk, adds robustness; no dependency.
-2. **P1**: Transfer testing (#5) — validates robustness; simple CLI extension.
-3. **P2**: Evolutionary optimizer (#1) — high impact; depends on run history format.
-4. **P3**: Diversified templates (#2), complexity/redundancy (#3), lineage (#6).
+1. **P0**: Gap features (#4) — low risk, adds robustness; no dependency. ✅ Done
+2. **P1**: Transfer testing (#5) — validates robustness; simple CLI extension. ✅ Done
+3. **P2**: Evolutionary optimizer (#1) — high impact; depends on run history format. ✅ Done
+4. **P3**: Diversified templates (#2), complexity/redundancy (#3), lineage (#6). ✅ Done
+
+---
+
+## Planned Tasks (Next Phase)
+
+Identified from gap analysis of the QuantaAlpha paper vs current implementation. See [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md) for full details and parameter tables.
+
+| ID | Task | Priority | Description |
+|----|------|----------|-------------|
+| 2.1 | IC threshold checking in pipeline | P1 | Auto-reject factors with \|IC\| < 0.01 across walk-forward windows |
+| 2.2 | Volume surge + OBV institutional filter | P2 | `volume_ratio > 2.0` + positive OBV slope as per-ticker filter (AMD, NVDA) |
+| 2.3 | Relative strength feature | P2 | `rel_strength_21d` — ticker outperformance vs SPY over 21d |
+| 2.4 | Regime-aware VIX gating for AI names | P2 | `vix_buy_max: 25` in AMD/NVDA per-ticker YAML |
+| 2.5 | Overfitting detection in walk-forward | P1 | Alert when train Sharpe >> test Sharpe (ratio > 2x) |
+
+---
+
+## Codebase Mapping (QuantaAlpha → This Project)
+
+| QuantaAlpha Concept | Implementation |
+|---------------------|----------------|
+| Trajectory (hypothesis → code → backtest) | `run_walk_forward_backtest()` → `output/run_*/run_info.json` |
+| Mutation | `scripts/evolutionary_backtest.py` — perturbs config params |
+| Crossover | Same script — swaps param blocks between high-Sharpe parents |
+| Terminal reward | Fitness = sharpe_ratio / total_return / hit_rate (configurable) |
+| Complexity penalty | `src/risk/complexity.py`: `compute_config_complexity()`, `compute_factor_redundancy()` |
+| Diversified planning | `scripts/diversified_backtest.py` — runs strategy templates |
+| Lineage / trajectory archive | `scripts/lineage_report.py` — DAG from `run_info.json` |
+| Factor construction | `src/features/gap_features.py`, `compute_all_features_extended()` |
+| Transfer testing | `scripts/transfer_report.py --transfer-watchlist <name>` |
+
+**Key divergence**: QuantaAlpha uses an LLM to mutate factor expressions/code; this project mutates YAML config parameters deterministically.
 
 ---
 
 ## References
 
 - QuantaAlpha: An Evolutionary Framework for LLM-Driven Alpha Mining. arXiv:2602.07085v1 [q-fin.ST] 6 Feb 2026.
+  - Section 3.1: Trajectory-level mutation and crossover → `evolutionary_backtest.py`
+  - Section 3.2: Diversified planning → `diversified_backtest.py`
+  - Section 3.3: Complexity/redundancy control → `src/risk/complexity.py`
+  - Section 4 (Table 2): IC=0.1501, ARR=27.75%, MDD=7.98% on CSI 300
+  - Section 4.2: Overnight gap factors → `src/features/gap_features.py`
+  - Section 4.4: Transfer to S&P 500 (137% excess return) → `transfer_report.py`
 - GitHub: https://github.com/QuantaAlpha/QuantaAlpha
+- Implementation guide: [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md)

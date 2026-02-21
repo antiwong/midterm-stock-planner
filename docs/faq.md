@@ -367,4 +367,4 @@ Yes! Contributions are welcome. Please:
 
 ---
 
-**Still have questions?** Check the [User Guide](user-guide.md) or open an issue on GitHub.
+**Still have questions?** Check the [User Guide](user-guide.md), [Quick Start](quick-start-guide.md), or [Documentation Index](README.md) for all 64+ docs. Open an issue on GitHub for bugs.

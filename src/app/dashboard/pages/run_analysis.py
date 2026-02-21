@@ -16,7 +16,8 @@ from ..components.loading import render_stage_progress, operation_with_feedback
 from ..components.errors import ErrorHandler
 from ..data import (
     load_runs, get_runs_with_folders, get_run_summary, get_available_run_folders,
-    get_all_available_watchlists, load_custom_watchlists
+    get_all_available_watchlists, load_custom_watchlists,
+    load_app_settings, save_app_settings,
 )
 from ..utils import get_project_root, check_run_folder_exists
 from ..config import COLORS
@@ -51,6 +52,9 @@ def _render_new_analysis_tab():
     </div>
     """.format(bg=COLORS['light']), unsafe_allow_html=True)
     
+    # Load persisted params (recalled on start/refresh)
+    saved = load_app_settings("run_analysis", default={})
+    
     # Step 1: Select Watchlist
     st.markdown("### Step 1: Select Stock Universe")
     
@@ -71,11 +75,16 @@ def _render_new_analysis_tab():
             categories[cat] = []
         categories[cat].append(wl_id)
     
+    category_options = ['All Categories'] + sorted(categories.keys())
+    default_category = saved.get("category", "All Categories")
+    if default_category not in category_options:
+        default_category = "All Categories"
+    
     with col1:
-        category_options = ['All Categories'] + sorted(categories.keys())
         selected_category = st.selectbox(
             "Filter by Category",
             options=category_options,
+            index=category_options.index(default_category) if default_category in category_options else 0,
             key="new_analysis_category",
             help="Filter watchlists by category (custom, sector, region, etc.)"
         )
@@ -89,6 +98,10 @@ def _render_new_analysis_tab():
             filtered_watchlists = {k: v for k, v in watchlists.items() if k in filtered_ids}
         
         watchlist_options = list(filtered_watchlists.keys())
+        default_watchlist = saved.get("watchlist")
+        if not default_watchlist or default_watchlist not in watchlist_options:
+            default_watchlist = watchlist_options[0] if watchlist_options else None
+        watchlist_index = watchlist_options.index(default_watchlist) if default_watchlist in watchlist_options else 0
         
         def format_watchlist(wl_id):
             wl = watchlists.get(wl_id, {})
@@ -100,6 +113,7 @@ def _render_new_analysis_tab():
         selected_watchlist = st.selectbox(
             "Select Watchlist",
             options=watchlist_options,
+            index=watchlist_index,
             format_func=format_watchlist,
             key="new_analysis_watchlist",
             help="Pick the stock universe to analyze"
@@ -134,9 +148,19 @@ def _render_new_analysis_tab():
     </div>
     """, unsafe_allow_html=True)
     
-    # Default dates
+    # Default dates (from saved or defaults)
     default_end = date.today()
     default_start = date(2015, 1, 1)
+    if saved.get("start_date"):
+        try:
+            default_start = datetime.strptime(saved["start_date"], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
+    if saved.get("end_date"):
+        try:
+            default_end = datetime.strptime(saved["end_date"], "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            pass
     
     col1, col2, col3 = st.columns([1, 1, 1])
     
@@ -172,6 +196,19 @@ def _render_new_analysis_tab():
     
     st.markdown("---")
     
+    # Backtest config (from config.yaml - for visibility)
+    try:
+        from src.config.config import load_config
+        _cfg = load_config()
+        step_str = f"{_cfg.backtest.step_value} {_cfg.backtest.step_unit}"
+        st.markdown("**Backtest settings** (from `config/config.yaml`):")
+        st.caption(f"Train: {_cfg.backtest.train_years}y · Test: {_cfg.backtest.test_years}y · **Step: {step_str}** · Rebalance: {_cfg.backtest.rebalance_freq}")
+        st.caption("Step = how far the window advances between walk-forward iterations. Smaller step (e.g. 1 month) = more windows = slower run.")
+    except Exception:
+        pass
+    
+    st.markdown("---")
+    
     # Step 3: Additional Options
     st.markdown("### Step 3: Configure & Run")
     
@@ -180,13 +217,14 @@ def _render_new_analysis_tab():
     with col1:
         include_ai = st.checkbox(
             "Include AI Commentary & Recommendations",
-            value=True,
+            value=saved.get("include_ai", True),
             help="Generates Gemini-powered commentary and recommendations"
         )
     
     with col2:
         custom_name = st.text_input(
             "Run Name (optional)",
+            value=saved.get("custom_name", ""),
             placeholder="e.g., Q1 2025 Analysis",
             help="Helps you identify this run later"
         )
@@ -210,6 +248,15 @@ def _render_new_analysis_tab():
         if not selected_watchlist:
             st.error("Please select a watchlist first.")
             return
+        # Persist params to DB (recalled on next start/refresh)
+        save_app_settings("run_analysis", {
+            "watchlist": selected_watchlist,
+            "category": selected_category,
+            "start_date": str(start_date),
+            "end_date": str(end_date),
+            "include_ai": include_ai,
+            "custom_name": custom_name or "",
+        })
         _run_new_analysis(
             selected_watchlist, 
             include_ai, 
@@ -343,7 +390,7 @@ def _render_continue_existing_tab():
         render_alert("⚠️ This run has no backtest data. You may need to start a new analysis.", "warning")
     else:
         # Show available actions
-        action_cols = st.columns(3)
+        action_cols = st.columns(4)
         
         with action_cols[0]:
             if not stages.get('enrichment'):
@@ -365,6 +412,10 @@ def _render_continue_existing_tab():
                     _run_stage("ai", selected_run_id)
             else:
                 st.success("✓ AI Analysis complete")
+        
+        with action_cols[3]:
+            if st.button("🛡️ Strengthen Recommendations", use_container_width=True, key="run_strengthen"):
+                _run_stage("strengthen", selected_run_id)
         
         # Re-run all button
         st.markdown("")
@@ -497,6 +548,8 @@ def _run_stage(stage: str, run_id: str):
     elif stage == "ai":
         cmd = ["python", "scripts/full_analysis_workflow.py", "--run-id", run_id,
                "--with-commentary", "--with-recommendations"]
+    elif stage == "strengthen":
+        cmd = ["python", "scripts/strengthen_recommendations.py", "--run-id", run_id]
     else:
         st.error(f"Unknown stage: {stage}")
         return

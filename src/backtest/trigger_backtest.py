@@ -15,7 +15,7 @@ from typing import Dict, List, Optional, Tuple
 @dataclass
 class TriggerConfig:
     """Configuration for a trigger-based backtest."""
-    signal_type: str = "rsi"          # "rsi", "macd", "bollinger", "combined"
+    signal_type: str = "rsi"          # "rsi", "macd", "bollinger", "cmf", "combined"
     initial_capital: float = 10000.0
     transaction_cost: float = 0.001   # 0.1% per trade
 
@@ -33,12 +33,37 @@ class TriggerConfig:
     bb_period: int = 20
     bb_std: float = 2.0
 
+    # Chaikin Money Flow (volume) parameters
+    cmf_window: int = 20
+    cmf_buy_threshold: float = 0.0   # BUY when CMF crosses above
+    cmf_sell_threshold: float = 0.0  # SELL when CMF crosses below
+
     # Combined signal: which indicators to use
     combined_use_rsi: bool = True
     combined_use_macd: bool = True
     combined_use_bollinger: bool = True
+    combined_use_cmf: bool = False
     # Agreement: "all" = all must agree (strict), "majority" = 2 of 3, "any" = 1 agrees (relaxed)
     combined_agreement: str = "majority"
+
+    # Macro filter: Gold-Silver Ratio (for commodities like SLV)
+    # When set, BUY only when GSR >= macro_gsr_buy_threshold, SELL when GSR <= macro_gsr_sell_threshold
+    macro_gsr_enabled: bool = False
+    macro_gsr_gold_ticker: str = "GLD"
+    macro_gsr_buy_threshold: float = 90.0   # GSR > 90: silver cheap, allow BUY
+    macro_gsr_sell_threshold: float = 70.0  # GSR < 70: silver expensive, allow SELL
+
+    # Macro filter: Dollar Index (DXY) - weak dollar can support risk assets
+    # BUY when DXY <= macro_dxy_buy_max, SELL when DXY >= macro_dxy_sell_min
+    macro_dxy_enabled: bool = False
+    macro_dxy_buy_max: float = 102.0   # BUY when DXY below this (weak dollar)
+    macro_dxy_sell_min: float = 106.0  # SELL when DXY above this (strong dollar)
+
+    # Macro filter: VIX - high vol blocks BUY, low vol allows BUY
+    # BUY when VIX <= macro_vix_buy_max, SELL when VIX >= macro_vix_sell_min
+    macro_vix_enabled: bool = False
+    macro_vix_buy_max: float = 25.0   # BUY when VIX below this (low fear)
+    macro_vix_sell_min: float = 30.0  # SELL when VIX above this (high fear)
 
 
 @dataclass
@@ -50,6 +75,7 @@ class TriggerBacktestResults:
     signals: pd.DataFrame          # date, close, indicator cols, signal
     metrics: Dict[str, float]
     config: TriggerConfig
+    metrics_by_regime: Optional[Dict[str, Dict[str, float]]] = None  # VIX regime splits
 
 
 def _compute_rsi(close: pd.Series, period: int = 14) -> pd.Series:
@@ -93,7 +119,30 @@ def _compute_bollinger(
     )
 
 
-def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFrame:
+def _compute_cmf(
+    high: pd.Series, low: pd.Series, close: pd.Series, volume: pd.Series, window: int = 20
+) -> pd.Series:
+    """Compute Chaikin Money Flow (CMF).
+
+    CMF measures buying vs selling pressure over a window. Oscillates between -1 and +1.
+    BUY when CMF crosses above threshold, SELL when crosses below.
+    """
+    mf_mult = (2 * close - high - low) / (high - low).replace(0, np.nan)
+    mf_mult = mf_mult.fillna(0)
+    mf_vol = mf_mult * volume
+    cmf = mf_vol.rolling(window=window, min_periods=window).sum() / volume.rolling(
+        window=window, min_periods=window
+    ).sum()
+    return cmf
+
+
+def generate_signals(
+    price_df: pd.DataFrame,
+    config: TriggerConfig,
+    macro_price_df: Optional[pd.DataFrame] = None,
+    macro_dxy_df: Optional[pd.DataFrame] = None,
+    macro_vix_df: Optional[pd.DataFrame] = None,
+) -> pd.DataFrame:
     """Generate buy/sell signals from price data using technical indicators.
 
     Computes indicators directly on the single-ticker price series (avoids
@@ -103,6 +152,9 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
         price_df: DataFrame with columns [date, ticker, open, high, low, close, volume].
                   Must contain exactly one ticker.
         config: Trigger configuration with signal type and parameters.
+        macro_price_df: Optional [date, close] for GSR (e.g. GLD).
+        macro_dxy_df: Optional [date, close] for Dollar Index when macro_dxy_enabled.
+        macro_vix_df: Optional [date, close] for VIX when macro_vix_enabled.
 
     Returns:
         DataFrame with original columns plus indicator values and a 'signal' column
@@ -168,11 +220,31 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             "signal",
         ] = -1
 
+    elif signal_type == "cmf":
+        if "volume" not in df.columns:
+            df["signal"] = 0
+        else:
+            df["cmf"] = _compute_cmf(
+                df["high"], df["low"], df["close"], df["volume"],
+                window=config.cmf_window,
+            )
+            df["signal"] = 0
+            cmf_prev = df["cmf"].shift(1)
+            df.loc[
+                (cmf_prev <= config.cmf_buy_threshold) & (df["cmf"] > config.cmf_buy_threshold),
+                "signal",
+            ] = 1
+            df.loc[
+                (cmf_prev >= config.cmf_sell_threshold) & (df["cmf"] < config.cmf_sell_threshold),
+                "signal",
+            ] = -1
+
     elif signal_type == "combined":
         # Confluence (AND) logic: BUY/SELL only when all selected indicators agree
         sig_rsi = np.zeros(len(df), dtype=int)
         sig_macd = np.zeros(len(df), dtype=int)
         sig_bb = np.zeros(len(df), dtype=int)
+        sig_cmf = np.zeros(len(df), dtype=int)
 
         if config.combined_use_rsi:
             df["rsi"] = _compute_rsi(close, period=config.rsi_period)
@@ -219,11 +291,25 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
                 (close_prev <= upper_prev) & (df["close"] > df["bb_upper"])
             ] = -1
 
+        if config.combined_use_cmf and "volume" in df.columns:
+            df["cmf"] = _compute_cmf(
+                df["high"], df["low"], df["close"], df["volume"],
+                window=config.cmf_window,
+            )
+            cmf_prev = df["cmf"].shift(1)
+            sig_cmf[
+                (cmf_prev <= config.cmf_buy_threshold) & (df["cmf"] > config.cmf_buy_threshold)
+            ] = 1
+            sig_cmf[
+                (cmf_prev >= config.cmf_sell_threshold) & (df["cmf"] < config.cmf_sell_threshold)
+            ] = -1
+
         # Build masks: voting logic - how many indicators must agree
         use_rsi = config.combined_use_rsi
         use_macd = config.combined_use_macd
         use_bb = config.combined_use_bollinger
-        n_active = sum([use_rsi, use_macd, use_bb])
+        use_cmf = config.combined_use_cmf
+        n_active = sum([use_rsi, use_macd, use_bb, use_cmf])
         if n_active == 0:
             raise ValueError("Combined signal requires at least one indicator selected")
 
@@ -245,6 +331,8 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             buy_count += (sig_macd == 1).astype(int)
         if use_bb:
             buy_count += (sig_bb == 1).astype(int)
+        if use_cmf:
+            buy_count += (sig_cmf == 1).astype(int)
         buy_mask = buy_count >= min_agree
 
         # SELL: at least min_agree indicators must show -1
@@ -255,6 +343,8 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
             sell_count += (sig_macd == -1).astype(int)
         if use_bb:
             sell_count += (sig_bb == -1).astype(int)
+        if use_cmf:
+            sell_count += (sig_cmf == -1).astype(int)
         sell_mask = sell_count >= min_agree
 
         # Conflict resolution: when both buy and sell fire on same bar (indicators disagree)
@@ -274,11 +364,69 @@ def generate_signals(price_df: pd.DataFrame, config: TriggerConfig) -> pd.DataFr
     else:
         raise ValueError(f"Unknown signal type: {config.signal_type!r}")
 
+    # Store raw signal before macro filters (for blocked-signal visualization)
+    df["signal_raw"] = df["signal"].values.copy()
+
+    # Macro filter: Gold-Silver Ratio (GSR) - for commodities like SLV
+    if config.macro_gsr_enabled and macro_price_df is not None and len(macro_price_df) > 0:
+        df_date = pd.to_datetime(df["date"]).dt.normalize().dt.tz_localize(None)
+        gold = macro_price_df.rename(columns={"close": "gold_close"})[["date", "gold_close"]].copy()
+        gold["date"] = pd.to_datetime(gold["date"]).dt.normalize().dt.tz_localize(None)
+        merged = df_date.to_frame("date").merge(gold, on="date", how="left")
+        merged["close"] = df["close"].values
+        merged["gsr"] = merged["gold_close"] / merged["close"].replace(0, np.nan)
+        gsr = merged["gsr"].values
+        if len(gsr) == len(df):
+            signal = df["signal"].values.copy()
+            buy_ok = (gsr >= config.macro_gsr_buy_threshold) | (gsr != gsr)  # nan passes
+            sell_ok = (gsr <= config.macro_gsr_sell_threshold) | (gsr != gsr)
+            signal[(df["signal"].values == 1) & ~buy_ok] = 0
+            signal[(df["signal"].values == -1) & ~sell_ok] = 0
+            df["signal"] = signal
+            df["gsr"] = gsr
+
+    # Macro filter: Dollar Index (DXY)
+    if config.macro_dxy_enabled and macro_dxy_df is not None and len(macro_dxy_df) > 0:
+        df_date = pd.to_datetime(df["date"]).dt.normalize().dt.tz_localize(None)
+        dxy = macro_dxy_df.rename(columns={"close": "dxy"})[["date", "dxy"]].copy()
+        dxy["date"] = pd.to_datetime(dxy["date"]).dt.normalize().dt.tz_localize(None)
+        merged = df_date.to_frame("date").merge(dxy, on="date", how="left")
+        dxy_vals = merged["dxy"].values
+        if len(dxy_vals) == len(df):
+            signal = df["signal"].values.copy()
+            buy_ok = (dxy_vals <= config.macro_dxy_buy_max) | (dxy_vals != dxy_vals)
+            sell_ok = (dxy_vals >= config.macro_dxy_sell_min) | (dxy_vals != dxy_vals)
+            signal[(df["signal"].values == 1) & ~buy_ok] = 0
+            signal[(df["signal"].values == -1) & ~sell_ok] = 0
+            df["signal"] = signal
+            df["dxy"] = dxy_vals
+
+    # Macro filter: VIX
+    if config.macro_vix_enabled and macro_vix_df is not None and len(macro_vix_df) > 0:
+        df_date = pd.to_datetime(df["date"]).dt.normalize().dt.tz_localize(None)
+        vix = macro_vix_df.rename(columns={"close": "vix"})[["date", "vix"]].copy()
+        vix["date"] = pd.to_datetime(vix["date"]).dt.normalize().dt.tz_localize(None)
+        merged = df_date.to_frame("date").merge(vix, on="date", how="left")
+        vix_vals = merged["vix"].values
+        if len(vix_vals) == len(df):
+            signal = df["signal"].values.copy()
+            buy_ok = (vix_vals <= config.macro_vix_buy_max) | (vix_vals != vix_vals)
+            sell_ok = (vix_vals >= config.macro_vix_sell_min) | (vix_vals != vix_vals)
+            signal[(df["signal"].values == 1) & ~buy_ok] = 0
+            signal[(df["signal"].values == -1) & ~sell_ok] = 0
+            df["signal"] = signal
+            df["vix"] = vix_vals
+
     return df
 
 
 def run_trigger_backtest(
-    price_df: pd.DataFrame, config: TriggerConfig
+    price_df: pd.DataFrame,
+    config: TriggerConfig,
+    macro_price_df: Optional[pd.DataFrame] = None,
+    macro_dxy_df: Optional[pd.DataFrame] = None,
+    macro_vix_df: Optional[pd.DataFrame] = None,
+    vix_df_for_regime: Optional[pd.DataFrame] = None,
 ) -> TriggerBacktestResults:
     """Run a trigger-based backtest on a single stock.
 
@@ -288,11 +436,20 @@ def run_trigger_backtest(
     Args:
         price_df: DataFrame with OHLCV data for a single ticker.
         config: Trigger configuration.
+        macro_price_df: Optional [date, close] for GSR (e.g. GLD).
+        macro_dxy_df: Optional [date, close] for DXY when macro_dxy_enabled.
+        macro_vix_df: Optional [date, close] for VIX when macro_vix_enabled.
+        vix_df_for_regime: Optional [date, close] for regime metrics (can be same as macro_vix_df).
 
     Returns:
         TriggerBacktestResults with trades, equity curve, metrics, etc.
     """
-    signals_df = generate_signals(price_df, config)
+    signals_df = generate_signals(
+        price_df, config,
+        macro_price_df=macro_price_df,
+        macro_dxy_df=macro_dxy_df,
+        macro_vix_df=macro_vix_df,
+    )
     signals_df = signals_df.dropna(subset=["close"]).reset_index(drop=True)
 
     capital = config.initial_capital
@@ -335,7 +492,7 @@ def run_trigger_backtest(
             entry_date = date
             capital = 0.0
             position_open = True
-            trades.append({
+            trade = {
                 "date": date,
                 "type": "BUY",
                 "price": exec_price,
@@ -343,7 +500,12 @@ def run_trigger_backtest(
                 "value": invest_amount,
                 "pnl": None,
                 "hold_days": None,
-            })
+            }
+            if "dxy" in row and pd.notna(row.get("dxy")):
+                trade["dxy"] = float(row["dxy"])
+            if "vix" in row and pd.notna(row.get("vix")):
+                trade["vix"] = float(row["vix"])
+            trades.append(trade)
 
         # Execute SELL
         elif signal == -1 and position_open:
@@ -352,7 +514,7 @@ def run_trigger_backtest(
             capital = sell_value - cost
             pnl = capital - (entry_price * shares)
             hold_days = (date - entry_date).days if entry_date else 0
-            trades.append({
+            trade = {
                 "date": date,
                 "type": "SELL",
                 "price": exec_price,
@@ -360,7 +522,12 @@ def run_trigger_backtest(
                 "value": capital,
                 "pnl": pnl,
                 "hold_days": hold_days,
-            })
+            }
+            if "dxy" in row and pd.notna(row.get("dxy")):
+                trade["dxy"] = float(row["dxy"])
+            if "vix" in row and pd.notna(row.get("vix")):
+                trade["vix"] = float(row["vix"])
+            trades.append(trade)
             shares = 0.0
             position_open = False
 
@@ -382,6 +549,14 @@ def run_trigger_backtest(
     )
     metrics = _calculate_metrics(equity_curve, buy_hold_curve, trades_df, config)
 
+    # Regime-based metrics when VIX data available
+    metrics_by_regime: Optional[Dict[str, Dict[str, float]]] = None
+    vix_for_regime = vix_df_for_regime if vix_df_for_regime is not None and len(vix_df_for_regime) > 0 else macro_vix_df
+    if vix_for_regime is not None and len(vix_for_regime) > 0:
+        metrics_by_regime = _compute_metrics_by_vix_regime(
+            equity_curve, buy_hold_curve, trades_df, vix_for_regime,
+        )
+
     return TriggerBacktestResults(
         trades=trades_df,
         equity_curve=equity_curve,
@@ -389,7 +564,58 @@ def run_trigger_backtest(
         signals=signals_df,
         metrics=metrics,
         config=config,
+        metrics_by_regime=metrics_by_regime,
     )
+
+
+def _compute_metrics_by_vix_regime(
+    equity: pd.Series,
+    buy_hold: pd.Series,
+    trades_df: pd.DataFrame,
+    vix_df: pd.DataFrame,
+    low_threshold: float = 15.0,
+    high_threshold: float = 20.0,
+) -> Dict[str, Dict[str, float]]:
+    """Compute metrics split by VIX regime: low_vol (VIX<15), normal (15-20), high_vol (VIX>=20)."""
+    if vix_df.empty or "close" not in vix_df.columns:
+        return {}
+    vix = vix_df.rename(columns={"close": "vix"})[["date", "vix"]].copy()
+    vix["date"] = pd.to_datetime(vix["date"]).dt.normalize()
+    equity_df = equity.reset_index()
+    equity_df.columns = ["date", "equity"]
+    equity_df["date"] = pd.to_datetime(equity_df["date"]).dt.normalize()
+    merged = equity_df.merge(vix, on="date", how="inner")
+    if len(merged) < 5:
+        return {}
+    merged["regime"] = "normal"
+    merged.loc[merged["vix"] < low_threshold, "regime"] = "low_vol"
+    merged.loc[merged["vix"] >= high_threshold, "regime"] = "high_vol"
+    merged = merged.sort_values("date")
+    out: Dict[str, Dict[str, float]] = {}
+    for regime in ("low_vol", "normal", "high_vol"):
+        sub = merged[merged["regime"] == regime].sort_values("date")
+        if len(sub) < 5:
+            continue
+        eq = sub["equity"].values
+        total_ret = (eq[-1] - eq[0]) / eq[0] if eq[0] != 0 else 0.0
+        rets = np.diff(eq) / np.where(eq[:-1] != 0, eq[:-1], np.nan)
+        rets = rets[np.isfinite(rets)]
+        vol = float(np.std(rets) * np.sqrt(252)) if len(rets) > 1 and np.std(rets) > 0 else 0.0
+        sharpe = (float(np.mean(rets)) * 252) / vol if vol > 0 else 0.0
+        cummax = np.maximum.accumulate(eq)
+        dd = (eq - cummax) / np.where(cummax > 0, cummax, 1)
+        max_dd = float(np.min(dd)) if len(dd) > 0 else 0.0
+        regime_dates = set(sub["date"].dt.date)
+        trade_dates = pd.to_datetime(trades_df["date"]).dt.date.tolist() if len(trades_df) > 0 else []
+        n_trades = sum(1 for d in trade_dates if d in regime_dates)
+        out[regime] = {
+            "total_return": total_ret,
+            "sharpe_ratio": sharpe,
+            "max_drawdown": max_dd,
+            "num_trades": float(n_trades),
+            "pct_days": len(sub) / len(merged),
+        }
+    return out
 
 
 def _calculate_metrics(

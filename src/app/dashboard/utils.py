@@ -424,8 +424,17 @@ def get_ui_settings_path() -> Path:
 
 
 def load_ui_settings() -> Dict[str, Any]:
-    """Load UI settings from disk with defaults."""
+    """Load UI settings from database (fallback to disk JSON)."""
     settings = DEFAULT_UI_SETTINGS.copy()
+    try:
+        from .data import load_app_settings
+        saved = load_app_settings("ui", default=settings)
+        if isinstance(saved, dict):
+            settings.update(saved)
+        return settings
+    except Exception:
+        pass
+    # Fallback: disk JSON
     settings_path = get_ui_settings_path()
     if not settings_path.exists():
         return settings
@@ -436,12 +445,18 @@ def load_ui_settings() -> Dict[str, Any]:
         if isinstance(saved, dict):
             settings.update(saved)
     except Exception:
-        return settings
+        pass
     return settings
 
 
 def save_ui_settings(settings: Dict[str, Any]) -> None:
-    """Persist UI settings to disk."""
+    """Persist UI settings to database and disk."""
+    try:
+        from .data import save_app_settings
+        save_app_settings("ui", settings)
+    except Exception:
+        pass
+    # Also save to disk for backward compat
     settings_path = get_ui_settings_path()
     try:
         settings_path.parent.mkdir(parents=True, exist_ok=True)
@@ -449,5 +464,4 @@ def save_ui_settings(settings: Dict[str, Any]) -> None:
         with open(settings_path, "w", encoding="utf-8") as f:
             json.dump(settings, f, indent=2, sort_keys=True)
     except Exception:
-        # Avoid breaking the UI if save fails
-        return
+        pass

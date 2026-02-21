@@ -40,7 +40,7 @@ def calculate_momentum_score(
     momentum_cols = []
     for period, weight in zip(lookback_periods, weights):
         col_name = f"_mom_{period}"
-        df[col_name] = df.groupby("ticker")["close"].pct_change(period)
+        df[col_name] = df.groupby("ticker")["close"].pct_change(period, fill_method=None)
         momentum_cols.append((col_name, weight))
     
     # Composite score (weighted average of returns, normalized by cross-sectional rank)
@@ -95,11 +95,11 @@ def calculate_relative_strength(
         raise ValueError(f"benchmark_df must contain one of {price_cols}")
     
     # Calculate stock returns
-    df["_stock_return"] = df.groupby("ticker")["close"].pct_change(lookback_days)
+    df["_stock_return"] = df.groupby("ticker")["close"].pct_change(lookback_days, fill_method=None)
     
     # Calculate benchmark returns
     benchmark = benchmark.sort_values("date")
-    benchmark["_benchmark_return"] = benchmark[benchmark_price_col].pct_change(lookback_days)
+    benchmark["_benchmark_return"] = benchmark[benchmark_price_col].pct_change(lookback_days, fill_method=None)
     
     # Merge benchmark returns
     df = df.merge(
@@ -145,7 +145,7 @@ def calculate_price_momentum_features(
     # Raw momentum (returns)
     periods = {"1m": 21, "3m": 63, "6m": 126, "12m": 252}
     for name, days in periods.items():
-        df[f"mom_{name}"] = df.groupby("ticker")["close"].pct_change(days)
+        df[f"mom_{name}"] = df.groupby("ticker")["close"].pct_change(days, fill_method=None)
     
     # Cross-sectional ranks
     for name in periods.keys():
@@ -161,7 +161,7 @@ def calculate_price_momentum_features(
     def _trend_strength(group: pd.DataFrame) -> pd.Series:
         close = group["close"]
         # Count positive vs negative daily returns over past 63 days
-        daily_ret = close.pct_change()
+        daily_ret = close.pct_change(fill_method=None)
         pos_ratio = daily_ret.rolling(63, min_periods=21).apply(
             lambda x: (x > 0).sum() / len(x)
         )

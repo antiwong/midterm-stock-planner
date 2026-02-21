@@ -11,20 +11,8 @@ from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 import numpy as np
 
+from ..config.config import BacktestConfig
 from ..models.trainer import train_lgbm_regressor, ModelConfig
-
-
-@dataclass
-class BacktestConfig:
-    """Configuration for walk-forward backtest."""
-    train_years: float = 5.0
-    test_years: float = 1.0
-    step_years: float = 1.0  # How much to step forward each iteration
-    rebalance_freq: str = "MS"  # "MS" = month start, "M" = month end
-    top_n: Optional[int] = None  # If None, use top decile
-    top_pct: float = 0.1  # Top percentage if top_n is None
-    min_stocks: int = 5  # Minimum stocks required for portfolio
-    transaction_cost: float = 0.001  # 0.1% transaction cost per trade
 
 
 @dataclass
@@ -37,6 +25,45 @@ class BacktestResults:
     window_results: List[Dict[str, Any]]
     predictions: Optional[pd.DataFrame] = None  # date, ticker, prediction
     final_scores: Optional[pd.DataFrame] = None  # Latest scores for each ticker
+
+
+def _compute_ic(pred: np.ndarray, actual: np.ndarray) -> Tuple[Optional[float], Optional[float]]:
+    """Compute Pearson IC and Spearman rank IC between predictions and actuals.
+    Returns (ic, rank_ic); either may be None if insufficient data or constant series.
+    """
+    if pred is None or actual is None or len(pred) != len(actual) or len(pred) < 2:
+        return None, None
+    pred = np.asarray(pred, dtype=float)
+    actual = np.asarray(actual, dtype=float)
+    mask = np.isfinite(pred) & np.isfinite(actual)
+    if mask.sum() < 2:
+        return None, None
+    pred = pred[mask]
+    actual = actual[mask]
+    if pred.std() == 0 or actual.std() == 0:
+        return None, None
+    ic = np.corrcoef(pred, actual)[0, 1]
+    rank_ic = pd.Series(pred).rank().values
+    act_rank = pd.Series(actual).rank().values
+    if np.std(rank_ic) == 0 or np.std(act_rank) == 0:
+        rank_ic_val = None
+    else:
+        rank_ic_val = np.corrcoef(rank_ic, act_rank)[0, 1]
+    return float(ic), float(rank_ic_val) if rank_ic_val is not None else None
+
+
+def _get_step_delta(step_value: float, step_unit: str):
+    """Convert step_value + step_unit to a pandas Timedelta or DateOffset."""
+    unit = step_unit.lower()
+    if unit in ("hours", "h"):
+        return pd.Timedelta(hours=step_value)
+    if unit in ("days", "d"):
+        return pd.Timedelta(days=step_value)
+    if unit in ("months", "month", "m"):
+        return pd.DateOffset(months=int(step_value))
+    if unit in ("years", "year", "y"):
+        return pd.DateOffset(months=int(step_value * 12))
+    raise ValueError(f"Unknown step_unit: {step_unit}. Use: hours, days, months, years")
 
 
 def _get_rebalance_dates(
@@ -254,7 +281,10 @@ def run_walk_forward_backtest(
     # Calculate window parameters (approximate days)
     train_days = int(config.train_years * 365.25)
     test_days = int(config.test_years * 365.25)
-    step_days = int(config.step_years * 365.25)
+    step_delta = _get_step_delta(config.step_value, config.step_unit)
+    
+    if verbose:
+        print(f"  Step: {config.step_value} {config.step_unit} (advance between windows)")
     
     # Initialize results storage
     all_predictions = []
@@ -299,7 +329,7 @@ def run_walk_forward_backtest(
             if verbose:
                 print(f"  Skipping window: {reason}")
             skipped_windows.append({'window': window_num, 'reason': reason})
-            train_start = train_start + pd.Timedelta(days=step_days)
+            train_start = train_start + step_delta
             test_start = train_start + pd.Timedelta(days=train_days)
             test_end = test_start + pd.Timedelta(days=test_days)
             continue
@@ -318,7 +348,7 @@ def run_walk_forward_backtest(
             if verbose:
                 print(f"  Skipping: {reason}")
             skipped_windows.append({'window': window_num, 'reason': reason})
-            train_start = train_start + pd.Timedelta(days=step_days)
+            train_start = train_start + step_delta
             test_start = train_start + pd.Timedelta(days=train_days)
             test_end = test_start + pd.Timedelta(days=test_days)
             continue
@@ -330,6 +360,22 @@ def run_walk_forward_backtest(
         test_predictions = test_window[['date', 'ticker']].copy()
         test_predictions['prediction'] = predictions
         all_predictions.append(test_predictions)
+        
+        # Information Coefficient (IC) and Rank IC per window
+        target_col = getattr(model_config, "target_col", "target")
+        ic, rank_ic = None, None
+        if target_col in test_window.columns:
+            ic, rank_ic = _compute_ic(
+                test_predictions["prediction"].values,
+                test_window[target_col].values,
+            )
+        if verbose and ic is not None:
+            print(f"  IC={ic:.4f}" + (f"  Rank_IC={rank_ic:.4f}" if rank_ic is not None else ""))
+        ic_threshold = getattr(config, "ic_min_threshold", None)
+        ic_action = getattr(config, "ic_action", "warn")
+        if ic_threshold is not None and ic_action == "warn" and ic is not None:
+            if abs(ic) < ic_threshold:
+                print(f"  ⚠ IC |{ic:.4f}| < {ic_threshold} (below threshold)")
         
         # Get rebalance dates in test window
         rebalance_dates = _get_rebalance_dates(test_start, test_end, config.rebalance_freq)
@@ -353,7 +399,7 @@ def run_walk_forward_backtest(
                 all_positions.append(portfolio[['date', 'ticker', 'weight']])
         
         # Store window results
-        window_results.append({
+        wr: Dict[str, Any] = {
             'window': window_num,
             'train_start': train_start,
             'train_end': test_start,
@@ -362,40 +408,74 @@ def run_walk_forward_backtest(
             'n_train_samples': len(train_window),
             'n_test_samples': len(test_window),
             'train_rmse': metrics.get('rmse'),
-        })
+        }
+        if ic is not None:
+            wr['ic'] = ic
+        if rank_ic is not None:
+            wr['rank_ic'] = rank_ic
+        window_results.append(wr)
         
         # Move to next window
-        train_start = train_start + pd.Timedelta(days=step_days)
+        train_start = train_start + step_delta
         test_start = train_start + pd.Timedelta(days=train_days)
         test_end = test_start + pd.Timedelta(days=test_days)
     
     # Check if we have any results
     if not all_predictions:
-        error_msg = "No predictions generated. Check data availability and date ranges.\n\n"
-        error_msg += f"Data range: {min_date.date()} to {max_date.date()}\n"
-        error_msg += f"Training window: {train_days} days ({config.train_years} years)\n"
-        error_msg += f"Test window: {test_days} days ({config.test_years} years)\n"
-        error_msg += f"Step size: {step_days} days ({config.step_years} years)\n"
-        error_msg += f"Total windows attempted: {window_num}\n"
-        error_msg += f"Windows skipped: {len(skipped_windows)}\n"
-        
+        data_span_days = (max_date - min_date).days
+        required_days = train_days + test_days
+
+        if window_num == 0:
+            root_cause = "Data span too short: no walk-forward window fits."
+            if data_span_days < required_days:
+                suggested_fix = (
+                    "Extend benchmark data (target = excess vs benchmark):\n"
+                    "  python scripts/download_benchmark.py --start 2010-01-01 --no-merge\n"
+                    "Or reduce config.backtest.train_years (e.g. 2.0) in config.yaml"
+                )
+            else:
+                suggested_fix = (
+                    "Check benchmark alignment. Run:\n"
+                    "  python scripts/download_benchmark.py --start 2010-01-01 --no-merge"
+                )
+        else:
+            root_cause = "All windows skipped (train/test empty or model errors)."
+            suggested_fix = (
+                "Check skipped window reasons below. If 'Insufficient data': extend benchmark.\n"
+                "  python scripts/download_benchmark.py --start 2010-01-01 --no-merge"
+            )
+
+        error_msg = (
+            f"No predictions generated. {root_cause}\n\n"
+            f"Data range:   {min_date.date()} to {max_date.date()} ({data_span_days} days)\n"
+            f"Required:     {required_days} days ({config.train_years}y train + {config.test_years}y test)\n"
+            f"Windows:      {window_num} attempted, {len(skipped_windows)} skipped\n"
+        )
         if skipped_windows:
             error_msg += "\nSkipped windows:\n"
-            for skip in skipped_windows[:10]:  # Show first 10
-                error_msg += f"  Window {skip['window']}: {skip['reason']}\n"
+            for skip in skipped_windows[:10]:
+                error_msg += f"  {skip['window']}: {skip['reason']}\n"
             if len(skipped_windows) > 10:
                 error_msg += f"  ... and {len(skipped_windows) - 10} more\n"
-        
-        error_msg += "\nPossible causes:\n"
-        error_msg += "  1. Date range too short for walk-forward windows\n"
-        error_msg += "  2. Training window too long relative to available data\n"
-        error_msg += "  3. All windows skipped due to insufficient data\n"
-        error_msg += "  4. Model training failures in all windows\n"
-        
-        raise ValueError(error_msg)
+        error_msg += f"\nFix:\n{suggested_fix}\n"
+
+        from src.exceptions import InsufficientBacktestDataError
+        raise InsufficientBacktestDataError(
+            error_msg,
+            data_range_days=data_span_days,
+            required_days=required_days,
+            windows_attempted=window_num,
+            windows_skipped=len(skipped_windows),
+            skipped_reasons=[s["reason"] for s in skipped_windows],
+            suggested_fix=suggested_fix,
+        )
     
     if not all_positions:
-        raise ValueError("No positions generated. Check rebalance dates and portfolio construction.")
+        from src.exceptions import BacktestError
+        raise BacktestError(
+            "No positions generated. Check rebalance dates and portfolio construction.",
+            diagnostics={"all_predictions": len(all_predictions)},
+        )
     
     # Combine results
     all_predictions_df = pd.concat(all_predictions, ignore_index=True)
@@ -415,6 +495,19 @@ def run_walk_forward_backtest(
         benchmark_returns_series,
         all_positions_df
     )
+    
+    # Aggregate IC metrics from window_results
+    ics = [w["ic"] for w in window_results if w.get("ic") is not None]
+    rank_ics = [w["rank_ic"] for w in window_results if w.get("rank_ic") is not None]
+    if ics:
+        metrics["mean_ic"] = float(np.mean(ics))
+        if rank_ics:
+            metrics["mean_rank_ic"] = float(np.mean(rank_ics))
+        _ic_thresh = getattr(config, "ic_min_threshold", None)
+        if _ic_thresh is not None:
+            metrics["windows_below_ic_threshold"] = sum(
+                1 for w in window_results if w.get("ic") is not None and abs(w["ic"]) < _ic_thresh
+            )
     
     if verbose:
         print(f"\nBacktest Results:")
@@ -504,7 +597,7 @@ def _calculate_portfolio_returns(
         
         # Calculate daily returns for each stock
         period_prices = period_prices.sort_values(['ticker', 'date'])
-        period_prices['daily_return'] = period_prices.groupby('ticker')['close'].pct_change()
+        period_prices['daily_return'] = period_prices.groupby('ticker')['close'].pct_change(fill_method=None)
         
         # Calculate weighted portfolio return for each day
         for date in period_prices['date'].unique():

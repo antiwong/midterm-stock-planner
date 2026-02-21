@@ -111,18 +111,21 @@ class ModelConfig:
 ```python
 @dataclass
 class BacktestConfig:
-    """Configuration for backtesting."""
-    train_years: int = 5
-    test_months: int = 12
-    step_months: int = 12
-    rebalance_frequency: str = "M"
-    top_n: int = 10
-    max_weight: float = 0.05
-    max_sector_weight: float = 0.25
-    commission_bps: float = 5.0
-    slippage_bps: float = 3.0
-    max_turnover: float = 0.30
+    """Configuration for walk-forward backtesting."""
+    train_years: float = 5.0
+    test_years: float = 1.0
+    step_value: float = 1.0
+    step_unit: str = "years"       # hours, days, months, years
+    rebalance_freq: str = "MS"     # MS, M, or "4h" for hourly
+    top_n: Optional[int] = 10
+    top_pct: float = 0.1
+    min_stocks: int = 5
+    transaction_cost: float = 0.001
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
 ```
+
+Per-ticker overrides: `config/tickers/{TICKER}.yaml` can override backtest params when running for a single ticker. See [backtesting.md](backtesting.md#11-per-ticker-configuration).
 
 ### 2.5 CLIConfig
 
@@ -171,15 +174,22 @@ model:
     reg_lambda: 0.1
 
 backtest:
-  train_years: 5
-  test_months: 12
-  rebalance_frequency: "M"
+  train_years: 1.0
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: days
+  rebalance_freq: 4h
   top_n: 10
-  max_weight: 0.05
-  max_sector_weight: 0.25
-  commission_bps: 5
-  slippage_bps: 3
-  max_turnover: 0.30
+  transaction_cost: 0.001
+
+trigger:
+  rsi_period: 14
+  rsi_oversold: 30
+  rsi_overbought: 70
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  optimized_params_path: output/best_params.json
 
 cli:
   output_format: "csv"
@@ -510,5 +520,10 @@ python -m src.app.cli compare-runs \
 ## Related Documents
 
 - **Back to**: [design.md](design.md) - Main overview
-- **Backtest Config**: [backtesting.md](backtesting.md) - Backtest settings
+- **Backtest Config**: [backtesting.md](backtesting.md) - Backtest settings, Related Scripts
 - **Model Config**: [model-training.md](model-training.md) - Model settings
+- **Transfer Report**: [backtesting.md](backtesting.md#85-transfer--robustness-testing) - Same config, different universe
+- **Macro Indicators**: [macro-indicators.md](macro-indicators.md) - DXY, VIX, GSR for Trigger Backtester
+- **QuantaAlpha Scripts**: [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) - evolutionary_backtest, diversified_backtest, lineage_report
+- **Per-Ticker Config**: [config/tickers/README.md](../config/tickers/README.md) - YAML schema
+- **Full Index**: [README.md](README.md)

@@ -5,9 +5,11 @@ Supports RSI, MACD, and Bollinger Band signals with configurable parameters.
 Real-time monitoring with live indicators and buy/sell signal notifications.
 """
 
+import json
 import streamlit as st
 import pandas as pd
 import numpy as np
+from pathlib import Path
 from datetime import datetime, timedelta
 
 import plotly.graph_objects as go
@@ -17,6 +19,7 @@ from ..components.sidebar import render_page_header, render_section_header
 from ..components.metrics import render_metric_card
 from ..components.notifications import NotificationManager
 from ..config import COLORS, CHART_COLORS
+from ..data import load_app_settings, save_app_settings
 
 from src.backtest.trigger_backtest import (
     TriggerConfig,
@@ -24,6 +27,29 @@ from src.backtest.trigger_backtest import (
     optimize_parameters,
     PARAM_GRIDS,
 )
+
+
+def _run_trigger_backtest_safe(price_df, config, **kwargs):
+    """Call run_trigger_backtest; fall back to fewer kwargs if module is cached/old."""
+    try:
+        return run_trigger_backtest(price_df, config, **kwargs)
+    except TypeError as e:
+        if "unexpected keyword argument" not in str(e):
+            raise
+        # Retry with all macro params (preserve DXY/VIX so filters actually apply)
+        macro_keys = ("macro_price_df", "macro_dxy_df", "macro_vix_df", "vix_df_for_regime")
+        safe = {k: v for k, v in kwargs.items() if k in macro_keys and v is not None}
+        try:
+            return run_trigger_backtest(price_df, config, **safe) if safe else run_trigger_backtest(price_df, config)
+        except TypeError:
+            return run_trigger_backtest(price_df, config)
+
+
+def _log_trigger(level: str, message: str) -> None:
+    """Append a notification, warning, or error to the trigger log."""
+    st.session_state.setdefault("trigger_log", [])
+    ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    st.session_state["trigger_log"].append(f"[{ts}] {level.upper()}: {message}")
 
 
 def _load_price_data_for_ticker(ticker: str) -> pd.DataFrame:
@@ -60,10 +86,152 @@ def _fetch_yfinance_data(ticker: str, start: str, end: str) -> pd.DataFrame:
     return data[["date", "ticker", "open", "high", "low", "close", "volume"]].copy()
 
 
-def _create_price_chart_with_signals(results) -> go.Figure:
-    """Create price chart with buy/sell markers."""
+def _fetch_macro_price_df(
+    gold_ticker: str, start: str, end: str, from_csv: bool = False
+) -> pd.DataFrame:
+    """Fetch gold (or other macro) price data for GSR. Returns [date, close]."""
+    if from_csv:
+        df = _load_price_data_for_ticker(gold_ticker)
+        if df.empty:
+            return pd.DataFrame()
+        df = df[(df["date"] >= pd.Timestamp(start)) & (df["date"] <= pd.Timestamp(end))]
+    else:
+        df = _fetch_yfinance_data(gold_ticker, start, end)
+    if df.empty or "close" not in df.columns:
+        return pd.DataFrame()
+    return df[["date", "close"]].copy()
+
+
+def _fetch_macro_series(ticker: str, start: str, end: str) -> pd.DataFrame:
+    """Fetch macro index (DXY, VIX, etc.) from yfinance. Returns [date, close]."""
+    df = _fetch_yfinance_data(ticker, start, end)
+    if df.empty or "close" not in df.columns:
+        return pd.DataFrame()
+    return df[["date", "close"]].copy()
+
+
+def _parse_tickers(ticker_str: str, max_tickers: int = 5) -> list[str]:
+    """Parse ticker input: 'AMD SLV' or 'AMD, SLV' -> ['AMD', 'SLV']."""
+    if not ticker_str or not ticker_str.strip():
+        return []
+    parts = [p.strip().upper() for p in ticker_str.replace(",", " ").split() if p.strip()]
+    seen = set()
+    out = []
+    for p in parts:
+        if p not in seen and len(out) < max_tickers:
+            seen.add(p)
+            out.append(p)
+    return out
+
+
+def _build_trigger_config_from_yaml(
+    ticker: str,
+    signal_key: str,
+    load_ticker_config_fn,
+    fallback_params: dict | None,
+    initial_capital: float = 10000.0,
+    transaction_cost: float = 0.001,
+) -> TriggerConfig:
+    """Build TriggerConfig from per-ticker YAML; fallback to best_params or defaults."""
+    cfg = TriggerConfig(
+        signal_type=signal_key,
+        initial_capital=initial_capital,
+        transaction_cost=transaction_cost,
+    )
+    if signal_key == "combined":
+        cfg.combined_use_rsi = True
+        cfg.combined_use_macd = True
+        cfg.combined_use_bollinger = False
+
+    ticker_cfg = load_ticker_config_fn(ticker) if load_ticker_config_fn else None
+    if ticker_cfg and "trigger" in ticker_cfg:
+        t = ticker_cfg["trigger"]
+        for key in ("rsi_period", "rsi_oversold", "rsi_overbought", "macd_fast", "macd_slow", "macd_signal", "bb_period", "bb_std"):
+            if key in t:
+                setattr(cfg, key, t[key])
+        # Volume trigger (CMF)
+        if "volume_trigger" in t:
+            vt = t["volume_trigger"]
+            for k in ("cmf_window", "cmf_buy_threshold", "cmf_sell_threshold"):
+                if k in vt:
+                    setattr(cfg, k, vt[k])
+        if "combined_use_cmf" in t:
+            cfg.combined_use_cmf = bool(t["combined_use_cmf"])
+        # Macro factors (GSR)
+        if "macro_factors" in t:
+            mf = t["macro_factors"]
+            if mf.get("gsr_enabled"):
+                cfg.macro_gsr_enabled = True
+                cfg.macro_gsr_gold_ticker = str(mf.get("gold_ticker", cfg.macro_gsr_gold_ticker))
+                cfg.macro_gsr_buy_threshold = float(mf.get("gsr_buy_threshold", cfg.macro_gsr_buy_threshold))
+                cfg.macro_gsr_sell_threshold = float(mf.get("gsr_sell_threshold", cfg.macro_gsr_sell_threshold))
+            if mf.get("dxy_enabled"):
+                cfg.macro_dxy_enabled = True
+                cfg.macro_dxy_buy_max = float(mf.get("dxy_buy_max", cfg.macro_dxy_buy_max))
+                cfg.macro_dxy_sell_min = float(mf.get("dxy_sell_min", cfg.macro_dxy_sell_min))
+            if mf.get("vix_enabled"):
+                cfg.macro_vix_enabled = True
+                cfg.macro_vix_buy_max = float(mf.get("vix_buy_max", cfg.macro_vix_buy_max))
+                cfg.macro_vix_sell_min = float(mf.get("vix_sell_min", cfg.macro_vix_sell_min))
+        return cfg
+
+    if fallback_params:
+        cfg.macd_fast = int(fallback_params.get("macd_fast", cfg.macd_fast))
+        cfg.macd_slow = int(fallback_params.get("macd_slow", cfg.macd_slow))
+        cfg.macd_signal = int(fallback_params.get("macd_signal", cfg.macd_signal))
+        cfg.rsi_period = int(fallback_params.get("rsi_period", fallback_params.get("rsi_len", cfg.rsi_period)))
+        cfg.rsi_overbought = float(fallback_params.get("rsi_overbought", fallback_params.get("rsi_hi", cfg.rsi_overbought)))
+        cfg.rsi_oversold = float(fallback_params.get("rsi_oversold", fallback_params.get("rsi_lo", cfg.rsi_oversold)))
+        if "bb_period" in fallback_params:
+            cfg.bb_period = int(fallback_params["bb_period"])
+        if "bb_std" in fallback_params:
+            cfg.bb_std = float(fallback_params["bb_std"])
+    return cfg
+
+
+def _load_fallback_params() -> dict | None:
+    """Load best_params from output/best_params.json if exists."""
+    try:
+        root = Path(__file__).resolve().parents[4]
+        p = root / "output" / "best_params.json"
+        if not p.exists():
+            return None
+        with open(p) as f:
+            data = json.load(f)
+        return data.get("best_params", {})
+    except Exception:
+        return None
+
+
+def _format_params_readonly(ticker_cfg: dict | None, fallback: dict | None, ticker: str) -> str:
+    """Format params for read-only display. Edit in config/tickers/{TICKER}.yaml."""
+    if ticker_cfg and "trigger" in ticker_cfg:
+        t = ticker_cfg["trigger"]
+        lines = [f"{k}: {v}" for k, v in sorted(t.items())]
+        if "horizon_days" in ticker_cfg:
+            lines.append(f"horizon_days: {ticker_cfg['horizon_days']}")
+        if "return_periods" in ticker_cfg:
+            lines.append(f"return_periods: {ticker_cfg['return_periods']}")
+        if "backtest" in ticker_cfg:
+            b = ticker_cfg["backtest"]
+            lines.append("--- backtest ---")
+            for k in ("train_years", "test_years", "step_value", "step_unit", "rebalance_freq"):
+                if k in b:
+                    lines.append(f"  {k}: {b[k]}")
+        return "\n".join(lines) + f"\n\nEdit: config/tickers/{ticker}.yaml"
+    if fallback:
+        lines = [f"{k}: {v}" for k, v in sorted(fallback.items())]
+        return "\n".join(lines) + "\n\n(Fallback from best_params.json)"
+    return f"Using defaults.\nAdd config/tickers/{ticker}.yaml for custom params."
+
+
+def _create_price_chart_with_signals(
+    results, height: int = 450, show_blocked: bool = True
+) -> go.Figure:
+    """Create price chart with buy/sell markers and optionally blocked-by-macro signals."""
     signals = results.signals
     trades = results.trades
+    config = results.config
 
     fig = go.Figure()
 
@@ -76,7 +244,49 @@ def _create_price_chart_with_signals(results) -> go.Figure:
         line=dict(color=CHART_COLORS["categorical"][0], width=1.5),
     ))
 
-    # Buy markers
+    # Blocked-by-macro signals (same colors as BUY/SELL, hollow markers)
+    has_macro = (
+        getattr(config, "macro_gsr_enabled", False)
+        or getattr(config, "macro_dxy_enabled", False)
+        or getattr(config, "macro_vix_enabled", False)
+    )
+    if (
+        show_blocked
+        and has_macro
+        and "signal_raw" in signals.columns
+    ):
+        blocked_buy = (signals["signal_raw"] == 1) & (signals["signal"] == 0)
+        blocked_sell = (signals["signal_raw"] == -1) & (signals["signal"] == 0)
+        if blocked_buy.any():
+            bb = signals.loc[blocked_buy]
+            fig.add_trace(go.Scatter(
+                x=bb["date"],
+                y=bb["close"],
+                mode="markers",
+                name="BUY (blocked)",
+                marker=dict(
+                    symbol="triangle-up-open",
+                    size=10,
+                    color="#10b981",
+                    line=dict(width=1.5, color="#10b981"),
+                ),
+            ))
+        if blocked_sell.any():
+            bs = signals.loc[blocked_sell]
+            fig.add_trace(go.Scatter(
+                x=bs["date"],
+                y=bs["close"],
+                mode="markers",
+                name="SELL (blocked)",
+                marker=dict(
+                    symbol="triangle-down-open",
+                    size=10,
+                    color="#ef4444",
+                    line=dict(width=1.5, color="#ef4444"),
+                ),
+            ))
+
+    # Executed buy/sell markers
     if len(trades) > 0:
         buys = trades[trades["type"] == "BUY"]
         if len(buys) > 0:
@@ -93,7 +303,6 @@ def _create_price_chart_with_signals(results) -> go.Figure:
                 ),
             ))
 
-        # Sell markers
         sells = trades[trades["type"] == "SELL"]
         if len(sells) > 0:
             fig.add_trace(go.Scatter(
@@ -113,9 +322,56 @@ def _create_price_chart_with_signals(results) -> go.Figure:
         title="Price with Buy/Sell Signals",
         yaxis_title="Price ($)",
         template="plotly_white",
-        height=450,
+        height=height,
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
         margin=dict(l=60, r=20, t=60, b=40),
+    )
+    return fig
+
+
+def _create_macro_chart(
+    df: pd.DataFrame,
+    title: str,
+    ylabel: str,
+    color: str,
+    height: int = 280,
+    buy_max: float | None = None,
+    sell_min: float | None = None,
+) -> go.Figure:
+    """Create a line chart for a macro series (DXY, VIX) with optional BUY/SELL bands."""
+    if df.empty or "close" not in df.columns:
+        return go.Figure()
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=df["date"],
+        y=df["close"],
+        mode="lines",
+        name=title,
+        line=dict(color=color, width=1.5),
+    ))
+    if buy_max is not None:
+        fig.add_hline(
+            y=buy_max,
+            line_dash="dash",
+            line_color="#10b981",
+            annotation_text=f"BUY zone (≤{buy_max:.0f})",
+            annotation_position="right",
+        )
+    if sell_min is not None:
+        fig.add_hline(
+            y=sell_min,
+            line_dash="dash",
+            line_color="#ef4444",
+            annotation_text=f"SELL zone (≥{sell_min:.0f})",
+            annotation_position="right",
+        )
+    fig.update_layout(
+        title=title,
+        yaxis_title=ylabel,
+        template="plotly_white",
+        height=height,
+        margin=dict(l=60, r=20, t=50, b=40),
+        showlegend=False,
     )
     return fig
 
@@ -420,6 +676,7 @@ def _check_and_notify_signals(
     if new_signal == 1:  # BUY
         if prev_signal != 1:
             msg = f"🟢 BUY signal for {ticker} | {signal_type} | {last_date}"
+            _log_trigger("notification", msg)
             try:
                 st.toast(msg, icon="🟢")
             except Exception:
@@ -434,6 +691,7 @@ def _check_and_notify_signals(
     elif new_signal == -1:  # SELL
         if prev_signal != -1:
             msg = f"🔴 SELL signal for {ticker} | {signal_type} | {last_date}"
+            _log_trigger("notification", msg)
             try:
                 st.toast(msg, icon="🔴")
             except Exception:
@@ -561,36 +819,112 @@ def _display_optimization_results(opt_results, signal_key: str):
         st.rerun()
 
 
+def _render_trigger_log():
+    """Render the trigger notification/error/warning log textbox."""
+    st.session_state.setdefault("trigger_log", [])
+    log_lines = st.session_state["trigger_log"]
+    log_text = "\n".join(log_lines) if log_lines else "(No notifications yet)"
+    with st.expander("📋 Trigger Log (notifications, warnings, errors)", expanded=bool(log_lines)):
+        st.text_area(
+            "Log",
+            value=log_text,
+            height=120,
+            disabled=True,
+            key="trigger_log_display",
+            label_visibility="collapsed",
+        )
+        if st.button("Clear log", key="trigger_log_clear"):
+            st.session_state["trigger_log"] = []
+            st.rerun()
+
+
 def render_trigger_backtester():
     """Render the Trigger Backtester page."""
     render_page_header("Trigger Backtester", "Backtest buy/sell trigger strategies on individual stocks")
+    _render_trigger_log()
+
+    # Load config (includes Bayesian-optimized params from output/best_params.json when set)
+    try:
+        from pathlib import Path
+        from src.config.config import load_config, load_ticker_config
+        _cfg_path = Path(__file__).resolve().parents[4] / "config" / "config.yaml"
+        _config = load_config(_cfg_path if _cfg_path.exists() else None)
+        _trigger = _config.trigger
+        _defaults = {
+            "rsi_period": _trigger.rsi_period,
+            "rsi_oversold": _trigger.rsi_oversold,
+            "rsi_overbought": _trigger.rsi_overbought,
+            "macd_fast": _trigger.macd_fast,
+            "macd_slow": _trigger.macd_slow,
+            "macd_signal": _trigger.macd_signal,
+            "bb_period": 20,
+            "bb_std": 2.0,
+        }
+    except Exception:
+        _defaults = {"rsi_period": 14, "rsi_oversold": 30, "rsi_overbought": 70, "macd_fast": 12, "macd_slow": 26, "macd_signal": 9, "bb_period": 20, "bb_std": 2.0}
+
+    # Load persisted params (recalled on start/refresh)
+    saved = load_app_settings("trigger_backtester", default={})
+    for k, v in saved.items():
+        if k not in ("ticker", "start_date", "end_date", "signal_type"):
+            st.session_state.setdefault(f"trigger_last_{k}", v)
 
     # --- Controls ---
     col1, col2, col3, col4 = st.columns([1.5, 1.5, 1.5, 1])
 
     available_tickers = _get_available_tickers()
-    default_ticker = "AMD" if "AMD" in available_tickers else (available_tickers[0] if available_tickers else "")
+    default_ticker = saved.get("ticker") or ("AMD" if "AMD" in available_tickers else (available_tickers[0] if available_tickers else ""))
+    if default_ticker not in (t.upper() for t in available_tickers):
+        default_ticker = "AMD" if "AMD" in available_tickers else (available_tickers[0] if available_tickers else "")
 
     with col1:
-        ticker = st.text_input(
-            "Ticker Symbol",
+        ticker_input = st.text_input(
+            "Tickers",
             value=default_ticker,
             key="trigger_ticker",
-            help="Enter a stock ticker (must exist in data/prices.csv)",
-        ).upper().strip()
+            help="One or more tickers, space or comma separated (e.g. AMD SLV). Max 5.",
+        ).strip()
+    tickers = _parse_tickers(ticker_input)
+    multi_ticker = len(tickers) > 1
+    ticker = tickers[0] if tickers else ""
+
+    # Override defaults with per-ticker YAML (config/tickers/{TICKER}.yaml) if present
+    if ticker:
+        try:
+            _ticker_cfg = load_ticker_config(ticker)
+            if _ticker_cfg and "trigger" in _ticker_cfg:
+                for k, v in _ticker_cfg["trigger"].items():
+                    if k in _defaults:
+                        _defaults[k] = v
+        except Exception:
+            pass
 
     with col2:
         end_default = datetime.now().date()
         start_default = end_default - timedelta(days=365 * 3)
+        if saved.get("start_date"):
+            try:
+                start_default = datetime.strptime(saved["start_date"], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
+        if saved.get("end_date"):
+            try:
+                end_default = datetime.strptime(saved["end_date"], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
+                pass
         start_date = st.date_input("Start Date", value=start_default, key="trigger_start")
 
     with col3:
         end_date = st.date_input("End Date", value=end_default, key="trigger_end")
 
     with col4:
+        signal_options = ["RSI", "MACD", "Bollinger Bands", "Combined"]
+        default_signal = saved.get("signal_type", "RSI")
+        default_signal_idx = signal_options.index(default_signal) if default_signal in signal_options else 0
         signal_type = st.selectbox(
             "Signal Type",
-            options=["RSI", "MACD", "Bollinger Bands", "Combined"],
+            options=signal_options,
+            index=default_signal_idx,
             key="trigger_signal_type",
         )
 
@@ -602,112 +936,156 @@ def render_trigger_backtester():
     }
     signal_key = signal_map[signal_type]
 
-    # --- Signal Parameters ---
-    render_section_header("Signal Parameters")
-    pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+    # --- Signal Parameters (single-ticker only; multi-ticker uses YAML per ticker) ---
+    if not multi_ticker:
+        render_section_header("Signal Parameters")
+        pcol1, pcol2, pcol3, pcol4 = st.columns(4)
+    else:
+        st.caption("Multi-ticker mode: params from config/tickers/{TICKER}.yaml per stock. Edit YAML files to change.")
+        # Placeholders for variables used in config build (single-ticker path)
+        rsi_period = _defaults.get("rsi_period", 14)
+        rsi_oversold = _defaults.get("rsi_oversold", 30)
+        rsi_overbought = _defaults.get("rsi_overbought", 70)
+        macd_fast = _defaults.get("macd_fast", 12)
+        macd_slow = _defaults.get("macd_slow", 26)
+        macd_signal_p = _defaults.get("macd_signal", 9)
+        bb_period = _defaults.get("bb_period", 20)
+        bb_std = _defaults.get("bb_std", 2.0)
+        tx_cost = 0.1
+        use_rsi = True
+        use_macd = True
+        use_bollinger = False
+        agreement_mode = "majority"
 
-    # Apply pending optimized parameters (from "Apply Best" button).
-    # Must delete widget keys BEFORE slider creation so new defaults take effect.
-    _pending = st.session_state.pop("trigger_pending_params", None)
-    if _pending:
-        for _wk in [
-            "trigger_rsi_period", "trigger_rsi_os", "trigger_rsi_ob",
-            "trigger_macd_fast", "trigger_macd_slow", "trigger_macd_sig",
-            "trigger_bb_period", "trigger_bb_std",
-        ]:
-            st.session_state.pop(_wk, None)
+    if not multi_ticker:
+        # Apply pending optimized parameters (from "Apply Best" button).
+        _pending = st.session_state.pop("trigger_pending_params", None)
+        if _pending:
+            for _wk in [
+                "trigger_rsi_period", "trigger_rsi_os", "trigger_rsi_ob",
+                "trigger_macd_fast", "trigger_macd_slow", "trigger_macd_sig",
+                "trigger_bb_period", "trigger_bb_std",
+            ]:
+                st.session_state.pop(_wk, None)
 
-    def _default(key: str, static_default):
-        """Prefer: pending params > last-saved session state > static default."""
-        if _pending and key in _pending:
-            return _pending[key]
-        ss_key = f"trigger_last_{key}"
-        if ss_key in st.session_state:
-            return st.session_state[ss_key]
-        return static_default
+        def _default(key: str, static_default):
+            if _pending and key in _pending:
+                return _pending[key]
+            ss_key = f"trigger_last_{key}"
+            if ss_key in st.session_state:
+                return st.session_state[ss_key]
+            return _defaults.get(key, static_default)
 
-    def _int_default(key: str, static: int):
-        v = _default(key, static)
-        if v is None:
-            return static
-        try:
-            return int(float(v))  # handle float/numpy from session state
-        except (ValueError, TypeError):
-            return static
+        def _int_default(key: str, static: int):
+            v = _default(key, static)
+            if v is None:
+                return static
+            try:
+                return int(float(v))
+            except (ValueError, TypeError):
+                return static
 
-    def _float_default(key: str, static: float):
-        v = _default(key, static)
-        if v is None:
-            return static
-        try:
-            return float(v)  # handle int/numpy from session state
-        except (ValueError, TypeError):
-            return static
+        def _float_default(key: str, static: float):
+            v = _default(key, static)
+            if v is None:
+                return static
+            try:
+                return float(v)
+            except (ValueError, TypeError):
+                return static
 
-    if signal_key == "rsi":
-        with pcol1:
-            rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period")
-        with pcol2:
-            rsi_oversold = st.slider("Oversold Threshold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os")
-        with pcol3:
-            rsi_overbought = st.slider("Overbought Threshold", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob")
-        with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
-    elif signal_key == "macd":
-        with pcol1:
-            macd_fast = st.slider("Fast Period", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast")
-        with pcol2:
-            macd_slow = st.slider("Slow Period", 15, 40, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow")
-        with pcol3:
-            macd_signal_p = st.slider("Signal Period", 5, 15, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig")
-        with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
-    elif signal_key == "bollinger":
-        with pcol1:
-            bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period")
-        with pcol2:
-            bb_std = st.slider("Std Deviation", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std")
-        with pcol3:
-            st.empty()
-        with pcol4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
-    elif signal_key == "combined":
-        st.caption(
-            "Combined uses voting: BUY when enough indicators agree, SELL when enough agree. "
-            "**All** = strict (all must agree). **Majority** = 2 of 3 (default). **Any** = 1 agrees."
-        )
-        agreement_mode = st.radio(
-            "Agreement",
-            options=["majority", "all", "any"],
-            index=0,
-            format_func=lambda x: {"majority": "Majority (2 of 3)", "all": "All must agree", "any": "Any (1 agrees)"}[x],
-            key="trigger_comb_agreement",
-            horizontal=True,
-        )
-        comb_col1, comb_col2, comb_col3, comb_col4 = st.columns(4)
-        with comb_col1:
-            use_rsi = st.checkbox("Use RSI", value=True, key="trigger_comb_rsi")
-        with comb_col2:
-            use_macd = st.checkbox("Use MACD", value=True, key="trigger_comb_macd")
-        with comb_col3:
-            use_bollinger = st.checkbox("Use Bollinger", value=True, key="trigger_comb_bb")
-        with comb_col4:
-            tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
-        if not (use_rsi or use_macd or use_bollinger):
+        if signal_key == "rsi":
+            with pcol1:
+                rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period")
+            with pcol2:
+                rsi_oversold = st.slider("Oversold Threshold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os")
+            with pcol3:
+                rsi_overbought = st.slider("Overbought Threshold", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob")
+            with pcol4:
+                tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+        elif signal_key == "macd":
+            with pcol1:
+                macd_fast = st.slider("Fast Period", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast")
+            with pcol2:
+                macd_slow = st.slider("Slow Period", 15, 60, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow")
+            with pcol3:
+                macd_signal_p = st.slider("Signal Period", 5, 20, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig")
+            with pcol4:
+                tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+        elif signal_key == "bollinger":
+            with pcol1:
+                bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period")
+            with pcol2:
+                bb_std = st.slider("Std Deviation", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std")
+            with pcol3:
+                st.empty()
+            with pcol4:
+                tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+        elif signal_key == "combined":
+            st.caption(
+                "Combined uses voting: BUY when enough indicators agree, SELL when enough agree. "
+                "**All** = strict (all must agree). **Majority** = 2 of 3 (default). **Any** = 1 agrees."
+            )
+            agreement_mode = st.radio(
+                "Agreement",
+                options=["majority", "all", "any"],
+                index=0,
+                format_func=lambda x: {"majority": "Majority (2 of 3)", "all": "All must agree", "any": "Any (1 agrees)"}[x],
+                key="trigger_comb_agreement",
+                horizontal=True,
+            )
+            comb_col1, comb_col2, comb_col3, comb_col4 = st.columns(4)
+            with comb_col1:
+                use_rsi = st.checkbox("Use RSI", value=True, key="trigger_comb_rsi")
+            with comb_col2:
+                use_macd = st.checkbox("Use MACD", value=True, key="trigger_comb_macd")
+            with comb_col3:
+                use_bollinger = st.checkbox("Use Bollinger", value=True, key="trigger_comb_bb")
+            with comb_col4:
+                tx_cost = st.number_input("Transaction Cost (%)", 0.0, 2.0, _float_default("tx_cost", 0.1), step=0.05, key="trigger_txcost")
+            if not (use_rsi or use_macd or use_bollinger):
+                _log_trigger("warning", "Select at least one indicator for combined signals.")
             st.warning("Select at least one indicator for combined signals.")
-        st.markdown("**Indicator parameters** (used for selected indicators)")
-        p2col1, p2col2, p2col3, p2col4 = st.columns(4)
-        with p2col1:
-            rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period", disabled=not use_rsi)
-            rsi_oversold = st.slider("RSI Oversold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os", disabled=not use_rsi)
-            rsi_overbought = st.slider("RSI Overbought", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob", disabled=not use_rsi)
-        with p2col2:
-            macd_fast = st.slider("MACD Fast", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast", disabled=not use_macd)
-            macd_slow = st.slider("MACD Slow", 15, 40, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow", disabled=not use_macd)
-            macd_signal_p = st.slider("MACD Signal", 5, 15, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig", disabled=not use_macd)
-        with p2col3:
-            bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period", disabled=not use_bollinger)
-            bb_std = st.slider("BB Std Dev", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std", disabled=not use_bollinger)
+            st.markdown("**Indicator parameters** (used for selected indicators)")
+            p2col1, p2col2, p2col3, p2col4 = st.columns(4)
+            with p2col1:
+                rsi_period = st.slider("RSI Period", 5, 30, _int_default("rsi_period", 14), step=1, key="trigger_rsi_period", disabled=not use_rsi)
+                rsi_oversold = st.slider("RSI Oversold", 10, 50, _int_default("rsi_oversold", 30), step=1, key="trigger_rsi_os", disabled=not use_rsi)
+                rsi_overbought = st.slider("RSI Overbought", 50, 90, _int_default("rsi_overbought", 70), step=1, key="trigger_rsi_ob", disabled=not use_rsi)
+            with p2col2:
+                macd_fast = st.slider("MACD Fast", 5, 20, _int_default("macd_fast", 12), step=1, key="trigger_macd_fast", disabled=not use_macd)
+                macd_slow = st.slider("MACD Slow", 15, 60, _int_default("macd_slow", 26), step=1, key="trigger_macd_slow", disabled=not use_macd)
+                macd_signal_p = st.slider("MACD Signal", 5, 20, _int_default("macd_signal", 9), step=1, key="trigger_macd_sig", disabled=not use_macd)
+            with p2col3:
+                bb_period = st.slider("BB Period", 10, 50, _int_default("bb_period", 20), step=1, key="trigger_bb_period", disabled=not use_bollinger)
+                bb_std = st.slider("BB Std Dev", 1.0, 3.0, _float_default("bb_std", 2.0), step=0.25, key="trigger_bb_std", disabled=not use_bollinger)
+
+        # Macro filters (DXY, VIX) - single-ticker only; defaults from per-ticker YAML
+        _mf = {}
+        if ticker:
+            try:
+                from src.config.config import load_ticker_config
+                _tc = load_ticker_config(ticker)
+                _mf = (_tc.get("trigger") or {}).get("macro_factors") or {}
+            except Exception:
+                pass
+        with st.expander("Macro Filters (DXY, VIX)", expanded=bool(_mf.get("dxy_enabled") or _mf.get("vix_enabled"))):
+            use_macro_filters = st.checkbox(
+                "Use macro filters",
+                value=True,
+                key="trigger_use_macro",
+                help="When unchecked, all macro filters (GSR, DXY, VIX) are disabled and signals are not filtered.",
+            )
+            st.caption("Filter signals by Dollar Index and VIX. DXY: BUY when weak (≤max), SELL when strong (≥min). VIX: BUY when low (≤max), SELL when high (≥min).")
+            mf1, mf2 = st.columns(2)
+            with mf1:
+                use_dxy = st.checkbox("Use DXY filter", value=bool(_mf.get("dxy_enabled")), key="trigger_macro_dxy", disabled=not use_macro_filters)
+                dxy_buy_max = st.number_input("DXY BUY max (weak $)", 95.0, 110.0, float(_mf.get("dxy_buy_max", 102)), 0.5, key="trigger_dxy_buy_max", disabled=not (use_macro_filters and use_dxy))
+                dxy_sell_min = st.number_input("DXY SELL min (strong $)", 95.0, 115.0, float(_mf.get("dxy_sell_min", 106)), 0.5, key="trigger_dxy_sell_min", disabled=not (use_macro_filters and use_dxy))
+            with mf2:
+                use_vix = st.checkbox("Use VIX filter", value=bool(_mf.get("vix_enabled")), key="trigger_macro_vix", disabled=not use_macro_filters)
+                vix_buy_max = st.number_input("VIX BUY max (low fear)", 10.0, 40.0, float(_mf.get("vix_buy_max", 25)), 1.0, key="trigger_vix_buy_max", disabled=not (use_macro_filters and use_vix))
+                vix_sell_min = st.number_input("VIX SELL min (high fear)", 15.0, 50.0, float(_mf.get("vix_sell_min", 30)), 1.0, key="trigger_vix_sell_min", disabled=not (use_macro_filters and use_vix))
 
     initial_capital = 10000.0
 
@@ -789,18 +1167,126 @@ def render_trigger_backtester():
                 st.session_state["trigger_opt_results"], signal_key,
             )
         else:
+            ticker_label = ", ".join(tickers) if tickers else "ticker"
             st.info(
                 f"Configure parameters above and click **Run Backtest** to test "
-                f"{signal_type} signals on **{ticker}**, or **Optimize Parameters** "
-                f"to find the best parameter combination."
+                f"{signal_type} signals on **{ticker_label}**, or **Optimize Parameters** "
+                f"(single-ticker only) to find the best parameter combination."
             )
         return
 
-    # --- Load Data (shared by both flows) ---
-    if not ticker:
-        st.error("Please enter a ticker symbol.")
+    if not tickers:
+        _log_trigger("error", "Please enter at least one ticker symbol.")
+        st.error("Please enter at least one ticker symbol.")
         return
 
+    if multi_ticker and optimize_clicked:
+        _log_trigger("info", "Parameter optimization is single-ticker only. Enter one ticker to optimize.")
+        st.info("Parameter optimization is single-ticker only. Enter one ticker to optimize.")
+        return
+
+    # --- Multi-ticker flow: read-only params, small charts ---
+    if multi_ticker and run_clicked:
+        fallback_params = _load_fallback_params()
+        from src.config.config import load_ticker_config
+        first_cfg = None  # first ticker's config for macro chart bands
+        for t in tickers:
+            with st.spinner(f"Loading {t}..."):
+                if live_mode:
+                    price_df = _fetch_yfinance_data(t, str(start_date), str(end_date + timedelta(days=1)))
+                else:
+                    price_df = _load_price_data_for_ticker(t)
+            if len(price_df) == 0:
+                _log_trigger("warning", f"No data for {t}. Skipped.")
+                st.warning(f"No data for **{t}**. Skipped.")
+                continue
+            price_df = price_df[
+                (price_df["date"] >= pd.Timestamp(start_date))
+                & (price_df["date"] <= pd.Timestamp(end_date))
+            ].reset_index(drop=True)
+            if len(price_df) < 50:
+                _log_trigger("warning", f"Insufficient data for {t} ({len(price_df)} rows). Skipped.")
+                st.warning(f"Insufficient data for **{t}** ({len(price_df)} rows). Skipped.")
+                continue
+            cfg = _build_trigger_config_from_yaml(
+                t, signal_key, load_ticker_config, fallback_params, initial_capital, 0.001
+            )
+            if first_cfg is None:
+                first_cfg = cfg
+            date_end_str = str(end_date + timedelta(days=1))
+            date_start_str = str(start_date)
+            macro_price_df = _fetch_macro_price_df(
+                cfg.macro_gsr_gold_ticker, date_start_str, date_end_str,
+                from_csv=not live_mode,
+            ) if cfg.macro_gsr_enabled else None
+            macro_dxy_df = _fetch_macro_series("DX-Y.NYB", date_start_str, date_end_str) if cfg.macro_dxy_enabled else None
+            macro_vix_df = _fetch_macro_series("^VIX", date_start_str, date_end_str) if cfg.macro_vix_enabled else None
+            vix_for_regime = _fetch_macro_series("^VIX", date_start_str, date_end_str) if live_mode else None
+            kwargs = {}
+            if macro_price_df is not None and len(macro_price_df) > 0:
+                kwargs["macro_price_df"] = macro_price_df
+            if macro_dxy_df is not None and len(macro_dxy_df) > 0:
+                kwargs["macro_dxy_df"] = macro_dxy_df
+            if macro_vix_df is not None and len(macro_vix_df) > 0:
+                kwargs["macro_vix_df"] = macro_vix_df
+            if vix_for_regime is not None and len(vix_for_regime) > 0:
+                kwargs["vix_df_for_regime"] = vix_for_regime
+            try:
+                results = _run_trigger_backtest_safe(price_df, cfg, **kwargs) if kwargs else run_trigger_backtest(price_df, cfg)
+            except Exception as e:
+                _log_trigger("error", f"Backtest failed for {t}: {e}")
+                st.error(f"Backtest failed for {t}: {e}")
+                continue
+            ticker_cfg = load_ticker_config(t)
+            params_text = _format_params_readonly(ticker_cfg, fallback_params, t)
+            m = results.metrics
+            st.markdown(f"### {t}")
+            chart_col, params_col = st.columns([2, 1])
+            with chart_col:
+                fig = _create_price_chart_with_signals(results, height=220)
+                st.plotly_chart(fig, use_container_width=True)
+            with params_col:
+                st.text_area("Parameters", value=params_text, height=200, disabled=True, key=f"params_{t}")
+            st.caption(
+                f"Sharpe: {m.get('sharpe_ratio', 0):.2f} | "
+                f"Return: {m.get('total_return', 0)*100:.1f}% | "
+                f"Max DD: {m.get('max_drawdown', 0)*100:.1f}% | "
+                f"Trades: {len(results.trades)}"
+            )
+            _log_trigger("info", f"Backtest completed for {t}: {len(results.trades)} trades")
+            st.markdown("---")
+        # Macro indicators for multi-ticker
+        render_section_header("Macro Indicators")
+        date_end_str = str(end_date + timedelta(days=1))
+        dxy_df = _fetch_macro_series("DX-Y.NYB", str(start_date), date_end_str)
+        vix_df = _fetch_macro_series("^VIX", str(start_date), date_end_str)
+        mac1, mac2 = st.columns(2)
+        cfg_m = first_cfg if first_cfg else None
+        with mac1:
+            st.caption("DXY (Dollar Index)")
+            if not dxy_df.empty:
+                fig_dxy = _create_macro_chart(
+                    dxy_df, "DXY", "Level", CHART_COLORS["categorical"][2],
+                    buy_max=getattr(cfg_m, "macro_dxy_buy_max", None) if cfg_m else None,
+                    sell_min=getattr(cfg_m, "macro_dxy_sell_min", None) if cfg_m else None,
+                )
+                st.plotly_chart(fig_dxy, use_container_width=True)
+            else:
+                st.info("DXY data unavailable. Use live mode.")
+        with mac2:
+            st.caption("VIX (Volatility Index)")
+            if not vix_df.empty:
+                fig_vix = _create_macro_chart(
+                    vix_df, "VIX", "Level", CHART_COLORS["categorical"][4],
+                    buy_max=getattr(cfg_m, "macro_vix_buy_max", None) if cfg_m else None,
+                    sell_min=getattr(cfg_m, "macro_vix_sell_min", None) if cfg_m else None,
+                )
+                st.plotly_chart(fig_vix, use_container_width=True)
+            else:
+                st.info("VIX data unavailable. Use live mode.")
+        return
+
+    # --- Single-ticker flow ---
     if live_mode:
         with st.spinner(f"Fetching live data for {ticker} from yfinance..."):
             price_df = _fetch_yfinance_data(
@@ -809,6 +1295,7 @@ def render_trigger_backtester():
                 str(end_date + timedelta(days=1)),
             )
         if len(price_df) == 0:
+            _log_trigger("error", f"Could not fetch data for {ticker} from yfinance. Check the ticker symbol.")
             st.error(
                 f"Could not fetch data for **{ticker}** from yfinance. "
                 f"Check the ticker symbol."
@@ -821,6 +1308,7 @@ def render_trigger_backtester():
     else:
         price_df = _load_price_data_for_ticker(ticker)
         if len(price_df) == 0:
+            _log_trigger("error", f"No price data found for {ticker}. Make sure it exists in data/prices.csv.")
             st.error(
                 f"No price data found for **{ticker}**. "
                 f"Make sure it exists in `data/prices.csv`. "
@@ -835,6 +1323,7 @@ def render_trigger_backtester():
     ].reset_index(drop=True)
 
     if len(price_df) < 50:
+        _log_trigger("warning", f"Only {len(price_df)} data points for {ticker} in the selected date range. Need at least 50 for reliable signals.")
         st.warning(
             f"Only {len(price_df)} data points for {ticker} in the selected "
             f"date range. Need at least 50 for reliable signals."
@@ -845,6 +1334,7 @@ def render_trigger_backtester():
     # --- Optimization Flow ---
     if optimize_clicked:
         if signal_key == "combined":
+            _log_trigger("info", "Parameter optimization is not available for Combined signals. Use single indicators to optimize.")
             st.info(
                 "Parameter optimization is not available for Combined signals. "
                 "Use single indicators (RSI, MACD, or Bollinger) to optimize, "
@@ -871,6 +1361,7 @@ def render_trigger_backtester():
                 progress_callback=_update_progress,
             )
         except Exception as e:
+            _log_trigger("error", f"Optimization failed: {e}")
             st.error(f"Optimization failed: {e}")
             return
         finally:
@@ -882,6 +1373,7 @@ def render_trigger_backtester():
 
     # --- Build Config ---
     if signal_key == "combined" and not (use_rsi or use_macd or use_bollinger):
+        _log_trigger("error", "Select at least one indicator (RSI, MACD, or Bollinger) for combined signals.")
         st.error("Select at least one indicator (RSI, MACD, or Bollinger) for combined signals.")
         return
 
@@ -915,25 +1407,86 @@ def render_trigger_backtester():
         config.bb_period = bb_period
         config.bb_std = bb_std
 
+    # Macro filters (single-ticker from UI + per-ticker YAML; multi-ticker from YAML)
+    if not multi_ticker:
+        config.macro_gsr_enabled = use_macro_filters and bool(_mf.get("gsr_enabled"))
+        config.macro_gsr_gold_ticker = str(_mf.get("gold_ticker", "GLD"))
+        config.macro_gsr_buy_threshold = float(_mf.get("gsr_buy_threshold", 90))
+        config.macro_gsr_sell_threshold = float(_mf.get("gsr_sell_threshold", 70))
+        config.macro_dxy_enabled = use_macro_filters and use_dxy
+        config.macro_vix_enabled = use_macro_filters and use_vix
+        if config.macro_dxy_enabled:
+            config.macro_dxy_buy_max = dxy_buy_max
+            config.macro_dxy_sell_min = dxy_sell_min
+        if config.macro_vix_enabled:
+            config.macro_vix_buy_max = vix_buy_max
+            config.macro_vix_sell_min = vix_sell_min
+
+    # --- Macro data (GSR, DXY, VIX) ---
+    date_end = str(end_date + timedelta(days=1))
+    date_start = str(start_date)
+    macro_price_df = None
+    macro_dxy_df = None
+    macro_vix_df = None
+    vix_df_for_regime = None
+    if getattr(config, "macro_gsr_enabled", False):
+        macro_price_df = _fetch_macro_price_df(
+            getattr(config, "macro_gsr_gold_ticker", "GLD"),
+            date_start, date_end,
+            from_csv=not live_mode,
+        )
+    if getattr(config, "macro_dxy_enabled", False):
+        macro_dxy_df = _fetch_macro_series("DX-Y.NYB", date_start, date_end)
+    if getattr(config, "macro_vix_enabled", False):
+        macro_vix_df = _fetch_macro_series("^VIX", date_start, date_end)
+    # Always fetch VIX for regime metrics when in live mode
+    if live_mode:
+        vix_df_for_regime = _fetch_macro_series("^VIX", date_start, date_end)
+
     # --- Run Backtest ---
     with st.spinner(f"Running {signal_type} backtest on {ticker}..."):
         try:
-            results = run_trigger_backtest(price_df, config)
+            kwargs = {}
+            if macro_price_df is not None:
+                kwargs["macro_price_df"] = macro_price_df
+            if macro_dxy_df is not None:
+                kwargs["macro_dxy_df"] = macro_dxy_df
+            if macro_vix_df is not None:
+                kwargs["macro_vix_df"] = macro_vix_df
+            if vix_df_for_regime is not None and len(vix_df_for_regime) > 0:
+                kwargs["vix_df_for_regime"] = vix_df_for_regime
+            results = _run_trigger_backtest_safe(price_df, config, **kwargs) if kwargs else run_trigger_backtest(price_df, config)
         except Exception as e:
+            _log_trigger("error", f"Backtest failed: {e}")
             st.error(f"Backtest failed: {e}")
             return
 
-    # --- Persist params so they're remembered when switching modes ---
+    # --- Persist params to DB and session (recalled on start/refresh) ---
     c = config
-    st.session_state["trigger_last_rsi_period"] = int(c.rsi_period)
-    st.session_state["trigger_last_rsi_oversold"] = float(c.rsi_oversold)
-    st.session_state["trigger_last_rsi_overbought"] = float(c.rsi_overbought)
-    st.session_state["trigger_last_macd_fast"] = int(c.macd_fast)
-    st.session_state["trigger_last_macd_slow"] = int(c.macd_slow)
-    st.session_state["trigger_last_macd_signal"] = int(c.macd_signal)
-    st.session_state["trigger_last_bb_period"] = int(c.bb_period)
-    st.session_state["trigger_last_bb_std"] = float(c.bb_std)
-    st.session_state["trigger_last_tx_cost"] = float(tx_cost)
+    trigger_params = {
+        "rsi_period": int(c.rsi_period),
+        "rsi_oversold": float(c.rsi_oversold),
+        "rsi_overbought": float(c.rsi_overbought),
+        "macd_fast": int(c.macd_fast),
+        "macd_slow": int(c.macd_slow),
+        "macd_signal": int(c.macd_signal),
+        "bb_period": int(c.bb_period),
+        "bb_std": float(c.bb_std),
+        "tx_cost": float(tx_cost),
+        "ticker": ticker,
+        "start_date": str(start_date),
+        "end_date": str(end_date),
+        "signal_type": signal_type,
+    }
+    if signal_key == "combined":
+        trigger_params["combined_agreement"] = getattr(c, "combined_agreement", "majority")
+        trigger_params["combined_use_rsi"] = getattr(c, "combined_use_rsi", True)
+        trigger_params["combined_use_macd"] = getattr(c, "combined_use_macd", True)
+        trigger_params["combined_use_bollinger"] = getattr(c, "combined_use_bollinger", True)
+    save_app_settings("trigger_backtester", trigger_params)
+    for k, v in trigger_params.items():
+        st.session_state[f"trigger_last_{k}"] = v
+    _log_trigger("info", f"Backtest completed for {ticker}: {len(results.trades)} trades")
 
     # --- Real-time indicator (when live + auto-refresh) ---
     is_realtime = live_mode and auto_refresh
@@ -983,13 +1536,42 @@ def render_trigger_backtester():
     with mcol8:
         render_metric_card("Data Points", f"{len(results.signals):,}")
 
+    # --- Regime metrics (when available) ---
+    if getattr(results, "metrics_by_regime", None) and results.metrics_by_regime:
+        st.markdown("#### Performance by VIX Regime")
+        regime = results.metrics_by_regime
+        reg_df = pd.DataFrame(regime).T
+        reg_df["total_return"] = reg_df["total_return"].apply(lambda x: f"{x:.1%}")
+        reg_df["sharpe_ratio"] = reg_df["sharpe_ratio"].apply(lambda x: f"{x:.2f}")
+        reg_df["max_drawdown"] = reg_df["max_drawdown"].apply(lambda x: f"{x:.1%}")
+        reg_df["pct_days"] = reg_df["pct_days"].apply(lambda x: f"{x:.0%}")
+        reg_df = reg_df.rename(columns={"pct_days": "% days"})
+        st.dataframe(reg_df[["total_return", "sharpe_ratio", "max_drawdown", "num_trades", "% days"]], use_container_width=True, hide_index=True)
+        st.caption("low_vol: VIX<15 | normal: 15–20 | high_vol: VIX≥20")
+
     st.markdown("---")
 
     # --- Charts ---
     tabs = st.tabs(["Price + Signals", "Equity Curve", "Signal Indicator", "Trade Log"])
 
     with tabs[0]:
-        fig = _create_price_chart_with_signals(results)
+        has_macro = (
+            getattr(results.config, "macro_gsr_enabled", False)
+            or getattr(results.config, "macro_dxy_enabled", False)
+            or getattr(results.config, "macro_vix_enabled", False)
+        )
+        show_blocked = (
+            st.checkbox(
+                "Show blocked-by-macro signals",
+                value=True,
+                key="trigger_show_blocked",
+                disabled=not has_macro,
+                help="When macro filters are used, show signals that were blocked (hollow markers). Same colors as BUY/SELL.",
+            )
+            if has_macro
+            else True
+        )
+        fig = _create_price_chart_with_signals(results, show_blocked=show_blocked)
         st.plotly_chart(fig, use_container_width=True)
 
     with tabs[1]:
@@ -1013,6 +1595,14 @@ def render_trigger_backtester():
             display_df["hold_days"] = display_df["hold_days"].apply(
                 lambda x: f"{int(x)}" if pd.notna(x) else "-"
             )
+            if "dxy" in display_df.columns:
+                display_df["dxy"] = display_df["dxy"].apply(
+                    lambda x: f"{x:.2f}" if pd.notna(x) else "-"
+                )
+            if "vix" in display_df.columns:
+                display_df["vix"] = display_df["vix"].apply(
+                    lambda x: f"{x:.1f}" if pd.notna(x) else "-"
+                )
             st.dataframe(display_df, use_container_width=True, hide_index=True)
         else:
             hint = (
@@ -1020,7 +1610,42 @@ def render_trigger_backtester():
                 if signal_key == "combined"
                 else ""
             )
+            _log_trigger("info", f"No trades were generated. {hint}Try adjusting the signal parameters or date range.")
             st.info(f"No trades were generated. {hint}Try adjusting the signal parameters or date range.")
+
+    # --- Macro indicators: DXY and VIX charts (visual) ---
+    st.markdown("---")
+    render_section_header("Macro Indicators")
+    date_end_str = str(end_date + timedelta(days=1))
+    dxy_df = _fetch_macro_series("DX-Y.NYB", str(start_date), date_end_str)
+    vix_df = _fetch_macro_series("^VIX", str(start_date), date_end_str)
+    mac1, mac2 = st.columns(2)
+    with mac1:
+        st.caption("DXY (Dollar Index) — weak dollar can support risk assets")
+        if not dxy_df.empty:
+            cfg = results.config
+            fig_dxy = _create_macro_chart(
+                dxy_df, "DXY (Dollar Index)", "Level",
+                CHART_COLORS["categorical"][2],
+                buy_max=getattr(cfg, "macro_dxy_buy_max", None),
+                sell_min=getattr(cfg, "macro_dxy_sell_min", None),
+            )
+            st.plotly_chart(fig_dxy, use_container_width=True)
+        else:
+            st.info("DXY data unavailable for this range. Use live mode.")
+    with mac2:
+        st.caption("VIX (Volatility Index) — high VIX indicates market fear")
+        if not vix_df.empty:
+            cfg = results.config
+            fig_vix = _create_macro_chart(
+                vix_df, "VIX (Volatility Index)", "Level",
+                CHART_COLORS["categorical"][4],
+                buy_max=getattr(cfg, "macro_vix_buy_max", None),
+                sell_min=getattr(cfg, "macro_vix_sell_min", None),
+            )
+            st.plotly_chart(fig_vix, use_container_width=True)
+        else:
+            st.info("VIX data unavailable for this range. Use live mode.")
 
     # --- Auto-refresh ---
     if live_mode and auto_refresh:

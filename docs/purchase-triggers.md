@@ -670,3 +670,12 @@ After analyzing purchase triggers:
 3. **Compare Runs**: Use "Compare Runs" page to see differences
 4. **Build Portfolio**: Use "Portfolio Builder" to create final portfolio
 5. **Review Risk**: Check "Portfolio Analysis" for risk metrics
+
+## Related Documentation
+
+- [Domain Analysis](domain-analysis.md) - Vertical/horizontal selection, domain_score
+- [Backtesting](backtesting.md) - Walk-forward backtest, Trigger Backtester (§12)
+- [Macro Indicators](macro-indicators.md) - DXY, VIX, GSR for trigger backtest
+- [Portfolio Builder](portfolio-builder.md) - Personalized portfolios
+- [config/tickers/README.md](../config/tickers/README.md) - Per-ticker YAML
+- [Documentation Index](README.md)

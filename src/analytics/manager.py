@@ -11,15 +11,32 @@ from typing import Dict, Any, List, Optional
 from contextlib import contextmanager
 import json
 
-from .models import get_db, Run, StockScore, Trade, PortfolioSnapshot, DatabaseManager
+from .models import (
+    get_db,
+    Run,
+    StockScore,
+    Trade,
+    PortfolioSnapshot,
+    BacktestReturn,
+    BacktestPosition,
+    DatabaseManager,
+)
 
 
 class RunContext:
     """Context manager for tracking a single analysis run."""
-    
-    def __init__(self, manager: "RunManager", run_id: str):
+
+    def __init__(
+        self,
+        manager: "RunManager",
+        run_id: str,
+        parent_run_ids: Optional[List[str]] = None,
+        mutation_type: Optional[str] = None,
+    ):
         self.manager = manager
         self.run_id = run_id
+        self.parent_run_ids = parent_run_ids or []
+        self.mutation_type = mutation_type or "initial"
         self.start_time = time.time()
         self._scores = []
         self._trades = []
@@ -143,9 +160,11 @@ class RunManager:
         tags: Optional[List[str]] = None,
         watchlist: Optional[str] = None,
         watchlist_display_name: Optional[str] = None,
+        parent_run_ids: Optional[List[str]] = None,
+        mutation_type: Optional[str] = None,
     ) -> RunContext:
         """Start a new analysis run.
-        
+
         Args:
             run_type: Type of run (backtest, score, optimization)
             name: Optional run name
@@ -155,9 +174,11 @@ class RunManager:
             tags: Optional list of tags
             watchlist: Watchlist identifier (e.g., 'tech_giants')
             watchlist_display_name: Human-readable watchlist name
+            parent_run_ids: Parent run IDs for lineage (evolutionary optimizer)
+            mutation_type: 'initial', 'mutation', 'crossover', or 'manual'
         """
         run_id = self._generate_run_id()
-        
+
         session = self.db.get_session()
         try:
             run = Run(
@@ -171,18 +192,33 @@ class RunManager:
                 watchlist=watchlist,
                 watchlist_display_name=watchlist_display_name,
             )
-            
+
             if tags:
                 run.set_tags(tags)
             if config:
-                run.set_config(config)
+                cfg = dict(config)
+                if parent_run_ids is not None:
+                    cfg['parent_run_ids'] = parent_run_ids
+                if mutation_type is not None:
+                    cfg['mutation_type'] = mutation_type
+                run.set_config(cfg)
+            elif parent_run_ids is not None or mutation_type is not None:
+                run.set_config({
+                    'parent_run_ids': parent_run_ids or [],
+                    'mutation_type': mutation_type or 'initial',
+                })
             if universe:
                 run.set_universe(universe)
-            
+
             session.add(run)
             session.commit()
-            
-            return RunContext(self, run_id)
+
+            return RunContext(
+                self,
+                run_id,
+                parent_run_ids=parent_run_ids,
+                mutation_type=mutation_type,
+            )
         except Exception as e:
             session.rollback()
             raise
@@ -288,6 +324,58 @@ class RunManager:
         finally:
             session.close()
     
+    def save_backtest_returns(
+        self,
+        run_id: str,
+        returns_df,
+    ) -> int:
+        """Save backtest returns (date, portfolio_return, benchmark_return) to database."""
+        import pandas as pd
+        session = self.db.get_session()
+        try:
+            session.query(BacktestReturn).filter_by(run_id=run_id).delete()
+            count = 0
+            for _, row in returns_df.iterrows():
+                date_val = row.get('date')
+                if isinstance(date_val, pd.Timestamp):
+                    date_val = date_val.to_pydatetime()
+                rec = BacktestReturn(
+                    run_id=run_id,
+                    date=date_val,
+                    portfolio_return=float(row.get('portfolio_return', 0)),
+                    benchmark_return=float(row.get('benchmark_return', 0)),
+                )
+                session.add(rec)
+                count += 1
+            session.commit()
+            return count
+        finally:
+            session.close()
+
+    def save_backtest_positions(self, run_id: str, positions_df) -> int:
+        """Save backtest positions (date, ticker, weight) to database."""
+        import pandas as pd
+        session = self.db.get_session()
+        try:
+            session.query(BacktestPosition).filter_by(run_id=run_id).delete()
+            count = 0
+            for _, row in positions_df.iterrows():
+                date_val = row.get('date')
+                if isinstance(date_val, pd.Timestamp):
+                    date_val = date_val.to_pydatetime()
+                rec = BacktestPosition(
+                    run_id=run_id,
+                    date=date_val,
+                    ticker=str(row.get('ticker', '')),
+                    weight=float(row.get('weight', 0)),
+                )
+                session.add(rec)
+                count += 1
+            session.commit()
+            return count
+        finally:
+            session.close()
+
     def _complete_run(
         self,
         run_id: str,

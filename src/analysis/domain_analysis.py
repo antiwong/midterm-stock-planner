@@ -1210,7 +1210,7 @@ def main():
             price_df = pd.read_csv(price_path, parse_dates=['date'])
             # Calculate daily returns
             price_df = price_df.sort_values(['ticker', 'date'])
-            price_df['return_1d'] = price_df.groupby('ticker')['close'].pct_change()
+            price_df['return_1d'] = price_df.groupby('ticker')['close'].pct_change(fill_method=None)
         else:
             price_df = None
         

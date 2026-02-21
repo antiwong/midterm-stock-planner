@@ -257,9 +257,10 @@ streamlit run run_dashboard.py --server.port 8502
 
 ## Getting Help
 
-- **FAQ**: See [faq.md](faq.md) for common questions
-- **Full Documentation Index**: See [README.md](README.md) for all 64 docs
-- **User Guide**: See [user-guide.md](user-guide.md) for detailed workflows
+- **FAQ**: [faq.md](faq.md) — Common questions
+- **Documentation Index**: [README.md](README.md) — All 64+ docs, quick navigation
+- **User Guide**: [user-guide.md](user-guide.md) — Detailed workflows
+- **Backtesting**: [backtesting.md](backtesting.md) — Scripts, transfer, evolutionary
 - **Issues**: Report bugs on GitHub
 
 ---

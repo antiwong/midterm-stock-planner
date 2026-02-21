@@ -117,6 +117,15 @@ python scripts/download_prices.py --watchlist everything
 python scripts/download_prices.py --watchlist tech_giants --start 2015-01-01 --end 2025-12-31
 ```
 
+**Benchmark data** (required for backtest target = excess return vs benchmark):
+
+```bash
+# Extend benchmark (SPY) to cover full backtest range (train_years + test_years)
+python scripts/download_benchmark.py --start 2010-01-01 --no-merge
+```
+
+If the benchmark CSV is too short, backtests fail with "No predictions generated" because the target requires aligned benchmark forward returns.
+
 **Validation Checks:**
 - Missing tickers (not in prices.csv)
 - Date range coverage
@@ -607,6 +616,7 @@ def prepare_inference_data(
 ## Related Documents
 
 - **Next**: [model-training.md](model-training.md) - How the training dataset is used
+- **Backtesting**: [backtesting.md](backtesting.md) - Walk-forward backtest, feature usage
 - **Extended Features**: [technical-indicators.md](technical-indicators.md)
 - **Fundamental Data**: [fundamental-data.md](fundamental-data.md)
 - **Back to**: [design.md](design.md) - Main overview

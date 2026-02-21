@@ -32,7 +32,8 @@ class BacktestConfig:
     """Configuration for walk-forward backtest."""
     train_years: float = 5.0
     test_years: float = 1.0
-    step_years: float = 1.0
+    step_value: float = 1.0  # Step size (see step_unit)
+    step_unit: str = "years"  # hours, days, months, years
     rebalance_freq: str = "MS"  # MS = month start, M = month end
     top_n: Optional[int] = None
     top_pct: float = 0.1
@@ -41,11 +42,25 @@ class BacktestConfig:
     # Optional date range constraints
     start_date: Optional[str] = None  # Format: YYYY-MM-DD (filters data before this date)
     end_date: Optional[str] = None    # Format: YYYY-MM-DD (filters data after this date)
+    # IC (Information Coefficient) gating: require |IC| above threshold per window
+    ic_min_threshold: Optional[float] = None  # e.g. 0.01 or 0.02; None = disabled
+    ic_action: str = "warn"  # "warn" | "off" when |IC| < ic_min_threshold
+
+
+def bars_per_day_from_interval(interval: str) -> float:
+    """Convert data interval to bars per trading day (US equities ~6.5 hours)."""
+    iv = (interval or "1d").lower().strip()
+    if iv in ("1d", "1day", "daily"):
+        return 1.0
+    if iv in ("1h", "1hour", "hourly"):
+        return 6.5  # US trading hours per day
+    return 1.0
 
 
 @dataclass
 class DataConfig:
     """Configuration for data paths and sources."""
+    interval: str = "1d"  # 1d (daily) or 1h (hourly). yfinance limits 1h to ~730 days
     price_data_path: str = "data/prices.csv"
     fundamental_data_path: Optional[str] = None
     benchmark_data_path: str = "data/benchmark.csv"
@@ -56,8 +71,24 @@ class DataConfig:
 
 
 @dataclass
+class MacdRsiConfig:
+    """Configuration for MACD/RSI (trigger backtest + feature engineering). Overridden by Bayesian-optimized params when file exists."""
+    macd_fast: int = 12
+    macd_slow: int = 26
+    macd_signal: int = 9
+    rsi_period: int = 14
+    rsi_overbought: float = 70.0
+    rsi_oversold: float = 30.0
+    optimized_params_path: Optional[str] = None  # JSON path; overrides above when file exists
+
+
+@dataclass
 class FeatureConfig:
     """Configuration for feature engineering."""
+    rsi_period: int = 14
+    macd_fast: int = 12
+    macd_slow: int = 26
+    macd_signal: int = 9
     return_periods: List[int] = field(default_factory=lambda: [21, 63, 126, 252])
     volatility_windows: List[int] = field(default_factory=lambda: [20, 60])
     volume_window: int = 20
@@ -104,12 +135,15 @@ class CLIConfig:
     verbose: bool = True
     save_results: bool = True
     results_path: Optional[str] = None
+    # When False, only save to database (reduces CSV files)
+    save_backtest_csv: bool = True
 
 
 @dataclass
 class AppConfig:
     """Main application configuration combining all configs."""
     model: ModelConfig = field(default_factory=ModelConfig)
+    trigger: MacdRsiConfig = field(default_factory=MacdRsiConfig)
     backtest: BacktestConfig = field(default_factory=BacktestConfig)
     data: DataConfig = field(default_factory=DataConfig)
     features: FeatureConfig = field(default_factory=FeatureConfig)
@@ -181,7 +215,14 @@ def load_config(
     
     # Create config objects
     model_cfg = ModelConfig(**config_dict.get('model', {})) if 'model' in config_dict else ModelConfig()
-    backtest_cfg = BacktestConfig(**config_dict.get('backtest', {})) if 'backtest' in config_dict else BacktestConfig()
+    trigger_dict = config_dict.get('trigger', {})
+    trigger_cfg = MacdRsiConfig(**trigger_dict) if trigger_dict else MacdRsiConfig()
+    backtest_dict = config_dict.get('backtest', {})
+    # Migrate step_years -> step_value + step_unit
+    if 'step_years' in backtest_dict and 'step_value' not in backtest_dict:
+        backtest_dict = {**backtest_dict, 'step_value': backtest_dict['step_years'], 'step_unit': 'years'}
+        backtest_dict = {k: v for k, v in backtest_dict.items() if k != 'step_years'}
+    backtest_cfg = BacktestConfig(**backtest_dict) if backtest_dict else BacktestConfig()
     data_cfg = DataConfig(**config_dict.get('data', {})) if 'data' in config_dict else DataConfig()
     features_cfg = FeatureConfig(**config_dict.get('features', {})) if 'features' in config_dict else FeatureConfig()
     sentiment_cfg = SentimentConfig(**config_dict.get('sentiment', {})) if 'sentiment' in config_dict else SentimentConfig()
@@ -201,18 +242,126 @@ def load_config(
         # Backtest config
         backtest_cfg.train_years = _get_env_value('backtest_train_years', backtest_cfg.train_years)
         backtest_cfg.test_years = _get_env_value('backtest_test_years', backtest_cfg.test_years)
+        backtest_cfg.step_value = _get_env_value('backtest_step_value', backtest_cfg.step_value)
+        backtest_cfg.step_unit = _get_env_value('backtest_step_unit', backtest_cfg.step_unit)
         
         # CLI config
         cli_cfg.verbose = _get_env_value('cli_verbose', cli_cfg.verbose)
         cli_cfg.output_format = _get_env_value('cli_output_format', cli_cfg.output_format)
     
-    return AppConfig(
+    config = AppConfig(
         model=model_cfg,
+        trigger=trigger_cfg,
         backtest=backtest_cfg,
         data=data_cfg,
         features=features_cfg,
         sentiment=sentiment_cfg,
         cli=cli_cfg
+    )
+    # Override trigger params from Bayesian-optimized JSON if present
+    _apply_optimized_trigger_params(config)
+    return config
+
+
+def _apply_optimized_trigger_params(config: AppConfig) -> None:
+    """Override config.trigger with best_params from JSON if file exists."""
+    path = getattr(config.trigger, 'optimized_params_path', None)
+    if not path:
+        return
+    p = Path(path)
+    if not p.is_absolute():
+        p = Path(__file__).parent.parent.parent / path
+    if not p.exists():
+        return
+    try:
+        with open(p) as f:
+            data = json.load(f)
+        best = data.get('best_params', {})
+        if best:
+            config.trigger.macd_fast = int(best.get('macd_fast', config.trigger.macd_fast))
+            config.trigger.macd_slow = int(best.get('macd_slow', config.trigger.macd_slow))
+            config.trigger.macd_signal = int(best.get('macd_signal', config.trigger.macd_signal))
+            config.trigger.rsi_period = int(best.get('rsi_period', best.get('rsi_len', config.trigger.rsi_period)))
+            config.trigger.rsi_overbought = float(best.get('rsi_overbought', best.get('rsi_hi', config.trigger.rsi_overbought)))
+            config.trigger.rsi_oversold = float(best.get('rsi_oversold', best.get('rsi_lo', config.trigger.rsi_oversold)))
+    except Exception:
+        pass
+
+
+def load_ticker_config(ticker: str, config_dir: Optional[Path] = None) -> Optional[dict]:
+    """Load per-ticker YAML config from config/tickers/{ticker}.yaml if it exists.
+
+    Returns a dict with keys: trigger (RSI/MACD/Bollinger params), horizon_days,
+    return_periods, volatility_windows, volume_window. Returns None if no file exists.
+
+    Example YAML structure:
+        ticker: AMD
+        trigger:
+          rsi_period: 15
+          ...
+        horizon_days: 63
+        return_periods: [21, 63, 126, 252]
+        backtest:
+          train_years: 1.0
+          test_years: 0.25
+          step_value: 1.0
+          step_unit: days
+          rebalance_freq: 4h
+    """
+    if config_dir is None:
+        config_dir = Path(__file__).parent.parent.parent / "config" / "tickers"
+    path = config_dir / f"{ticker.upper().strip()}.yaml"
+    if not path.exists():
+        return None
+    try:
+        with open(path) as f:
+            return yaml.safe_load(f) or {}
+    except Exception:
+        return None
+
+
+def get_backtest_config_for_ticker(
+    ticker: str,
+    base_backtest: BacktestConfig,
+    config_dir: Optional[Path] = None,
+) -> BacktestConfig:
+    """Return BacktestConfig with per-ticker overrides from config/tickers/{ticker}.yaml.
+
+    If the ticker YAML has a 'backtest' section, those values override the base config.
+    Otherwise returns a copy of base_backtest.
+    """
+    ticker_cfg = load_ticker_config(ticker, config_dir)
+    if not ticker_cfg or "backtest" not in ticker_cfg:
+        return BacktestConfig(
+            train_years=base_backtest.train_years,
+            test_years=base_backtest.test_years,
+            step_value=base_backtest.step_value,
+            step_unit=base_backtest.step_unit,
+            rebalance_freq=base_backtest.rebalance_freq,
+            top_n=base_backtest.top_n,
+            top_pct=base_backtest.top_pct,
+            min_stocks=base_backtest.min_stocks,
+            transaction_cost=base_backtest.transaction_cost,
+            start_date=base_backtest.start_date,
+            end_date=base_backtest.end_date,
+            ic_min_threshold=getattr(base_backtest, "ic_min_threshold", None),
+            ic_action=getattr(base_backtest, "ic_action", "warn"),
+        )
+    b = ticker_cfg["backtest"]
+    return BacktestConfig(
+        train_years=float(b.get("train_years", base_backtest.train_years)),
+        test_years=float(b.get("test_years", base_backtest.test_years)),
+        step_value=float(b.get("step_value", base_backtest.step_value)),
+        step_unit=str(b.get("step_unit", base_backtest.step_unit)),
+        rebalance_freq=str(b.get("rebalance_freq", base_backtest.rebalance_freq)),
+        top_n=b.get("top_n", base_backtest.top_n),
+        top_pct=float(b.get("top_pct", base_backtest.top_pct)),
+        min_stocks=int(b.get("min_stocks", base_backtest.min_stocks)),
+        transaction_cost=float(b.get("transaction_cost", base_backtest.transaction_cost)),
+        start_date=b.get("start_date", base_backtest.start_date),
+        end_date=b.get("end_date", base_backtest.end_date),
+        ic_min_threshold=float(b["ic_min_threshold"]) if b.get("ic_min_threshold") is not None else getattr(base_backtest, "ic_min_threshold", None),
+        ic_action=str(b.get("ic_action", getattr(base_backtest, "ic_action", "warn"))),
     )
 
 
@@ -227,6 +376,15 @@ def save_config(config: AppConfig, path: Union[str, Path]) -> None:
     path = Path(path)
     
     config_dict = {
+        'trigger': {
+            'macd_fast': config.trigger.macd_fast,
+            'macd_slow': config.trigger.macd_slow,
+            'macd_signal': config.trigger.macd_signal,
+            'rsi_period': config.trigger.rsi_period,
+            'rsi_overbought': config.trigger.rsi_overbought,
+            'rsi_oversold': config.trigger.rsi_oversold,
+            'optimized_params_path': config.trigger.optimized_params_path,
+        },
         'model': {
             'target_col': config.model.target_col,
             'test_size': config.model.test_size,
@@ -237,14 +395,18 @@ def save_config(config: AppConfig, path: Union[str, Path]) -> None:
         'backtest': {
             'train_years': config.backtest.train_years,
             'test_years': config.backtest.test_years,
-            'step_years': config.backtest.step_years,
+            'step_value': config.backtest.step_value,
+            'step_unit': config.backtest.step_unit,
             'rebalance_freq': config.backtest.rebalance_freq,
             'top_n': config.backtest.top_n,
             'top_pct': config.backtest.top_pct,
             'min_stocks': config.backtest.min_stocks,
             'transaction_cost': config.backtest.transaction_cost,
+            'ic_min_threshold': getattr(config.backtest, 'ic_min_threshold', None),
+            'ic_action': getattr(config.backtest, 'ic_action', 'warn'),
         },
         'data': {
+            'interval': config.data.interval,
             'price_data_path': config.data.price_data_path,
             'fundamental_data_path': config.data.fundamental_data_path,
             'benchmark_data_path': config.data.benchmark_data_path,
@@ -282,6 +444,7 @@ def save_config(config: AppConfig, path: Union[str, Path]) -> None:
             'verbose': config.cli.verbose,
             'save_results': config.cli.save_results,
             'results_path': config.cli.results_path,
+            'save_backtest_csv': config.cli.save_backtest_csv,
         },
     }
     

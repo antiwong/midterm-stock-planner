@@ -1,0 +1,18 @@
+# Value-tilt strategy template
+# Longer lookback, slower rebalance, emphasize valuation in domain score
+# Use with: python scripts/diversified_backtest.py --templates value_tilt
+description: "Value-tilt: longer train, slower rebalance, emphasize value score"
+backtest:
+  train_years: 1.0   # Use 3.0 with extended data
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: months
+  rebalance_freq: MS
+  top_n: 10
+  top_pct: 0.1
+  transaction_cost: 0.001
+analysis:
+  weights:
+    model_score: 0.30
+    value_score: 0.50
+    quality_score: 0.20

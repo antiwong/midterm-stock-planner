@@ -9,7 +9,8 @@
 - [design.md](design.md) - Main overview and architecture
 - [backtesting.md](backtesting.md) - Uses risk metrics for evaluation
 - [visualization-analytics.md](visualization-analytics.md) - Risk visualization
-- **[risk-parity.md](risk-parity.md)** - **NEW** Advanced risk parity allocation, beta control, sector constraints
+- **[risk-parity.md](risk-parity.md)** - Advanced risk parity allocation, beta control, sector constraints
+- **Factor complexity & redundancy** - `src/risk/complexity.py`: `compute_config_complexity`, `compute_factor_redundancy`. Used in evolutionary optimizer (`--complexity-penalty`, `--reject-complexity-above`). See [quantaalpha-feature-proposal.md §3](quantaalpha-feature-proposal.md)
 
 ---
 

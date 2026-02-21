@@ -34,6 +34,9 @@
 | [portfolio-comparison.md](portfolio-comparison.md) | Comparison of Purchase Triggers vs Portfolio Builder methods |
 | [analysis-improvements.md](analysis-improvements.md) | Roadmap for enhancing analytical capabilities |
 | [comprehensive-analysis-system.md](comprehensive-analysis-system.md) | Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis |
+| [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) | Evolutionary optimizer, diversified templates, lineage, complexity control |
+| [macro-indicators.md](macro-indicators.md) | DXY, VIX, GSR for Trigger Backtester |
+| [risk-analysis-guide.md](risk-analysis-guide.md) | Tail risk, VaR, stress testing, conscience filters |
 
 ---
 

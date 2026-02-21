@@ -5,8 +5,10 @@ and comparing sentiment impact.
 """
 
 import argparse
-import sys
+import hashlib
 import json
+import subprocess
+import sys
 from pathlib import Path
 from datetime import datetime
 from typing import Optional
@@ -68,6 +70,29 @@ def _load_sector_mapping() -> dict:
             pass
     
     return fallback_mapping
+
+
+def _compute_config_hash(config_dict: dict) -> str:
+    """Compute deterministic SHA256 hash of config for lineage tracking."""
+    canonical = json.dumps(config_dict, sort_keys=True, default=str)
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+def _get_git_commit() -> Optional[str]:
+    """Return current git commit hash if in a git repo, else None."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            cwd=Path(__file__).parent.parent.parent,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            return result.stdout.strip()[:12]
+    except Exception:
+        pass
+    return None
 
 
 def _save_results(
@@ -142,6 +167,7 @@ def run_backtest(args) -> int:
         print("=" * 60)
         print(f"Watchlist: {watchlist_display_name or 'Default (universe.txt)'}")
         print(f"Sentiment features: {sentiment_status}")
+        print(f"Windows: train={config.backtest.train_years}y, test={config.backtest.test_years}y, step={config.backtest.step_value} {config.backtest.step_unit}")
         print()
         
         # Run pipeline with optional universe filter
@@ -197,63 +223,81 @@ def run_backtest(args) -> int:
                 else:
                     run_folder = base_output / f"run_{run_ctx.run_id[:16]}"
                 run_folder.mkdir(parents=True, exist_ok=True)
-                
+
+                # Always save run_info for lineage/audit (run_id, config_hash, parent_run_ids, mutation_type)
+                actual_start = None
+                actual_end = None
+                if hasattr(backtest_results, 'portfolio_returns') and backtest_results.portfolio_returns is not None and len(backtest_results.portfolio_returns) > 0:
+                    actual_start = backtest_results.portfolio_returns.index.min()
+                    actual_end = backtest_results.portfolio_returns.index.max()
+                config_snapshot = {
+                    'train_years': config.backtest.train_years,
+                    'test_years': config.backtest.test_years,
+                    'step_value': config.backtest.step_value,
+                    'step_unit': config.backtest.step_unit,
+                    'rebalance_freq': config.backtest.rebalance_freq,
+                    'top_n': config.backtest.top_n,
+                    'top_pct': config.backtest.top_pct,
+                    'transaction_cost': config.backtest.transaction_cost,
+                    'sentiment_enabled': config.features.use_sentiment,
+                }
+                run_info = {
+                    'run_id': run_ctx.run_id,
+                    'name': run_name,
+                    'created_at': datetime.now().isoformat(),
+                    'watchlist': watchlist_name,
+                    'watchlist_display_name': watchlist_display_name,
+                    'date_range': {
+                        'requested_start': start_date,
+                        'requested_end': end_date,
+                        'actual_start': str(actual_start) if actual_start else None,
+                        'actual_end': str(actual_end) if actual_end else None,
+                    },
+                    'config': config_snapshot,
+                    'config_hash': _compute_config_hash(config_snapshot),
+                    'parent_run_ids': getattr(run_ctx, 'parent_run_ids', []) or [],
+                    'mutation_type': getattr(run_ctx, 'mutation_type', None) or 'initial',
+                    'metrics': metrics,
+                    'git_commit': _get_git_commit(),
+                    'output_folder': str(run_folder),
+                }
+                run_info_path = run_folder / "run_info.json"
+                with open(run_info_path, 'w') as f:
+                    json.dump(run_info, f, indent=2, default=str)
+                print(f"Run info saved to: {run_info_path}")
+
                 # Save results if requested
                 if config.cli.save_results:
-                    # Save metrics
-                    metrics_path = run_folder / "backtest_metrics.json"
-                    with open(metrics_path, 'w') as f:
-                        json.dump(metrics, f, indent=2)
-                    print(f"\nMetrics saved to: {metrics_path}")
-                    
-                    # Save returns
                     returns_df = pd.DataFrame({
                         'date': backtest_results.portfolio_returns.index,
                         'portfolio_return': backtest_results.portfolio_returns.values,
                         'benchmark_return': backtest_results.benchmark_returns.values,
                     })
-                    returns_path = run_folder / "backtest_returns.csv"
-                    returns_df.to_csv(returns_path, index=False)
-                    print(f"Returns saved to: {returns_path}")
+                    # Save to database (primary store)
+                    run_manager.save_backtest_returns(run_ctx.run_id, returns_df)
+                    run_manager.save_backtest_positions(run_ctx.run_id, backtest_results.positions)
+                    print(f"\nReturns and positions saved to database")
                     
-                    # Save positions
-                    positions_path = run_folder / "backtest_positions.csv"
-                    backtest_results.positions.to_csv(positions_path, index=False)
-                    print(f"Positions saved to: {positions_path}")
+                    # Always save metrics and run_info (small JSON files)
+                    metrics_path = run_folder / "backtest_metrics.json"
+                    with open(metrics_path, 'w') as f:
+                        json.dump(metrics, f, indent=2)
                     
-                    # Save run info with date range and config
-                    actual_start = returns_df['date'].min() if len(returns_df) > 0 else None
-                    actual_end = returns_df['date'].max() if len(returns_df) > 0 else None
-                    
-                    run_info = {
-                        'run_id': run_ctx.run_id,
-                        'name': run_name,
-                        'created_at': datetime.now().isoformat(),
-                        'watchlist': watchlist_name,
-                        'watchlist_display_name': watchlist_display_name,
-                        'date_range': {
-                            'requested_start': start_date,
-                            'requested_end': end_date,
-                            'actual_start': str(actual_start) if actual_start else None,
-                            'actual_end': str(actual_end) if actual_end else None,
-                        },
-                        'config': {
-                            'train_years': config.backtest.train_years,
-                            'test_years': config.backtest.test_years,
-                            'step_years': config.backtest.step_years,
-                            'rebalance_freq': config.backtest.rebalance_freq,
-                            'top_n': config.backtest.top_n,
-                            'top_pct': config.backtest.top_pct,
-                            'transaction_cost': config.backtest.transaction_cost,
-                            'sentiment_enabled': config.features.use_sentiment,
-                        },
-                        'output_folder': str(run_folder),
-                    }
-                    run_info_path = run_folder / "run_info.json"
-                    with open(run_info_path, 'w') as f:
-                        json.dump(run_info, f, indent=2, default=str)
-                    print(f"Run info saved to: {run_info_path}")
-                
+                    # Optionally save returns/positions CSV (set cli.save_backtest_csv: false to reduce)
+                    if getattr(config.cli, 'save_backtest_csv', True):
+                        returns_path = run_folder / "backtest_returns.csv"
+                        returns_df.to_csv(returns_path, index=False)
+                        positions_path = run_folder / "backtest_positions.csv"
+                        backtest_results.positions.to_csv(positions_path, index=False)
+                        print(f"CSV files saved to: {run_folder}")
+
+                    # Update run_info with actual dates from returns
+                    if len(returns_df) > 0:
+                        run_info['date_range']['actual_start'] = str(returns_df['date'].min())
+                        run_info['date_range']['actual_end'] = str(returns_df['date'].max())
+                        with open(run_info_path, 'w') as f:
+                            json.dump(run_info, f, indent=2, default=str)
+
                 print(f"\n📁 Output folder: {run_folder}")
                 # Count unique tickers in the universe
                 universe_count = 0
@@ -385,6 +429,14 @@ def run_backtest(args) -> int:
         print(f"Error: {e}", file=sys.stderr)
         return 1
     except Exception as e:
+        from src.exceptions import BacktestError, InsufficientBacktestDataError, handle_cli_error
+        from src.data.loader import DataValidationError as LoaderDataValidationError
+        if isinstance(e, (BacktestError, InsufficientBacktestDataError)):
+            print(handle_cli_error(e), file=sys.stderr)
+            return 1
+        if isinstance(e, LoaderDataValidationError):
+            print(f"Data Error: {e}\nPlease check your data files.", file=sys.stderr)
+            return 1
         print(f"Error running backtest: {e}", file=sys.stderr)
         import traceback
         traceback.print_exc()
@@ -394,7 +446,7 @@ def run_backtest(args) -> int:
 def score_latest(args) -> int:
     """Score stocks and produce rankings."""
     try:
-        from ..config.config import load_config
+        from ..config.config import load_config, bars_per_day_from_interval
         from ..pipeline import prepare_inference_data
         from ..models.predictor import load_model, predict, get_top_stocks
         from ..explain.shap_explain import compute_shap_values, summarize_feature_importance
@@ -444,11 +496,13 @@ def score_latest(args) -> int:
             from ..data.loader import load_universe
             universe = load_universe(args.universe)
         
+        bars_per_day = bars_per_day_from_interval(config.data.interval)
         feature_df, feature_cols = prepare_inference_data(
             price_path=config.data.price_data_path,
             fundamental_path=config.data.fundamental_data_path,
             universe=universe,
             date=args.date,
+            bars_per_day=bars_per_day,
         )
         
         if len(feature_df) == 0:

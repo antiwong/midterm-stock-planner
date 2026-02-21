@@ -1,5 +1,11 @@
 """Risk management module."""
 
+from .complexity import (
+    compute_config_complexity,
+    compute_factor_redundancy,
+    compute_penalty,
+    exceeds_thresholds,
+)
 from .metrics import RiskMetrics
 from .position_sizing import PositionSizer
 from .portfolio import PortfolioRiskManager
@@ -12,6 +18,10 @@ from .risk_parity import (
 )
 
 __all__ = [
+    "compute_config_complexity",
+    "compute_factor_redundancy",
+    "compute_penalty",
+    "exceeds_thresholds",
     "RiskMetrics",
     "PositionSizer",
     "PortfolioRiskManager",

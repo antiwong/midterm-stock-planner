@@ -522,6 +522,15 @@ python scripts/convert_tiger_symbols.py
 
 # Transfer testing (same config, different universe)
 python scripts/transfer_report.py --watchlist nasdaq_100 --transfer-watchlist sp500
+
+# Evolutionary optimizer (mutate/crossover backtest params)
+python scripts/evolutionary_backtest.py --watchlist tech_giants --generations 5
+
+# Diversified strategy templates (correlation matrix, select diverse subset)
+python scripts/diversified_backtest.py --templates value_tilt momentum_tilt
+
+# Lineage report (DAG of runs, best branches)
+python scripts/lineage_report.py --format text --metric sharpe_ratio
 ```
 
 ### Integration

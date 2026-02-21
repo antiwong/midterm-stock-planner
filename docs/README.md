@@ -2,6 +2,8 @@
 
 **Mid-term Stock Planner v3.11.2** - Complete documentation for the ML-powered stock ranking and portfolio optimization system.
 
+**Quick navigation**: [Quick Start](quick-start-guide.md) | [User Guide](user-guide.md) | [Design](design.md) | [Backtesting](backtesting.md) | [QuantaAlpha](quantaalpha-feature-proposal.md) | [Implementation Guide](quantaalpha-implementation-guide.md) | [Macro](macro-indicators.md) | [Config](configuration-cli.md) | [Risk](risk-management.md) | [FAQ](faq.md)
+
 ## Start Here
 
 | If you want to... | Read this |
@@ -49,7 +51,10 @@
 
 | Document | Description |
 |----------|-------------|
-| [QuantaAlpha Feature Proposal](quantaalpha-feature-proposal.md) | Gap/overnight features, transfer testing, evolutionary roadmap |
+| [QuantaAlpha Feature Proposal](quantaalpha-feature-proposal.md) | Gap features, transfer testing, evolutionary optimizer, diversified templates, lineage, complexity control. Scripts: `evolutionary_backtest.py`, `diversified_backtest.py`, `lineage_report.py`. See [backtesting.md](backtesting.md), [risk-management.md](risk-management.md) |
+| [QuantaAlpha Implementation Guide](quantaalpha-implementation-guide.md) | Concrete factor formulas, parameter tables, step-by-step workflows, silver vs gold, AMD regime signals, codebase mapping, transfer learning |
+| [QuantaAlpha Paper Summary](quantaalpha-paper-summary.md) | High-level summary of arXiv:2602.07085 (IC, ARR, MDD benchmarks, gap factors, transfer results) |
+| [Macro Indicators](macro-indicators.md) | DXY, VIX, GSR for Trigger Backtester. BUY/SELL bands, validate script. See [backtesting.md](backtesting.md#12-trigger-backtester), [config/tickers/README.md](../config/tickers/README.md) |
 | [Technical Indicators](technical-indicators.md) | RSI, MACD, Bollinger Bands, ATR, ADX, OBV, gap features |
 | [Sentiment Analysis](sentiment.md) | Multi-source news sentiment with Gemini LLM |
 | [Fundamental Data](fundamental-data.md) | SEC filings, PE/PB/ROE data fetching |
@@ -81,6 +86,8 @@
 |----------|-------------|
 | [API Documentation](api-documentation.md) | Complete API reference for all modules |
 | [Configuration & CLI](configuration-cli.md) | Config file, CLI commands, run tracking |
+| [config/tickers/README.md](../config/tickers/README.md) | Per-ticker YAML schema (RSI, MACD, macro). See [backtesting.md](backtesting.md#11-per-ticker-configuration) |
+| [config/strategy_templates/README.md](../config/strategy_templates/README.md) | Strategy templates (value_tilt, momentum_tilt, etc.). See [diversified_backtest.py](../scripts/diversified_backtest.py) |
 | [API Configuration](api-configuration.md) | API key setup (NewsAPI, Gemini, etc.) |
 | [Data Validation](data-validation.md) | Data quality checks for AI insights |
 | [GARCH Design](garch-design.md) | GARCH volatility modeling design |

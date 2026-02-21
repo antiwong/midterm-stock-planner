@@ -1,0 +1,22 @@
+# Quality-tilt strategy template
+# Emphasize quality (ROE, margins) in domain score, moderate rebalance
+# Use with: python scripts/diversified_backtest.py --templates quality_tilt
+description: "Quality-tilt: emphasize quality score, moderate rebalance"
+backtest:
+  train_years: 1.0   # Use 2.0 with extended data
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: months
+  rebalance_freq: MS
+  top_n: 10
+  top_pct: 0.1
+  transaction_cost: 0.001
+analysis:
+  weights:
+    model_score: 0.30
+    value_score: 0.20
+    quality_score: 0.50
+  filters:
+    min_roe: 0.05
+    min_net_margin: 0.03
+    max_debt_to_equity: 1.5

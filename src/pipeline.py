@@ -21,7 +21,13 @@ from .features.engineering import (
     make_training_dataset,
     get_feature_columns,
 )
-from .config.config import AppConfig, DataConfig, FeatureConfig
+from .config.config import (
+    AppConfig,
+    DataConfig,
+    FeatureConfig,
+    bars_per_day_from_interval,
+    get_backtest_config_for_ticker,
+)
 
 
 def prepare_training_data(
@@ -31,6 +37,11 @@ def prepare_training_data(
     universe: Optional[List[str]] = None,
     horizon_days: int = 63,
     target_col: str = "target",
+    bars_per_day: float = 1.0,
+    rsi_period: int = 14,
+    macd_fast: int = 12,
+    macd_slow: int = 26,
+    macd_signal: int = 9,
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
     Prepare training data by loading, computing features, and creating labels.
@@ -64,12 +75,17 @@ def prepare_training_data(
     
     # Compute features with technical indicators (RSI, MACD, etc.)
     feature_df = compute_all_features_extended(
-        price_df, 
+        price_df,
         fundamental_df,
         benchmark_df=benchmark_df,
         include_technical=True,
         include_momentum=True,
         include_mean_reversion=True,
+        bars_per_day=bars_per_day,
+        rsi_period=rsi_period,
+        macd_fast=macd_fast,
+        macd_slow=macd_slow,
+        macd_signal=macd_signal,
     )
     
     # Create training dataset
@@ -78,6 +94,7 @@ def prepare_training_data(
         benchmark_df,
         horizon_days=horizon_days,
         target_col=target_col,
+        bars_per_day=bars_per_day,
     )
     
     # Get feature columns
@@ -91,6 +108,7 @@ def prepare_inference_data(
     fundamental_path: Optional[Union[str, Path]] = None,
     universe: Optional[List[str]] = None,
     date: Optional[str] = None,
+    bars_per_day: float = 1.0,
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
     Prepare data for inference (scoring stocks).
@@ -120,7 +138,7 @@ def prepare_inference_data(
             fundamental_df = fundamental_df[fundamental_df['ticker'].isin(universe)]
     
     # Compute features
-    feature_df = compute_all_features(price_df, fundamental_df)
+    feature_df = compute_all_features(price_df, fundamental_df, bars_per_day=bars_per_day)
     
     # Filter to specific date if provided
     if date is not None:
@@ -160,6 +178,7 @@ def prepare_data_from_config(
     """
     data_cfg = config.data
     feature_cfg = config.features
+    bars_per_day = bars_per_day_from_interval(data_cfg.interval)
     
     # Use override_universe if provided, otherwise load from config
     universe = None
@@ -175,7 +194,8 @@ def prepare_data_from_config(
         end_date = getattr(config.backtest, 'end_date', None)
     
     if for_training:
-        # Prepare training data
+        # Prepare training data (use config.trigger for RSI/MACD params, including Bayesian-optimized)
+        trigger = config.trigger
         training_df, feature_cols = prepare_training_data(
             price_path=data_cfg.price_data_path,
             benchmark_path=data_cfg.benchmark_data_path,
@@ -183,6 +203,11 @@ def prepare_data_from_config(
             universe=universe,
             horizon_days=feature_cfg.horizon_days,
             target_col=config.model.target_col,
+            bars_per_day=bars_per_day,
+            rsi_period=trigger.rsi_period,
+            macd_fast=trigger.macd_fast,
+            macd_slow=trigger.macd_slow,
+            macd_signal=trigger.macd_signal,
         )
         
         # Also load raw data for backtest
@@ -212,6 +237,7 @@ def prepare_data_from_config(
             price_path=data_cfg.price_data_path,
             fundamental_path=data_cfg.fundamental_data_path,
             universe=universe,
+            bars_per_day=bars_per_day,
         )
         
         price_df = load_price_data(data_cfg.price_data_path)
@@ -270,17 +296,24 @@ def run_full_pipeline(
         params=config.model.params,
     )
     
-    backtest_cfg = BacktestConfig(
-        train_years=config.backtest.train_years,
-        test_years=config.backtest.test_years,
-        step_years=config.backtest.step_years,
-        rebalance_freq=config.backtest.rebalance_freq,
-        top_n=config.backtest.top_n,
-        top_pct=config.backtest.top_pct,
-        min_stocks=config.backtest.min_stocks,
-        transaction_cost=config.backtest.transaction_cost,
-    )
-    
+    # Use per-ticker backtest config when universe has exactly one ticker
+    if universe is not None and len(universe) == 1:
+        backtest_cfg = get_backtest_config_for_ticker(universe[0], config.backtest)
+        if verbose:
+            print(f"  Using per-ticker backtest config for {universe[0]}")
+    else:
+        backtest_cfg = BacktestConfig(
+            train_years=config.backtest.train_years,
+            test_years=config.backtest.test_years,
+            step_value=config.backtest.step_value,
+            step_unit=config.backtest.step_unit,
+            rebalance_freq=config.backtest.rebalance_freq,
+            top_n=config.backtest.top_n,
+            top_pct=config.backtest.top_pct,
+            min_stocks=config.backtest.min_stocks,
+            transaction_cost=config.backtest.transaction_cost,
+        )
+
     if verbose:
         print("\nRunning backtest...")
     

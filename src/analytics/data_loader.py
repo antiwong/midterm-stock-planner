@@ -123,7 +123,7 @@ class RunDataLoader:
                         df['date'] = pd.to_datetime(df['date'])
                         # Calculate returns from close prices
                         df = df.sort_values(['ticker', 'date'])
-                        df['return'] = df.groupby('ticker')['close'].pct_change()
+                        df['return'] = df.groupby('ticker')['close'].pct_change(fill_method=None)
                         returns_df = df.pivot_table(
                             index='date',
                             columns='ticker',

@@ -11,6 +11,8 @@ from .models import (
     StockScore,
     Trade,
     PortfolioSnapshot,
+    BacktestReturn,
+    BacktestPosition,
     WatchlistStock,
     CustomWatchlist,
 )
@@ -32,6 +34,8 @@ __all__ = [
     'StockScore',
     'Trade',
     'PortfolioSnapshot',
+    'BacktestReturn',
+    'BacktestPosition',
     'WatchlistStock',
     'CustomWatchlist',
     # Manager

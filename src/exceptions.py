@@ -27,7 +27,36 @@ class ModelError(StockPlannerError):
 
 class BacktestError(StockPlannerError):
     """Raised when backtest execution fails."""
-    pass
+
+    def __init__(self, message: str, diagnostics: dict | None = None):
+        super().__init__(message)
+        self.diagnostics = diagnostics or {}
+
+
+class InsufficientBacktestDataError(BacktestError):
+    """Raised when training data span is too short for walk-forward windows."""
+
+    def __init__(
+        self,
+        message: str,
+        data_range_days: int | None = None,
+        required_days: int | None = None,
+        windows_attempted: int = 0,
+        windows_skipped: int = 0,
+        skipped_reasons: list | None = None,
+        suggested_fix: str | None = None,
+    ):
+        super().__init__(
+            message,
+            diagnostics={
+                "data_range_days": data_range_days,
+                "required_days": required_days,
+                "windows_attempted": windows_attempted,
+                "windows_skipped": windows_skipped,
+                "skipped_reasons": skipped_reasons or [],
+                "suggested_fix": suggested_fix,
+            },
+        )
 
 
 class InsufficientDataError(DataValidationError):
@@ -81,7 +110,11 @@ def handle_cli_error(error: Exception, verbose: bool = False) -> str:
         return f"Model Error: {error}\nPlease check your model and feature setup."
     
     elif isinstance(error, BacktestError):
-        return f"Backtest Error: {error}\nPlease check your data and parameters."
+        msg = str(error)
+        # Use brief header only if message doesn't already include Fix/suggestions
+        if "Fix:" in msg or "Suggested" in msg or "python scripts/" in msg:
+            return msg
+        return f"Backtest Error: {msg}\nPlease check your data and parameters."
     
     elif isinstance(error, FileNotFoundError):
         return f"File Not Found: {error}\nPlease verify the file path exists."

@@ -11,7 +11,16 @@ from pathlib import Path
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 
-from src.analytics.models import get_db, Run, StockScore, Trade, PortfolioSnapshot, CustomWatchlist
+from src.analytics.models import (
+    get_db,
+    Run,
+    StockScore,
+    Trade,
+    PortfolioSnapshot,
+    BacktestReturn,
+    BacktestPosition,
+    CustomWatchlist,
+)
 from .utils import get_project_root, get_run_folder
 
 
@@ -206,6 +215,64 @@ def get_database():
     return get_db(str(db_path))
 
 
+def load_app_settings(scope: str, default: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    """Load persisted app parameters for a scope (recalled on start/refresh).
+    
+    Args:
+        scope: Settings scope (ui, run_analysis, backtest, trigger_backtester)
+        default: Default dict if no settings found
+    
+    Returns:
+        Settings dictionary
+    """
+    default = default or {}
+    try:
+        from src.analytics.models import AppSettings
+    except ImportError:
+        return default.copy()
+    db = get_database()
+    session = db.get_session()
+    try:
+        row = session.query(AppSettings).filter_by(scope=scope).first()
+        if row:
+            loaded = row.get_settings()
+            return {**default, **loaded}
+        return default.copy()
+    except Exception:
+        return default.copy()
+    finally:
+        session.close()
+
+
+def save_app_settings(scope: str, settings: Dict[str, Any]) -> None:
+    """Persist app parameters to database (recalled on start/refresh).
+    
+    Args:
+        scope: Settings scope (ui, run_analysis, backtest, trigger_backtester)
+        settings: Settings dictionary (must be JSON-serializable)
+    """
+    try:
+        from src.analytics.models import AppSettings
+    except ImportError:
+        return
+    db = get_database()
+    session = db.get_session()
+    try:
+        row = session.query(AppSettings).filter_by(scope=scope).first()
+        if row:
+            row.set_settings(settings)
+        else:
+            row = AppSettings(scope=scope)
+            row.set_settings(settings)
+            session.add(row)
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
+
+
 from .utils.cache import cached_query
 
 @st.cache_data(ttl=60, show_spinner=False)  # Streamlit cache for 60 seconds
@@ -315,6 +382,8 @@ def delete_run(run_id: str) -> bool:
         session.query(StockScore).filter_by(run_id=run_id).delete()
         session.query(Trade).filter_by(run_id=run_id).delete()
         session.query(PortfolioSnapshot).filter_by(run_id=run_id).delete()
+        session.query(BacktestReturn).filter_by(run_id=run_id).delete()
+        session.query(BacktestPosition).filter_by(run_id=run_id).delete()
         session.query(Run).filter_by(run_id=run_id).delete()
         session.commit()
         return True
@@ -454,7 +523,7 @@ def load_backtest_metrics(run_id: str) -> Optional[Dict[str, Any]]:
 
 
 def load_backtest_returns(run_id: str) -> Optional[pd.DataFrame]:
-    """Load backtest returns for a run.
+    """Load backtest returns for a run. Prefers database, falls back to CSV.
     
     Args:
         run_id: Run ID
@@ -462,22 +531,38 @@ def load_backtest_returns(run_id: str) -> Optional[pd.DataFrame]:
     Returns:
         Returns DataFrame or None
     """
+    # Try database first
+    db = get_database()
+    session = db.get_session()
+    try:
+        rows = session.query(BacktestReturn).filter_by(run_id=run_id).order_by(BacktestReturn.date).all()
+        if rows:
+            df = pd.DataFrame([
+                {
+                    'date': r.date,
+                    'portfolio_return': r.portfolio_return,
+                    'benchmark_return': r.benchmark_return,
+                }
+                for r in rows
+            ])
+            df['date'] = pd.to_datetime(df['date'])
+            return df
+    finally:
+        session.close()
+    
+    # Fall back to CSV
     run_folder = get_run_folder(run_id)
     returns_file = run_folder / "backtest_returns.csv"
-    
     if returns_file.exists():
         return pd.read_csv(returns_file, parse_dates=['date'])
-    
-    # Try legacy location
     legacy_file = get_project_root() / "output" / "backtest_returns.csv"
     if legacy_file.exists():
         return pd.read_csv(legacy_file, parse_dates=['date'])
-    
     return None
 
 
 def load_backtest_positions(run_id: str) -> Optional[pd.DataFrame]:
-    """Load backtest positions for a run.
+    """Load backtest positions for a run. Prefers database, falls back to CSV.
     
     Args:
         run_id: Run ID
@@ -485,17 +570,29 @@ def load_backtest_positions(run_id: str) -> Optional[pd.DataFrame]:
     Returns:
         Positions DataFrame or None
     """
+    # Try database first
+    db = get_database()
+    session = db.get_session()
+    try:
+        rows = session.query(BacktestPosition).filter_by(run_id=run_id).order_by(BacktestPosition.date, BacktestPosition.ticker).all()
+        if rows:
+            df = pd.DataFrame([
+                {'date': r.date, 'ticker': r.ticker, 'weight': r.weight}
+                for r in rows
+            ])
+            df['date'] = pd.to_datetime(df['date'])
+            return df
+    finally:
+        session.close()
+    
+    # Fall back to CSV
     run_folder = get_run_folder(run_id)
     positions_file = run_folder / "backtest_positions.csv"
-    
     if positions_file.exists():
         return pd.read_csv(positions_file)
-    
-    # Try legacy location
     legacy_file = get_project_root() / "output" / "backtest_positions.csv"
     if legacy_file.exists():
         return pd.read_csv(legacy_file)
-    
     return None
 
 
@@ -702,6 +799,17 @@ def get_run_summary(run_id: str) -> Dict[str, Any]:
         summary['stages']['enrichment'] = any('enriched' in f.name.lower() for f in files)
         summary['stages']['domain_analysis'] = any('vertical' in f.name.lower() or 'horizontal' in f.name.lower() for f in files)
         summary['stages']['ai_analysis'] = any('ai' in f.name.lower() or 'commentary' in f.name.lower() for f in files)
+        
+        # Load run_info.json for config (train_years, test_years, step_value, step_unit)
+        run_info_path = run_folder / "run_info.json"
+        if run_info_path.exists():
+            try:
+                with open(run_info_path, "r") as f:
+                    summary['run_info'] = json.load(f)
+            except Exception:
+                summary['run_info'] = {}
+        else:
+            summary['run_info'] = {}
     
     return summary
 

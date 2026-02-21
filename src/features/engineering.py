@@ -21,7 +21,7 @@ from typing import Optional, List, Union
 from pathlib import Path
 
 
-def add_return_features(price_df: pd.DataFrame) -> pd.DataFrame:
+def add_return_features(price_df: pd.DataFrame, bars_per_day: float = 1.0) -> pd.DataFrame:
     """
     Add return-based features to price data.
     
@@ -33,6 +33,7 @@ def add_return_features(price_df: pd.DataFrame) -> pd.DataFrame:
     
     Args:
         price_df: DataFrame with columns ['date', 'ticker', 'close']
+        bars_per_day: Bars per trading day (1 for daily, ~6.5 for hourly)
     
     Returns:
         DataFrame with added return features
@@ -40,24 +41,30 @@ def add_return_features(price_df: pd.DataFrame) -> pd.DataFrame:
     df = price_df.copy()
     df = df.sort_values(['ticker', 'date'])
     
-    df["return_1m"] = df.groupby("ticker")["close"].pct_change(21)
-    df["return_3m"] = df.groupby("ticker")["close"].pct_change(63)
-    df["return_6m"] = df.groupby("ticker")["close"].pct_change(126)
-    df["return_12m"] = df.groupby("ticker")["close"].pct_change(252)
+    p1 = max(1, int(21 * bars_per_day))
+    p3 = max(1, int(63 * bars_per_day))
+    p6 = max(1, int(126 * bars_per_day))
+    p12 = max(1, int(252 * bars_per_day))
+    
+    df["return_1m"] = df.groupby("ticker")["close"].pct_change(p1, fill_method=None)
+    df["return_3m"] = df.groupby("ticker")["close"].pct_change(p3, fill_method=None)
+    df["return_6m"] = df.groupby("ticker")["close"].pct_change(p6, fill_method=None)
+    df["return_12m"] = df.groupby("ticker")["close"].pct_change(p12, fill_method=None)
     
     return df
 
 
-def add_volatility_features(price_df: pd.DataFrame) -> pd.DataFrame:
+def add_volatility_features(price_df: pd.DataFrame, bars_per_day: float = 1.0) -> pd.DataFrame:
     """
     Add volatility-based features to price data.
     
     Features added:
-    - vol_20d: 20-day rolling standard deviation of daily returns
-    - vol_60d: 60-day rolling standard deviation of daily returns
+    - vol_20d: 20-day rolling standard deviation of returns
+    - vol_60d: 60-day rolling standard deviation of returns
     
     Args:
         price_df: DataFrame with columns ['date', 'ticker', 'close']
+        bars_per_day: Bars per trading day (1 for daily, ~6.5 for hourly)
     
     Returns:
         DataFrame with added volatility features
@@ -65,15 +72,18 @@ def add_volatility_features(price_df: pd.DataFrame) -> pd.DataFrame:
     df = price_df.copy()
     df = df.sort_values(['ticker', 'date'])
     
-    # Compute daily returns first
-    df['daily_return'] = df.groupby('ticker')['close'].pct_change()
+    w20 = max(2, int(20 * bars_per_day))
+    w60 = max(2, int(60 * bars_per_day))
+    
+    # Compute period returns
+    df['daily_return'] = df.groupby('ticker')['close'].pct_change(fill_method=None)
     
     # Rolling volatility
     df['vol_20d'] = df.groupby('ticker')['daily_return'].transform(
-        lambda x: x.rolling(window=20, min_periods=10).std()
+        lambda x: x.rolling(window=w20, min_periods=w20//2).std()
     )
     df['vol_60d'] = df.groupby('ticker')['daily_return'].transform(
-        lambda x: x.rolling(window=60, min_periods=30).std()
+        lambda x: x.rolling(window=w60, min_periods=w60//2).std()
     )
     
     # Drop intermediate column
@@ -82,17 +92,13 @@ def add_volatility_features(price_df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def add_volume_features(price_df: pd.DataFrame) -> pd.DataFrame:
+def add_volume_features(price_df: pd.DataFrame, bars_per_day: float = 1.0) -> pd.DataFrame:
     """
     Add volume-based features to price data.
     
-    Features added:
-    - dollar_volume_20d: 20-day average dollar volume (close * volume)
-    - turnover_20d: 20-day average turnover ratio (volume / avg volume)
-    - volume_ratio: Current volume relative to 20-day average
-    
     Args:
         price_df: DataFrame with columns ['date', 'ticker', 'close', 'volume']
+        bars_per_day: Bars per trading day (1 for daily, ~6.5 for hourly)
     
     Returns:
         DataFrame with added volume features
@@ -100,21 +106,23 @@ def add_volume_features(price_df: pd.DataFrame) -> pd.DataFrame:
     df = price_df.copy()
     df = df.sort_values(['ticker', 'date'])
     
+    w20 = max(2, int(20 * bars_per_day))
+    
     # Dollar volume
     df['dollar_volume'] = df['close'] * df['volume']
     df['dollar_volume_20d'] = df.groupby('ticker')['dollar_volume'].transform(
-        lambda x: x.rolling(window=20, min_periods=10).mean()
+        lambda x: x.rolling(window=w20, min_periods=w20//2).mean()
     )
     
     # Volume ratio (current vs average)
     df['avg_volume_20d'] = df.groupby('ticker')['volume'].transform(
-        lambda x: x.rolling(window=20, min_periods=10).mean()
+        lambda x: x.rolling(window=w20, min_periods=w20//2).mean()
     )
     df['volume_ratio'] = df['volume'] / df['avg_volume_20d']
     
     # Turnover (relative volume change)
     df['turnover_20d'] = df.groupby('ticker')['volume'].transform(
-        lambda x: x.rolling(window=20, min_periods=10).std() / x.rolling(window=20, min_periods=10).mean()
+        lambda x: x.rolling(window=w20, min_periods=w20//2).std() / x.rolling(window=w20, min_periods=w20//2).mean()
     )
     
     # Drop intermediate columns
@@ -206,7 +214,8 @@ def add_valuation_features(
 
 def compute_all_features(
     price_df: pd.DataFrame,
-    fundamental_df: Optional[pd.DataFrame] = None
+    fundamental_df: Optional[pd.DataFrame] = None,
+    bars_per_day: float = 1.0,
 ) -> pd.DataFrame:
     """
     Orchestrator function that computes all features in the correct order.
@@ -214,21 +223,17 @@ def compute_all_features(
     Args:
         price_df: DataFrame with columns ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
         fundamental_df: Optional DataFrame with fundamental data
+        bars_per_day: Bars per trading day (1 for daily, ~6.5 for hourly)
     
     Returns:
         DataFrame with all features computed
     """
     df = price_df.copy()
-    
-    # Ensure proper sorting
     df = df.sort_values(['ticker', 'date'])
-    
-    # Compute features in order (dependencies respected)
-    df = add_return_features(df)
-    df = add_volatility_features(df)
-    df = add_volume_features(df)
+    df = add_return_features(df, bars_per_day)
+    df = add_volatility_features(df, bars_per_day)
+    df = add_volume_features(df, bars_per_day)
     df = add_valuation_features(df, fundamental_df)
-    
     return df
 
 
@@ -237,6 +242,7 @@ def make_training_dataset(
     benchmark_df: pd.DataFrame,
     horizon_days: int = 63,
     target_col: str = "target",
+    bars_per_day: float = 1.0,
 ) -> pd.DataFrame:
     """
     Create a training dataset with features and target (excess return).
@@ -251,7 +257,8 @@ def make_training_dataset(
                     Should be sorted by (ticker, date).
         benchmark_df: DataFrame with columns ['date'] and a price column ('close', 'price', or 'value').
                      Should be sorted by date.
-        horizon_days: Number of trading days forward to compute returns (default: 63 for ~3 months).
+        horizon_days: Number of trading days forward (default: 63 for ~3 months).
+        bars_per_day: Bars per trading day (1 for daily, ~6.5 for hourly).
         target_col: Name for the target column (default: "target").
     
     Returns:
@@ -281,15 +288,25 @@ def make_training_dataset(
             f"Found columns: {benchmark.columns.tolist()}"
         )
     
+    # Use single benchmark series when ticker column exists (e.g. SPY for S&P 500)
+    if 'ticker' in benchmark.columns:
+        tickers = benchmark['ticker'].unique().tolist()
+        if 'SPY' in tickers:
+            benchmark = benchmark[benchmark['ticker'] == 'SPY'].copy()
+        elif len(tickers) > 1:
+            benchmark = benchmark[benchmark['ticker'] == tickers[0]].copy()
+    
     # Sort data
     df = df.sort_values(['ticker', 'date'])
-    benchmark = benchmark.sort_values('date')
+    benchmark = benchmark.sort_values('date').drop_duplicates(subset=['date'])
+    
+    horizon_bars = max(1, int(horizon_days * bars_per_day))
     
     # Compute forward returns for each stock
     def _compute_forward_return(group: pd.DataFrame) -> pd.Series:
         """Compute forward return for a single ticker."""
         group = group.sort_values('date')
-        future_price = group['close'].shift(-horizon_days)
+        future_price = group['close'].shift(-horizon_bars)
         current_price = group['close']
         forward_return = (future_price / current_price) - 1.0
         return forward_return
@@ -300,7 +317,7 @@ def make_training_dataset(
     
     # Compute forward returns for benchmark
     benchmark['_benchmark_forward_return'] = (
-        benchmark[benchmark_price_col].shift(-horizon_days) / benchmark[benchmark_price_col]
+        benchmark[benchmark_price_col].shift(-horizon_bars) / benchmark[benchmark_price_col]
     ) - 1.0
     
     # Merge benchmark forward returns into feature dataframe
@@ -480,6 +497,7 @@ def compute_all_features_with_sentiment(
     include_technical: bool = True,
     include_momentum: bool = True,
     include_mean_reversion: bool = True,
+    bars_per_day: float = 1.0,
 ) -> pd.DataFrame:
     """
     Compute all features including sentiment.
@@ -510,6 +528,7 @@ def compute_all_features_with_sentiment(
         include_technical=include_technical,
         include_momentum=include_momentum,
         include_mean_reversion=include_mean_reversion,
+        bars_per_day=bars_per_day,
     )
     
     # Add sentiment features if news data provided
@@ -561,6 +580,11 @@ def compute_all_features_extended(
     include_technical: bool = True,
     include_momentum: bool = True,
     include_mean_reversion: bool = True,
+    bars_per_day: float = 1.0,
+    rsi_period: int = 14,
+    macd_fast: int = 12,
+    macd_slow: int = 26,
+    macd_signal: int = 9,
 ) -> pd.DataFrame:
     """
     Compute all features including technical indicators and strategy features.
@@ -588,9 +612,9 @@ def compute_all_features_extended(
     df = df.sort_values(['ticker', 'date'])
     
     # Compute basic features
-    df = add_return_features(df)
-    df = add_volatility_features(df)
-    df = add_volume_features(df)
+    df = add_return_features(df, bars_per_day)
+    df = add_volatility_features(df, bars_per_day)
+    df = add_volume_features(df, bars_per_day)
     df = add_valuation_features(df, fundamental_df)
 
     # Add gap/overnight features (QuantaAlpha-inspired, robust under regime shifts)
@@ -612,8 +636,8 @@ def compute_all_features_extended(
                 calculate_adx,
             )
             
-            df = calculate_rsi(df, period=14)
-            df = calculate_macd(df)
+            df = calculate_rsi(df, period=rsi_period)
+            df = calculate_macd(df, fast_period=macd_fast, slow_period=macd_slow, signal_period=macd_signal)
             df = calculate_bollinger_bands(df)
             
             # ATR and ADX require high/low/close

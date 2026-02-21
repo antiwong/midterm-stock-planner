@@ -1,0 +1,45 @@
+# Per-ticker configuration for SLV
+# Overrides global config when this ticker is used in trigger backtest or feature engineering.
+# Generate optimized params with: python scripts/optimize_macd_rsi_bayesian.py --tickers SLV --save output/best_params_SLV.json
+# Validate macro influence: python scripts/validate_macro_influence.py --ticker SLV
+
+ticker: SLV
+
+# RSI, MACD (from optimize_macd_rsi_bayesian.py --tickers SLV, no macro)
+trigger:
+  rsi_period: 14
+  rsi_oversold: 40
+  rsi_overbought: 79
+  macd_fast: 5
+  macd_slow: 51
+  macd_signal: 5
+  bb_period: 20
+  bb_std: 2.0
+  # GSR disabled: was blocking all trades with DXY+VIX. Enable and tune if desired.
+  macro_factors:
+    gsr_enabled: false
+    gold_ticker: GLD
+    gsr_buy_threshold: 90
+    gsr_sell_threshold: 70
+    # VIX filter (permissive: BUY when VIX<=40, SELL when VIX>=20)
+    vix_enabled: true
+    vix_buy_max: 40
+    vix_sell_min: 20
+    # DXY filter (permissive: BUY when DXY<=108, SELL when DXY>=102)
+    dxy_enabled: true
+    dxy_buy_max: 108
+    dxy_sell_min: 102
+
+# Time forward windows
+horizon_days: 63
+return_periods: [21, 63, 126, 252]
+volatility_windows: [20, 60]
+volume_window: 20
+
+# Walk-forward backtest (overrides global config.backtest when running for this ticker)
+backtest:
+  train_years: 3.0
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: days
+  rebalance_freq: 4h

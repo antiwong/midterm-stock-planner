@@ -398,3 +398,12 @@ Then strengthen:
 ```bash
 python scripts/strengthen_recommendations.py --full
 ```
+
+---
+
+## Related Documentation
+
+- [Risk Management](risk-management.md) - Core risk metrics, complexity control
+- [Backtesting](backtesting.md) - Performance evaluation
+- [Macro Indicators](macro-indicators.md) - DXY, VIX, regime analysis
+- [Documentation Index](README.md)

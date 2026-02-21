@@ -78,40 +78,60 @@ class BacktestConfig:
     """Configuration for walk-forward backtesting."""
     
     # Window settings
-    train_years: int = 5              # Training window length
-    test_months: int = 12             # Test window length
-    step_months: int = 12             # Step size between windows
+    train_years: float = 5.0           # Training window in years
+    test_years: float = 1.0            # Test window in years
+    step_value: float = 1.0            # Step size (see step_unit)
+    step_unit: str = "years"            # hours, days, months, years
     
     # Rebalancing
-    rebalance_frequency: str = "M"    # Monthly rebalancing
+    rebalance_freq: str = "MS"         # MS=month start, M=month end, "4h" for hourly
     
     # Portfolio construction
-    top_n: int = 10                   # Number of stocks to hold
-    max_weight: float = 0.05          # Max single stock weight
-    max_sector_weight: float = 0.25   # Max sector weight
+    top_n: Optional[int] = None        # Number of stocks to hold
+    top_pct: float = 0.1               # Top fraction by score
+    min_stocks: int = 5                # Minimum stocks in portfolio
     
     # Transaction costs
-    commission_bps: float = 5.0       # Commission in basis points
-    slippage_bps: float = 3.0         # Slippage in basis points
+    transaction_cost: float = 0.001    # 0.1% per trade
     
-    # Risk controls
-    max_turnover: float = 0.30        # Max turnover per rebalance
+    # Optional date constraints
+    start_date: Optional[str] = None   # YYYY-MM-DD
+    end_date: Optional[str] = None     # YYYY-MM-DD
+    
+    # IC (Information Coefficient) gating
+    ic_min_threshold: Optional[float] = None  # e.g. 0.01 or 0.02; None = disabled
+    ic_action: str = "warn"            # "warn" | "off" when |IC| < ic_min_threshold
 ```
 
 ### 2.2 Configuration Options
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `train_years` | 5 | Training window in years |
-| `test_months` | 12 | Test window in months |
-| `step_months` | 12 | Step between windows |
-| `rebalance_frequency` | "M" | Rebalance frequency (M=monthly) |
+| `train_years` | 5.0 | Training window in years |
+| `test_years` | 1.0 | Test window in years |
+| `step_value` | 1.0 | Step size between walk-forward windows |
+| `step_unit` | "years" | Step unit: `hours`, `days`, `months`, `years` |
+| `rebalance_freq` | "MS" | Rebalance frequency: "MS" (month start), "M" (month end), "4h" (4-hourly for intraday) |
 | `top_n` | 10 | Number of top stocks to hold |
-| `max_weight` | 0.05 | Max single stock weight (5%) |
-| `max_sector_weight` | 0.25 | Max sector weight (25%) |
-| `commission_bps` | 5.0 | Trading commission (bps) |
-| `slippage_bps` | 3.0 | Execution slippage (bps) |
-| `max_turnover` | 0.30 | Max turnover per rebalance |
+| `top_pct` | 0.1 | Top fraction by score (alternative to top_n) |
+| `min_stocks` | 5 | Minimum stocks in portfolio |
+| `transaction_cost` | 0.001 | Per-trade cost (0.1%) |
+| `ic_min_threshold` | None | If set (e.g. 0.01 or 0.02), log a warning when \|IC\| &lt; threshold in a window. See [IC threshold](#ic-information-coefficient-per-window). |
+| `ic_action` | "warn" | When \|IC\| &lt; ic_min_threshold: `warn` = log warning; `off` = no action |
+
+### 2.3 IC (Information Coefficient) per window
+
+For each walk-forward window, the pipeline computes the **Information Coefficient** (Pearson correlation of model predictions with actual excess return) and **Rank IC** (Spearman). These are stored in `window_results[].ic` and `window_results[].rank_ic`. Aggregate metrics added when IC is computed:
+
+- **mean_ic** — Mean IC across windows (in `backtest_results.metrics` and `run_info.json` / `backtest_metrics.json`).
+- **mean_rank_ic** — Mean Rank IC across windows.
+- **windows_below_ic_threshold** — Count of windows where \|IC\| &lt; `ic_min_threshold` (only when `ic_min_threshold` is set).
+
+Set `backtest.ic_min_threshold` (e.g. `0.01` or `0.02`) in `config/config.yaml` to enable per-window warnings when \|IC\| is below the threshold. See [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md) for recommended thresholds.
+
+### 2.4 Global vs Per-Ticker Config
+
+Backtest parameters can be set globally in `config/config.yaml` or **per ticker** in `config/tickers/{TICKER}.yaml`. When running analysis for a single ticker, the pipeline uses per-ticker overrides when present. See [Section 11: Per-Ticker Configuration](#11-per-ticker-configuration).
 
 ---
 
@@ -499,7 +519,7 @@ This script will:
 📊 Configuration:
    Training years: 5.0
    Test years: 1.0
-   Step years: 1.0
+   Step: 1.0 years
 
 📅 Date Ranges:
    Price data: 2015-01-01 to 2023-12-31 (8.9 years)
@@ -526,8 +546,11 @@ This script will:
 **Reduce window sizes:**
 ```yaml
 backtest:
-  train_years: 3.0  # Reduce from 5.0
-  test_years: 0.5   # Reduce from 1.0
+  train_years: 3.0   # Reduce from 5.0
+  test_years: 0.5    # Reduce from 1.0
+  step_value: 1.0
+  step_unit: years
+  rebalance_freq: MS
 ```
 
 **Remove date filters:**
@@ -604,11 +627,13 @@ training_data = make_training_dataset(feature_df, benchmark_df)
 
 # Configure backtest
 backtest_config = BacktestConfig(
-    train_years=5,
-    test_months=12,
+    train_years=5.0,
+    test_years=1.0,
+    step_value=1.0,
+    step_unit="years",
+    rebalance_freq="MS",
     top_n=10,
-    commission_bps=5,
-    slippage_bps=3
+    transaction_cost=0.001
 )
 
 # Run backtest
@@ -628,11 +653,251 @@ print(f"Annual Return: {results.metrics['annual_return']:.2%}")
 
 ---
 
+## 11. Per-Ticker Configuration
+
+Each ticker can have its own YAML file at `config/tickers/{TICKER}.yaml` that overrides global settings for that ticker. This applies to:
+
+- **Trigger parameters** (RSI, MACD, Bollinger) for the trigger backtester
+- **Time forward windows** (horizon_days, return_periods, volatility_windows, volume_window) for feature engineering
+- **Walk-forward backtest** (train_years, test_years, step_value, step_unit, rebalance_freq)
+
+### 11.1 Per-Ticker YAML Schema
+
+```yaml
+ticker: AMD
+
+# RSI, MACD, Bollinger (trigger backtest)
+trigger:
+  rsi_period: 15
+  rsi_oversold: 20
+  rsi_overbought: 69
+  macd_fast: 6
+  macd_slow: 57
+  macd_signal: 13
+  bb_period: 20
+  bb_std: 2.0
+  # Optional: volume_trigger (CMF), macro_factors (GSR) — see Section 12.4
+
+# Time forward windows (feature engineering)
+horizon_days: 63
+return_periods: [21, 63, 126, 252]
+volatility_windows: [20, 60]
+volume_window: 20
+
+# Walk-forward backtest
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: days
+  rebalance_freq: 4h
+```
+
+### 11.2 When Per-Ticker Config Applies
+
+| Component | Per-Ticker Override |
+|-----------|---------------------|
+| **Trigger Backtester (GUI)** | Uses `trigger` section; sliders default to per-ticker values |
+| **Live backtest script** | Uses `trigger` section per ticker |
+| **Walk-forward pipeline** | Uses `backtest` section when universe has exactly one ticker |
+| **Feature engineering** | Uses `horizon_days`, `return_periods`, `volatility_windows`, `volume_window` when wired |
+
+### 11.3 API
+
+```python
+from src.config.config import load_ticker_config, get_backtest_config_for_ticker
+
+# Load full per-ticker config
+ticker_cfg = load_ticker_config("AMD")  # Returns dict or None
+
+# Get per-ticker backtest config (for walk-forward)
+backtest_cfg = get_backtest_config_for_ticker("AMD", base_config.backtest)
+```
+
+---
+
+## 12. Trigger Backtester & Bayesian Optimization
+
+The **Trigger Backtester** is a separate backtesting mode for single-stock RSI/MACD/Bollinger strategies. It uses different parameters than the walk-forward portfolio backtest.
+
+### 12.1 Trigger Parameters
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `rsi_period` | 14 | RSI lookback period |
+| `rsi_oversold` | 30 | RSI level for buy signal (oversold) |
+| `rsi_overbought` | 70 | RSI level for sell signal (overbought) |
+| `macd_fast` | 12 | MACD fast EMA period |
+| `macd_slow` | 26 | MACD slow EMA period |
+| `macd_signal` | 9 | MACD signal line period |
+| `bb_period` | 20 | Bollinger Band period |
+| `bb_std` | 2.0 | Bollinger Band standard deviation |
+
+### 12.2 Bayesian Optimization
+
+Use `scripts/optimize_macd_rsi_bayesian.py` to find optimal RSI/MACD parameters per ticker:
+
+```bash
+# Optimize for AMD, save to JSON
+python scripts/optimize_macd_rsi_bayesian.py --tickers AMD --save output/best_params_AMD.json
+
+# Optimize for multiple tickers (finds best params across all)
+python scripts/optimize_macd_rsi_bayesian.py --tickers AMD SLV --n-calls 50 --metric sharpe
+
+# Metrics: sharpe, return, sharpe_dd (Sharpe + drawdown penalty)
+```
+
+**Parameter search space:**
+
+| Parameter | Range |
+|-----------|-------|
+| MACD fast | 5–20 |
+| MACD slow | 20–60 |
+| MACD signal | 5–20 |
+| RSI period | 7–21 |
+| RSI overbought | 60–80 |
+| RSI oversold | 20–40 |
+
+**VIX optimization** (with `--optimize-vix`):
+
+| Parameter | Range | Constraint |
+|-----------|-------|------------|
+| vix_buy_max | 15–35 | — |
+| vix_sell_min | 20–45 | ≥ vix_buy_max + 5 |
+
+**DXY optimization** (with `--optimize-dxy`):
+
+| Parameter | Range | Constraint |
+|-----------|-------|------------|
+| dxy_buy_max | 96–104 | — |
+| dxy_sell_min | 100–110 | ≥ dxy_buy_max + 4 |
+
+```bash
+# Optimize including VIX thresholds
+python scripts/optimize_macd_rsi_bayesian.py --optimize-vix --tickers AMD --n-calls 60
+```
+
+### 12.3 Applying Optimized Params
+
+1. **Global:** Set `optimized_params_path: output/best_params.json` in `config/config.yaml`; the loader applies it to all tickers.
+2. **Per-ticker:** Copy optimized values into `config/tickers/{TICKER}.yaml` under the `trigger` section. Per-ticker YAML overrides global config.
+
+> **Note:** Validate optimized parameters on a separate out-of-sample period not used in optimization.
+
+### 12.4 Volume & Macro Factors
+
+> **Full documentation**: [macro-indicators.md](macro-indicators.md) — CMF, GSR, DXY, VIX formulas, logic, YAML schema, and visual charts.
+
+**Combined signal + macro flow:** RSI, MACD (and optionally BB, CMF) vote to produce a raw BUY/SELL. Macro filters (GSR, DXY, VIX) then gate that signal: they block BUY or SELL when macro conditions are unfavorable, but never generate signals themselves. See [macro-indicators.md — How Macro Indicators Work](macro-indicators.md#how-macro-indicators-work-with-combined-rsi--macd-signals).
+
+#### Chaikin Money Flow (CMF)
+
+CMF measures buying vs selling pressure over a rolling window using volume and price range. It oscillates between -1 and +1.
+
+**Formula:**
+```
+MFM = (2×close - high - low) / (high - low)
+CMF = sum(MFM × volume) / sum(volume)  over window
+```
+
+**Usage:**
+- **Standalone signal** (`signal_type: cmf`): BUY when CMF crosses above `cmf_buy_threshold`, SELL when it crosses below `cmf_sell_threshold`.
+- **Combined mode**: Set `combined_use_cmf: true` in per-ticker YAML to include CMF as a fourth indicator in the voting logic.
+
+**Per-ticker YAML:**
+```yaml
+trigger:
+  volume_trigger:
+    cmf_window: 20
+    cmf_buy_threshold: 0.0
+    cmf_sell_threshold: 0.0
+  combined_use_cmf: false
+```
+
+#### Gold-Silver Ratio (GSR) Macro Filter
+
+For commodities like SLV (silver), the Gold-Silver Ratio can act as a macro filter: BUY only when silver is cheap relative to gold (GSR high), SELL when silver is expensive (GSR low).
+
+**Formula:** `GSR = gold_close / silver_close` (e.g. GLD/SLV)
+
+**Logic:**
+- BUY allowed when `GSR >= gsr_buy_threshold` (e.g. 90) — silver cheap
+- SELL allowed when `GSR <= gsr_sell_threshold` (e.g. 70) — silver expensive
+- When GSR is between thresholds, existing signals pass through; the filter only blocks BUY when GSR is low and SELL when GSR is high.
+
+**Per-ticker YAML (e.g. SLV):**
+```yaml
+trigger:
+  macro_factors:
+    gsr_enabled: true
+    gold_ticker: GLD
+    gsr_buy_threshold: 90
+    gsr_sell_threshold: 70
+```
+
+**Data:** When `macro_gsr_enabled` is true, the pipeline fetches the gold ticker (e.g. GLD) via yfinance (live mode) or from `data/prices.csv` (CSV mode) and merges it by date to compute GSR.
+
+#### Dollar Index (DXY) Macro Filter
+
+DXY measures the US dollar strength vs a basket of currencies. A weak dollar can support risk assets; a strong dollar can pressure them.
+
+**Logic:**
+- BUY allowed when `DXY <= dxy_buy_max` (e.g. 102) — weak dollar
+- SELL allowed when `DXY >= dxy_sell_min` (e.g. 106) — strong dollar
+
+**Per-ticker YAML:**
+```yaml
+trigger:
+  macro_factors:
+    dxy_enabled: true
+    dxy_buy_max: 102
+    dxy_sell_min: 106
+```
+
+#### VIX (Volatility Index) Macro Filter
+
+VIX measures implied volatility (fear). High VIX can block new BUY signals; low VIX allows entries.
+
+**Logic:**
+- BUY allowed when `VIX <= vix_buy_max` (e.g. 25) — low fear
+- SELL allowed when `VIX >= vix_sell_min` (e.g. 30) — high fear
+
+**Per-ticker YAML:**
+```yaml
+trigger:
+  macro_factors:
+    vix_enabled: true
+    vix_buy_max: 25
+    vix_sell_min: 30
+```
+
+**Charts:** The Trigger Backtester displays DXY and VIX as separate visual indicator charts below the main results, with BUY/SELL bands (horizontal dashed lines) when macro filters are configured. The price chart shows blocked-by-macro signals (hollow markers) when macro filters are enabled.
+
+**Trade log:** When DXY or VIX filters are enabled, the Trade Log tab includes DXY and VIX values at each trade.
+
+**Regime metrics:** When VIX data is available (live mode), the backtest reports performance by VIX regime (low_vol, normal, high_vol). See [macro-indicators.md](macro-indicators.md#5-regime-based-performance-split).
+
+**Validate macro influence:** Run `python scripts/validate_macro_influence.py --ticker SLV` to verify macro filters affect trades. See [macro-indicators.md §10](macro-indicators.md#10-validate-macro-influence).
+
+---
+
 ## Related Documents
 
 - **Previous**: [model-training.md](model-training.md) - Model training details
 - **Risk Metrics**: [risk-management.md](risk-management.md) - Detailed risk calculations
 - **Visualization**: [visualization-analytics.md](visualization-analytics.md) - Performance charts
-- **Diagnostics**: `scripts/diagnose_backtest_data.py` - Backtest data diagnostic tool
-- **Transfer Testing**: `scripts/transfer_report.py` - Same config, different universe robustness check
-- **Back to**: [design.md](design.md) - Main overview
+- **Macro Indicators**: [macro-indicators.md](macro-indicators.md) - CMF, GSR, DXY, VIX for Trigger Backtester
+- **QuantaAlpha Proposal**: [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) - Evolutionary optimizer, diversified templates, lineage
+
+### Related Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `scripts/diagnose_backtest_data.py` | Backtest data diagnostic tool |
+| `scripts/transfer_report.py` | Same config, different universe robustness check |
+| `scripts/optimize_macd_rsi_bayesian.py` | Optimize RSI/MACD (and VIX/DXY) params for trigger backtest |
+| `scripts/evolutionary_backtest.py` | Evolutionary optimizer: mutate/crossover backtest params, fitness=Sharpe. `--complexity-penalty`, `--reject-complexity-above` for factor complexity control |
+| `scripts/diversified_backtest.py` | Run strategy templates, correlation matrix, select diversified subset |
+| `scripts/lineage_report.py` | DAG of runs from run_info.json, highlight best branches |
+| **Per-Ticker Config**: `config/tickers/README.md` | Per-ticker YAML schema and usage |
+| **Back to**: [design.md](design.md) | Main overview |

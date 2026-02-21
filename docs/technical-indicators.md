@@ -9,6 +9,9 @@
 - [design.md](design.md) - Main overview and architecture
 - [data-engineering.md](data-engineering.md) - Core feature engineering
 - [visualization-analytics.md](visualization-analytics.md) - Chart visualization
+- [backtesting.md](backtesting.md) - Trigger Backtester, Bayesian optimization
+- [macro-indicators.md](macro-indicators.md) - DXY, VIX, GSR
+- [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) - Gap features (§4)
 
 ---
 

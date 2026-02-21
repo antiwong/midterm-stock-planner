@@ -245,6 +245,52 @@ class PortfolioSnapshot(Base):
     )
 
 
+class BacktestReturn(Base):
+    """Daily portfolio and benchmark returns for a backtest run."""
+    __tablename__ = 'backtest_returns'
+    
+    id = Column(Integer, primary_key=True)
+    run_id = Column(String(50), ForeignKey('runs.run_id'), nullable=False)
+    date = Column(DateTime, nullable=False)
+    portfolio_return = Column(Float, nullable=False)
+    benchmark_return = Column(Float, nullable=False)
+    
+    __table_args__ = (
+        Index('idx_backtest_return_run_date', 'run_id', 'date'),
+    )
+
+
+class BacktestPosition(Base):
+    """Portfolio positions (ticker, weight) per rebalance date."""
+    __tablename__ = 'backtest_positions'
+    
+    id = Column(Integer, primary_key=True)
+    run_id = Column(String(50), ForeignKey('runs.run_id'), nullable=False)
+    date = Column(DateTime, nullable=False)
+    ticker = Column(String(20), nullable=False)
+    weight = Column(Float, nullable=False)
+    
+    __table_args__ = (
+        Index('idx_backtest_position_run_date', 'run_id', 'date'),
+    )
+
+
+class AppSettings(Base):
+    """Persisted app parameters (recalled on start/refresh)."""
+    __tablename__ = 'app_settings'
+    
+    id = Column(Integer, primary_key=True)
+    scope = Column(String(80), unique=True, nullable=False, index=True)  # ui, run_analysis, backtest, trigger_backtester
+    settings_json = Column(Text, nullable=False)  # JSON dict of parameters
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    
+    def get_settings(self) -> Dict:
+        return json.loads(self.settings_json) if self.settings_json else {}
+    
+    def set_settings(self, settings: Dict):
+        self.settings_json = json.dumps(settings, default=str)
+
+
 class CustomWatchlist(Base):
     """User-defined custom watchlist stored in database."""
     __tablename__ = 'custom_watchlists'

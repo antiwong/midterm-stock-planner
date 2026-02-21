@@ -1,0 +1,18 @@
+# Momentum-tilt strategy template
+# Shorter lookback, faster rebalance, emphasize model (momentum) score
+# Use with: python scripts/diversified_backtest.py --templates momentum_tilt
+description: "Momentum-tilt: shorter train, faster rebalance, emphasize model score"
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_value: 1.0
+  step_unit: months
+  rebalance_freq: 2W
+  top_n: 10
+  top_pct: 0.1
+  transaction_cost: 0.001
+analysis:
+  weights:
+    model_score: 0.60
+    value_score: 0.15
+    quality_score: 0.25

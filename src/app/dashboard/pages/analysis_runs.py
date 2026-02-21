@@ -4,11 +4,15 @@ Analysis Runs Page
 Browse and manage analysis runs.
 """
 
+import os
+import subprocess
+
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
 from ..components.sidebar import render_page_header, render_section_header
+from ..utils import get_project_root
 from ..components.tables import render_runs_table
 from ..components.cards import render_run_card, render_alert
 from ..data import load_runs, delete_run, get_run_summary
@@ -257,6 +261,18 @@ def render_analysis_runs():
             st.write(f"- **Max Drawdown:** {format_percent(run.get('max_drawdown'))}")
             st.write(f"- **Volatility:** {format_percent(run.get('volatility'), with_sign=False)}")
         
+        # Backtest config (from run_info.json)
+        run_info = summary.get('run_info', {})
+        config_cfg = run_info.get('config', {})
+        if config_cfg:
+            step_val = config_cfg.get('step_value')
+            step_unit = config_cfg.get('step_unit')
+            step_str = f"{step_val} {step_unit}" if step_val is not None and step_unit else None
+            if step_str:
+                st.markdown("**Backtest Config**")
+                st.write(f"- Train: {config_cfg.get('train_years', 'N/A')}y · Test: {config_cfg.get('test_years', 'N/A')}y")
+                st.write(f"- **Step: {step_str}**")
+        
         # Output folder info
         if summary.get('has_folder'):
             st.success(f"📁 Output folder exists with {len(summary.get('files', []))} files")
@@ -281,13 +297,44 @@ def render_analysis_runs():
         with stage_cols[3]:
             st.write("AI Analysis:", "✅" if stages.get('ai_analysis') else "❌")
         
-        # Delete button
+        # Actions: Strengthen, Delete
         st.markdown("---")
-        if st.button("🗑️ Delete This Run", type="secondary"):
-            if st.checkbox("I confirm I want to delete this run"):
-                try:
-                    delete_run(selected_run_id)
-                    st.success("Run deleted successfully!")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to delete run: {e}")
+        action_col1, action_col2 = st.columns(2)
+        with action_col1:
+            if st.button("🛡️ Strengthen Recommendations", key="analysis_runs_strengthen", use_container_width=True):
+                _run_strengthen(selected_run_id)
+        with action_col2:
+            if st.button("🗑️ Delete This Run", type="secondary"):
+                if st.checkbox("I confirm I want to delete this run"):
+                    try:
+                        delete_run(selected_run_id)
+                        st.success("Run deleted successfully!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Failed to delete run: {e}")
+
+
+def _run_strengthen(run_id: str):
+    """Run strengthen_recommendations.py for the given run."""
+    output_area = st.empty()
+    cwd = str(get_project_root())
+    env = os.environ.copy()
+    env['PYTHONPATH'] = cwd + os.pathsep + env.get('PYTHONPATH', '')
+    cmd = ["python", "scripts/strengthen_recommendations.py", "--run-id", run_id]
+    process = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        cwd=cwd,
+        env=env,
+    )
+    output_lines = []
+    for line in iter(process.stdout.readline, ''):
+        output_lines.append(line)
+        output_area.code(''.join(output_lines[-30:]), language='text')
+    process.wait()
+    if process.returncode == 0:
+        st.success("✅ Strengthen analysis completed! Report saved to run folder.")
+    else:
+        st.error(f"❌ Failed with code {process.returncode}")

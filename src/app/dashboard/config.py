@@ -1165,6 +1165,7 @@ STANDALONE_TOOLS = [
     ("Watchlist Manager", "watchlist_manager"),
     ("Stock Explorer", "stock_explorer"),
     ("Trigger Backtester", "trigger_backtester"),
+    ("Strategy Optimizer", "strategy_optimizer"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
 ]

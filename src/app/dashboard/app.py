@@ -55,6 +55,7 @@ from src.app.dashboard.pages import (
     render_data_quality,
     render_notifications,
     render_trigger_backtester,
+    render_strategy_optimizer,
 )
 
 
@@ -111,6 +112,7 @@ def main():
         "Data Quality": render_data_quality,
         "Notifications": render_notifications,
         "Trigger Backtester": render_trigger_backtester,
+        "Strategy Optimizer": render_strategy_optimizer,
         "Documentation": render_documentation,
         "Settings": render_settings,
     }

@@ -329,5 +329,9 @@ print(horizontal_result.risk_metrics)
 ## Related Documentation
 
 - [Portfolio Builder](portfolio-builder.md) - Personalized portfolios
-- [Risk Management](risk-management.md) - Risk metrics details
+- [Risk Management](risk-management.md) - Risk metrics, factor complexity & redundancy
 - [Configuration](configuration-cli.md) - Config options
+- [Backtesting](backtesting.md) - Walk-forward backtest
+- [QuantaAlpha](quantaalpha-feature-proposal.md) - Strategy templates, domain_score weights
+- [Design](design.md) - Architecture overview
+- [Full index](README.md)
