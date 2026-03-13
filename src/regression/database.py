@@ -1,9 +1,11 @@
 """Database schema and CRUD operations for regression testing.
 
-Extends the existing SQLite database with three new tables:
+Extends the existing SQLite database with tables:
 - regression_tests: One row per regression test session
 - regression_steps: One row per feature addition step
 - feature_contributions: Aggregated feature leaderboard
+- optimization_runs: Bayesian optimization run results
+- correlation_analysis: Pairwise ticker correlation snapshots
 """
 
 import json
@@ -92,6 +94,50 @@ def _ensure_regression_tables(db_path: str = DEFAULT_DB_PATH) -> None:
             CREATE INDEX IF NOT EXISTS idx_regsteps_feature ON regression_steps(feature_added);
             CREATE INDEX IF NOT EXISTS idx_featcontrib_name ON feature_contributions(feature_name);
             CREATE INDEX IF NOT EXISTS idx_featcontrib_regid ON feature_contributions(regression_id);
+
+            CREATE TABLE IF NOT EXISTS optimization_runs (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                run_id           TEXT UNIQUE,
+                ticker           TEXT NOT NULL,
+                metric           TEXT NOT NULL,
+                best_score       REAL,
+                n_calls          INTEGER,
+                n_initial        INTEGER,
+                seed             INTEGER,
+                optimize_vix     INTEGER DEFAULT 0,
+                optimize_dxy     INTEGER DEFAULT 0,
+                best_params_json TEXT,
+                all_scores_json  TEXT,
+                sharpe_ratio     REAL,
+                total_return     REAL,
+                max_drawdown     REAL,
+                num_trades       INTEGER,
+                created_at       TEXT NOT NULL,
+                duration_seconds REAL,
+                notes            TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_optrun_ticker ON optimization_runs(ticker);
+            CREATE INDEX IF NOT EXISTS idx_optrun_metric ON optimization_runs(metric);
+            CREATE INDEX IF NOT EXISTS idx_optrun_created ON optimization_runs(created_at);
+
+            CREATE TABLE IF NOT EXISTS correlation_analysis (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                analysis_id      TEXT UNIQUE,
+                ticker           TEXT NOT NULL,
+                peer_ticker      TEXT NOT NULL,
+                pearson_corr     REAL,
+                spearman_corr    REAL,
+                rolling_20d_mean REAL,
+                rolling_20d_std  REAL,
+                rolling_60d_mean REAL,
+                rolling_60d_std  REAL,
+                lead_lag_json    TEXT,
+                created_at       TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_corr_ticker ON correlation_analysis(ticker);
+            CREATE INDEX IF NOT EXISTS idx_corr_peer ON correlation_analysis(peer_ticker);
         """)
         conn.commit()
     finally:
@@ -354,6 +400,173 @@ class RegressionDatabase:
                        FROM feature_contributions
                        GROUP BY feature_name
                        ORDER BY marginal_sharpe DESC""",
+                ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    # --- optimization_runs ---
+
+    def log_optimization_run(
+        self,
+        run_id: str,
+        ticker: str,
+        metric: str,
+        best_score: float,
+        n_calls: int,
+        n_initial: int,
+        seed: int,
+        optimize_vix: bool = False,
+        optimize_dxy: bool = False,
+        best_params: Optional[Dict] = None,
+        all_scores: Optional[List[float]] = None,
+        sharpe_ratio: Optional[float] = None,
+        total_return: Optional[float] = None,
+        max_drawdown: Optional[float] = None,
+        num_trades: Optional[int] = None,
+        duration_seconds: Optional[float] = None,
+        notes: Optional[str] = None,
+    ) -> None:
+        """Insert a new optimization run record."""
+        conn = self._connect()
+        try:
+            conn.execute(
+                """INSERT INTO optimization_runs
+                   (run_id, ticker, metric, best_score, n_calls, n_initial, seed,
+                    optimize_vix, optimize_dxy, best_params_json, all_scores_json,
+                    sharpe_ratio, total_return, max_drawdown, num_trades,
+                    created_at, duration_seconds, notes)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    run_id, ticker, metric, best_score,
+                    n_calls, n_initial, seed,
+                    1 if optimize_vix else 0,
+                    1 if optimize_dxy else 0,
+                    json.dumps(best_params) if best_params else None,
+                    json.dumps(all_scores) if all_scores else None,
+                    sharpe_ratio, total_return, max_drawdown, num_trades,
+                    datetime.now().isoformat(),
+                    duration_seconds, notes,
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_optimization_runs(
+        self, ticker: Optional[str] = None, metric: Optional[str] = None
+    ) -> List[Dict]:
+        """List optimization runs with optional ticker/metric filters."""
+        conn = self._connect()
+        try:
+            clauses: List[str] = []
+            params: List[Any] = []
+            if ticker:
+                clauses.append("ticker = ?")
+                params.append(ticker)
+            if metric:
+                clauses.append("metric = ?")
+                params.append(metric)
+            where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+            rows = conn.execute(
+                f"SELECT * FROM optimization_runs{where} ORDER BY created_at DESC",
+                params,
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    def get_best_optimization(
+        self, ticker: str, metric: Optional[str] = None
+    ) -> Optional[Dict]:
+        """Get the best optimization run for a ticker (highest best_score)."""
+        conn = self._connect()
+        try:
+            if metric:
+                row = conn.execute(
+                    """SELECT * FROM optimization_runs
+                       WHERE ticker = ? AND metric = ?
+                       ORDER BY best_score DESC LIMIT 1""",
+                    (ticker, metric),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """SELECT * FROM optimization_runs
+                       WHERE ticker = ?
+                       ORDER BY best_score DESC LIMIT 1""",
+                    (ticker,),
+                ).fetchone()
+            return dict(row) if row else None
+        finally:
+            conn.close()
+
+    def compare_optimizations(self, ticker: str) -> List[Dict]:
+        """Return all optimization runs for a ticker, ordered by score descending."""
+        conn = self._connect()
+        try:
+            rows = conn.execute(
+                """SELECT * FROM optimization_runs
+                   WHERE ticker = ?
+                   ORDER BY best_score DESC""",
+                (ticker,),
+            ).fetchall()
+            return [dict(r) for r in rows]
+        finally:
+            conn.close()
+
+    # --- correlation_analysis ---
+
+    def log_correlation_analysis(
+        self,
+        analysis_id: str,
+        ticker: str,
+        peer_ticker: str,
+        pearson_corr: Optional[float] = None,
+        spearman_corr: Optional[float] = None,
+        rolling_20d_mean: Optional[float] = None,
+        rolling_20d_std: Optional[float] = None,
+        rolling_60d_mean: Optional[float] = None,
+        rolling_60d_std: Optional[float] = None,
+        lead_lag: Optional[Dict] = None,
+    ) -> None:
+        """Insert a correlation analysis record."""
+        conn = self._connect()
+        try:
+            conn.execute(
+                """INSERT INTO correlation_analysis
+                   (analysis_id, ticker, peer_ticker, pearson_corr, spearman_corr,
+                    rolling_20d_mean, rolling_20d_std, rolling_60d_mean, rolling_60d_std,
+                    lead_lag_json, created_at)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+                (
+                    analysis_id, ticker, peer_ticker,
+                    pearson_corr, spearman_corr,
+                    rolling_20d_mean, rolling_20d_std,
+                    rolling_60d_mean, rolling_60d_std,
+                    json.dumps(lead_lag) if lead_lag else None,
+                    datetime.now().isoformat(),
+                ),
+            )
+            conn.commit()
+        finally:
+            conn.close()
+
+    def get_correlations(
+        self, ticker: Optional[str] = None
+    ) -> List[Dict]:
+        """Get correlation analyses, optionally filtered by ticker."""
+        conn = self._connect()
+        try:
+            if ticker:
+                rows = conn.execute(
+                    """SELECT * FROM correlation_analysis
+                       WHERE ticker = ? OR peer_ticker = ?
+                       ORDER BY created_at DESC""",
+                    (ticker, ticker),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM correlation_analysis ORDER BY created_at DESC"
                 ).fetchall()
             return [dict(r) for r in rows]
         finally:

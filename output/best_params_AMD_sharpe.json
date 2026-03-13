@@ -1,0 +1,17 @@
+{
+  "best_params": {
+    "macd_fast": 18,
+    "macd_slow": 37,
+    "macd_signal": 5,
+    "rsi_period": 15,
+    "rsi_overbought": 70,
+    "rsi_oversold": 20
+  },
+  "best_score": 1.7781851294552413,
+  "metric": "sharpe",
+  "tickers": [
+    "AMD"
+  ],
+  "optimize_vix": false,
+  "optimize_dxy": false
+}

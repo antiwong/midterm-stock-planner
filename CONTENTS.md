@@ -181,5 +181,7 @@
 
 ---
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-02-21
 **Version**: 3.11.2
+
+**Recent additions (QuantaAlpha)**: evolutionary_backtest.py, diversified_backtest.py, lineage_report.py, config/strategy_templates/. See docs/backtesting.md Related Scripts, docs/quantaalpha-feature-proposal.md.

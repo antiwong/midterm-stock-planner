@@ -836,6 +836,15 @@ watchlists:
       - AEM     # Agnico Eagle Mines
       - KGC     # Kinross Gold Corporation
 
+  # Focus Optimization - Stocks under active optimization
+  focus_optimization:
+    name: "Focus Optimization"
+    description: "SLV and AMD - active deep optimization targets"
+    category: "custom"
+    symbols:
+      - SLV     # iShares Silver Trust ETF
+      - AMD     # Advanced Micro Devices
+
   # Earnings Watch - Upcoming earnings to monitor
   earnings_watch:
     name: "Earnings Watch"

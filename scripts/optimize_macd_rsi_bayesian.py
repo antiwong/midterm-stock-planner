@@ -29,7 +29,10 @@ Note: Validate final parameters on a separate out-of-sample period not used in o
 import argparse
 import json
 import sys
+import time
+import uuid
 from pathlib import Path
+from typing import Dict
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -39,6 +42,7 @@ import pandas as pd
 from src.backtest.trigger_backtest import TriggerConfig, run_trigger_backtest
 from src.data.loader import load_price_data
 from src.config.config import load_config
+from src.regression.database import RegressionDatabase
 
 
 def _fetch_vix(start: str, end: str) -> pd.DataFrame:
@@ -226,7 +230,84 @@ def main():
         action="store_true",
         help="Include DXY (USD) thresholds (dxy_buy_max, dxy_sell_min) in optimization",
     )
+    parser.add_argument(
+        "--list",
+        action="store_true",
+        dest="list_runs",
+        help="List previous optimization runs from DB and exit",
+    )
+    parser.add_argument(
+        "--compare",
+        type=str,
+        default=None,
+        metavar="TICKER",
+        help="Compare all optimization runs for a ticker and exit",
+    )
+    parser.add_argument(
+        "--notes",
+        type=str,
+        default=None,
+        help="Optional notes to attach to this optimization run",
+    )
+    parser.add_argument(
+        "--no-db",
+        action="store_true",
+        help="Skip logging the run to the database",
+    )
     args = parser.parse_args()
+
+    db = RegressionDatabase()
+
+    # --- List mode ---
+    if args.list_runs:
+        runs = db.get_optimization_runs(
+            ticker=args.tickers[0] if len(args.tickers) == 1 else None,
+            metric=None,
+        )
+        if not runs:
+            print("No optimization runs found.")
+            sys.exit(0)
+        print(f"{'run_id':>8}  {'ticker':>6}  {'metric':>10}  {'score':>8}  "
+              f"{'sharpe':>7}  {'return':>8}  {'maxDD':>8}  {'trades':>6}  {'created_at'}")
+        print("-" * 100)
+        for r in runs:
+            print(f"{r['run_id'][:8]:>8}  {r['ticker']:>6}  {r['metric']:>10}  "
+                  f"{r['best_score'] or 0:>8.4f}  "
+                  f"{r['sharpe_ratio'] or 0:>7.3f}  "
+                  f"{(r['total_return'] or 0)*100:>7.2f}%  "
+                  f"{(r['max_drawdown'] or 0)*100:>7.2f}%  "
+                  f"{r['num_trades'] or 0:>6}  "
+                  f"{r['created_at'][:19]}")
+        sys.exit(0)
+
+    # --- Compare mode ---
+    if args.compare:
+        runs = db.compare_optimizations(args.compare)
+        if not runs:
+            print(f"No optimization runs found for {args.compare}.")
+            sys.exit(0)
+        print(f"\nOptimization runs for {args.compare} (best score first):\n")
+        print(f"{'#':>3}  {'run_id':>8}  {'metric':>10}  {'score':>8}  "
+              f"{'sharpe':>7}  {'return':>8}  {'maxDD':>8}  {'trades':>6}  "
+              f"{'n_calls':>7}  {'VIX':>3}  {'DXY':>3}  {'created_at'}")
+        print("-" * 115)
+        for i, r in enumerate(runs, 1):
+            print(f"{i:>3}  {r['run_id'][:8]:>8}  {r['metric']:>10}  "
+                  f"{r['best_score'] or 0:>8.4f}  "
+                  f"{r['sharpe_ratio'] or 0:>7.3f}  "
+                  f"{(r['total_return'] or 0)*100:>7.2f}%  "
+                  f"{(r['max_drawdown'] or 0)*100:>7.2f}%  "
+                  f"{r['num_trades'] or 0:>6}  "
+                  f"{r['n_calls'] or 0:>7}  "
+                  f"{'Y' if r['optimize_vix'] else 'N':>3}  "
+                  f"{'Y' if r['optimize_dxy'] else 'N':>3}  "
+                  f"{r['created_at'][:19]}")
+        # Show best params for top run
+        best = runs[0]
+        if best.get("best_params_json"):
+            params = json.loads(best["best_params_json"])
+            print(f"\nBest run params: {json.dumps(params, indent=2)}")
+        sys.exit(0)
 
     try:
         from skopt import gp_minimize
@@ -324,6 +405,7 @@ def main():
     print(f"\nRunning Bayesian optimization ({n_calls} calls, {args.n_initial} random warmup)...")
     print(f"Metric: {args.metric}{macro_str}\n")
 
+    t_start = time.time()
     res = gp_minimize(
         objective_bo,
         space,
@@ -371,17 +453,51 @@ def main():
         cfg.macro_dxy_sell_min = float(best_params["dxy_sell_min"])
         if not dxy_df.empty:
             run_kwargs["macro_dxy_df"] = dxy_df
+    duration_seconds = time.time() - t_start
+    all_scores = [-float(v) for v in res.func_vals]
+
     print("\nPer-ticker metrics with best params:")
+    ticker_metrics: Dict[str, Dict] = {}
     for ticker in tickers:
         sub = price_df[price_df["ticker"] == ticker]
         if len(sub) < 100:
             continue
         r = run_trigger_backtest(sub, cfg, **run_kwargs)
         m = r.metrics
+        ticker_metrics[ticker] = m
         print(f"  {ticker}: Sharpe={m.get('sharpe_ratio', 0):.3f}, "
               f"Return={m.get('total_return', 0)*100:.2f}%, "
               f"MaxDD={m.get('max_drawdown', 0)*100:.2f}%, "
               f"Trades={m.get('num_trades', 0)}")
+
+    # --- Log to database ---
+    if not args.no_db:
+        # Convert numpy types for JSON serialization
+        serializable_params = {k: int(v) if isinstance(v, (np.integer,)) else float(v) if isinstance(v, (np.floating,)) else v
+                               for k, v in best_params.items()}
+        for ticker in tickers:
+            m = ticker_metrics.get(ticker, {})
+            run_id = str(uuid.uuid4())
+            db.log_optimization_run(
+                run_id=run_id,
+                ticker=ticker,
+                metric=args.metric,
+                best_score=float(best_score),
+                n_calls=n_calls,
+                n_initial=args.n_initial,
+                seed=args.seed,
+                optimize_vix=args.optimize_vix,
+                optimize_dxy=args.optimize_dxy,
+                best_params=serializable_params,
+                all_scores=all_scores,
+                sharpe_ratio=m.get("sharpe_ratio"),
+                total_return=m.get("total_return"),
+                max_drawdown=m.get("max_drawdown"),
+                num_trades=m.get("num_trades"),
+                duration_seconds=duration_seconds,
+                notes=args.notes,
+            )
+        print(f"\nLogged {len(tickers)} run(s) to database ({db.db_path})")
 
     if args.save and args.save != "none":
         def _to_serializable(v):
