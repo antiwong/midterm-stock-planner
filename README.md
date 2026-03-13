@@ -80,9 +80,12 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 
 ### Interactive Dashboard
 - **Analysis Pipeline**: Clear 4-stage workflow with guards and status indicators
+- **Strategy Optimizer**: Run evolutionary backtest, diversified backtest, lineage report, and strengthen recommendations from one page; view evolutionary results (best config, metrics table)
+- **Trigger Backtester**: Single-ticker RSI/MACD/Bollinger/combined backtest with macro filters (DXY, VIX, GSR); per-ticker params from `config/tickers/{TICKER}.yaml`
 - **Portfolio Builder**: Interactive UI for personalized portfolio construction
 - **Comprehensive Analysis**: Performance attribution, benchmark comparison, factor exposure, rebalancing, style analysis
-- **Advanced Analytics Pages**: 6 new dedicated pages for event analysis, tax optimization, Monte Carlo, turnover, earnings, and real-time monitoring
+- **Strengthen Recommendations**: From Run Analysis (Continue Existing) or Analysis Runs (per-run); runs full or quick risk analysis
+- **Advanced Analytics Pages**: Event analysis, tax optimization, Monte Carlo, turnover, earnings, real-time monitoring
 - **Alert Management**: Configure and manage portfolio alerts with email/SMS notifications (v3.10.0)
 - **Report Templates**: Create custom report templates and generate reports on-demand (v3.10.0)
 - **Enhanced UX**: Loading indicators, improved error messages with actionable guidance, keyboard shortcuts
@@ -104,11 +107,29 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Smart Caching**: TTL-based query cache with automatic compression for large datasets
 - **Batch Report Generation**: Generate reports across multiple runs in parallel
 
-### Other Features
+### QuantaAlpha & Strategy Optimizer
+- **IC (Information Coefficient) per window**: Pearson IC and Rank IC in each walk-forward window; `mean_ic`, `mean_rank_ic`, `windows_below_ic_threshold` in metrics; optional gating via `backtest.ic_min_threshold` (e.g. 0.01 or 0.02)
+- **Evolutionary Backtest**: Mutate backtest params (train_years, rebalance_freq, top_n, etc.), fitness = Sharpe/total_return/hit_rate, trajectory history in `output/evolutionary/*.json` (`scripts/evolutionary_backtest.py`)
+- **Diversified Backtest**: Run multiple strategy templates (value_tilt, momentum_tilt, quality_tilt, balanced, low_vol), correlation matrix of returns, diversified subset selection (`scripts/diversified_backtest.py`)
+- **Lineage Report**: DAG of runs from `run_info.json` and evolutionary trajectories, best branches by metric (`scripts/lineage_report.py`)
+- **Strategy Optimizer (Dashboard)**: Single page to run evolutionary, diversified, lineage, and strengthen recommendations from the GUI
 - **Transfer & Robustness Testing**: Run same config on primary + transfer universe, compare metrics (`scripts/transfer_report.py`)
+- **Per-ticker config**: `config/tickers/{TICKER}.yaml` for RSI/MACD/macro and backtest overrides; **Strategy templates**: `config/strategy_templates/` (value_tilt, momentum_tilt, quality_tilt, balanced, low_vol)
+
+### Feature Regression Testing (NEW)
+- **Systematic Feature Evaluation**: Add features one-by-one to a baseline, measure marginal contribution with statistical significance tests
+- **14 Feature Specs**: Returns, volatility, volume, valuation, RSI, MACD, Bollinger, ATR, ADX, OBV, gap, momentum, mean reversion, sentiment
+- **Metrics Framework**: PRIMARY (mean_rank_ic, sharpe, excess_return), SECONDARY (IC stability, sortino, calmar), GUARD (max_drawdown, overfitting detection)
+- **Bayesian Parameter Tuning**: Per-feature and model hyperparameter tuning via skopt
+- **Statistical Tests**: Paired t-tests, bootstrap CIs for Sharpe differences
+- **Reporting**: JSON/Markdown/CSV reports with feature leaderboard (`scripts/run_regression_test.py`)
+- **Database Tracking**: All results stored in SQLite for historical comparison
+
+### Other Features
 - **A/B Testing**: Compare strategies with and without sentiment features
 - **Diversified Watchlists**: Tech, Blue-chip, Nuclear/Energy, Clean Energy, ETFs
 - **Run-Specific Output**: Each backtest creates its own folder with all outputs
+- **Beads**: Optional git-backed task tracking (e.g. `bd ready`, `bd list`); see `.beads/README.md`
 
 ## Tech Stack
 
@@ -199,6 +220,17 @@ python scripts/comprehensive_risk_analysis.py --run-dir output/run_everything_20
 python scripts/stress_testing.py --run-dir output/run_everything_20260102_160327_
 python scripts/conscience_filter.py --exclude-categories "weapons,tobacco,gambling"
 
+# QuantaAlpha / strategy optimization
+python scripts/evolutionary_backtest.py --watchlist tech_giants --generations 5 --save output/evolutionary_best.yaml
+python scripts/diversified_backtest.py --templates value_tilt momentum_tilt quality_tilt --max-correlation 0.85
+python scripts/lineage_report.py --output-dir output --metric sharpe_ratio --top 5
+python scripts/transfer_report.py --watchlist tech_giants --transfer-watchlist sp500
+
+# Trigger backtest (single-ticker, per-ticker YAML)
+python scripts/run_trigger_backtest_live.py --tickers AMD SLV
+python scripts/optimize_macd_rsi_bayesian.py --tickers SLV --save output/best_params_SLV.json
+python scripts/validate_macro_influence.py --ticker SLV
+
 # Diagnostic scripts
 python scripts/diagnose_backtest_data.py  # Check backtest data issues
 python scripts/diagnose_value_quality_scores.py  # Check fundamental data coverage
@@ -273,7 +305,9 @@ Build personalized portfolios with adjustable parameters:
 midterm-stock-planner/
 ├── config/              # Configuration files
 │   ├── config.yaml
-│   └── watchlists.yaml
+│   ├── watchlists.yaml
+│   ├── strategy_templates/   # value_tilt, momentum_tilt, quality_tilt, balanced, low_vol
+│   └── tickers/             # Per-ticker YAML (RSI, MACD, macro, backtest overrides)
 ├── data/                # Data files
 │   ├── prices.csv
 │   ├── fundamentals.csv
@@ -296,8 +330,13 @@ midterm-stock-planner/
 ├── scripts/            # Analysis scripts
 │   ├── full_analysis_workflow.py
 │   ├── run_portfolio_optimizer.py
-│   ├── show_purchase_triggers.py
-│   ├── download_fundamentals.py
+│   ├── evolutionary_backtest.py
+│   ├── diversified_backtest.py
+│   ├── lineage_report.py
+│   ├── transfer_report.py
+│   ├── run_trigger_backtest_live.py
+│   ├── optimize_macd_rsi_bayesian.py
+│   ├── validate_macro_influence.py
 │   ├── strengthen_recommendations.py
 │   └── ...
 └── output/             # Analysis results
@@ -323,11 +362,18 @@ midterm-stock-planner/
 | \`run_portfolio_optimizer.py\` | Build personalized portfolio |
 | \`run_domain_analysis.py\` | Vertical + horizontal analysis |
 | \`analyze_portfolio.py\` | Portfolio enrichment only |
+| \`evolutionary_backtest.py\` | Evolve backtest params (Sharpe/total_return/hit_rate), export best YAML |
+| \`diversified_backtest.py\` | Run strategy templates, correlation matrix, diversified subset |
+| \`lineage_report.py\` | DAG of runs + evolutionary trajectories, best branches by metric |
+| \`transfer_report.py\` | Same config on primary + transfer universe, side-by-side metrics |
+| \`run_trigger_backtest_live.py\` | Single-ticker trigger backtest (per-ticker YAML) |
+| \`optimize_macd_rsi_bayesian.py\` | Bayesian optimize RSI/MACD per ticker; optional VIX/DXY |
+| \`validate_macro_influence.py\` | Validate macro filter impact on a ticker |
 | \`show_purchase_triggers.py\` | Display purchase triggers & selection logic |
-| \`improve_purchase_triggers.py\` | Apply AI recommendations to improve selection |
 | \`download_fundamentals.py\` | Download comprehensive fundamentals (PE, PB, ROE, margins) |
 | \`fetch_sector_data.py\` | Fetch/update sector classifications |
 | \`download_prices.py\` | Download and validate price data |
+| \`download_benchmark.py\` | Download/extend benchmark series for backtest range |
 
 ### Risk Analysis Scripts
 
@@ -404,6 +450,8 @@ backtest:
   test_years: 1.0
   rebalance_freq: "MS"
   transaction_cost: 0.001
+  ic_min_threshold: null   # optional: 0.01 or 0.02 to warn when |IC| below
+  ic_action: "warn"
 
 analysis:
   weights:
@@ -481,10 +529,17 @@ pytest tests/ --lf
 > **Browse all 64 docs:** See [docs/README.md](docs/README.md) for the full categorized index.
 
 ### Core Documentation
+- [Documentation Index](docs/README.md) - Full index with quick navigation
 - [Design Overview](docs/design.md) - System architecture
+- [Backtesting](docs/backtesting.md) - Walk-forward backtest, IC per window, scripts, transfer, evolutionary
+- [Risk Management](docs/risk-management.md) - Position sizing, risk metrics, complexity control
+- [QuantaAlpha Proposal](docs/quantaalpha-feature-proposal.md) - Evolutionary optimizer, diversified templates, lineage, planned tasks
+- [QuantaAlpha Implementation Guide](docs/quantaalpha-implementation-guide.md) - Factor formulas, parameter tables, silver/gold, AMD, codebase mapping
+- [QuantaAlpha Paper Summary](docs/quantaalpha-paper-summary.md) - High-level summary of the paper (arXiv:2602.07085)
+- [Macro Indicators](docs/macro-indicators.md) - DXY, VIX, GSR for Trigger Backtester
+- [config/tickers/README.md](config/tickers/README.md) - Per-ticker YAML schema
+- [config/strategy_templates/README.md](config/strategy_templates/README.md) - Strategy templates
 - [Sentiment Module](docs/sentiment.md) - News sentiment analysis
-- [Backtesting](docs/backtesting.md) - Walk-forward backtest details
-- [Risk Management](docs/risk-management.md) - Position sizing and risk metrics
 
 ### Feature Documentation
 - [Portfolio Builder](docs/portfolio-builder.md) - Personalized portfolio construction
@@ -527,6 +582,17 @@ pytest tests/ --lf
 ## Recent Changes
 
 See [CHANGELOG.md](CHANGELOG.md) for full details.
+
+**QuantaAlpha & IC (2026-02):**
+- ✅ **IC per window**: Information Coefficient and Rank IC in each walk-forward window; `mean_ic`, `mean_rank_ic`, `windows_below_ic_threshold` in metrics; `backtest.ic_min_threshold` and `ic_action` for gating
+- ✅ **Strategy Optimizer (Dashboard)**: Single page for evolutionary backtest, diversified backtest, lineage report, strengthen recommendations; view evolutionary run results (best config, metrics table)
+- ✅ **Evolutionary backtest**: `scripts/evolutionary_backtest.py` — mutate config params, fitness = Sharpe/total_return/hit_rate, trajectory history, best config export to YAML
+- ✅ **Diversified backtest**: `scripts/diversified_backtest.py` — run strategy templates, correlation matrix, diversified subset selection
+- ✅ **Lineage report**: `scripts/lineage_report.py` — DAG of runs and evolutionary trajectories, best branches by metric
+- ✅ **Strengthen in GUI**: Run from Run Analysis (Continue Existing) and Analysis Runs (per-run)
+- ✅ **Strategy templates**: value_tilt, momentum_tilt, quality_tilt, balanced, low_vol in `config/strategy_templates/`
+- ✅ **Per-ticker config**: AMD, SLV examples in `config/tickers/`; README with schema
+- ✅ **Docs**: QuantaAlpha implementation guide, paper summary, backtesting §2.3 IC, cross-links
 
 **v3.11.2 Highlights:**
 - ✅ **Lazy Loading**: On-demand DataFrames with pagination and virtual scrolling
