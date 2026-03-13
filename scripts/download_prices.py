@@ -273,6 +273,7 @@ class PriceDownloader:
         return original, None
     
     def download(self, tickers: List[str], start_date: str, end_date: str,
+                 interval: str = "1d",
                  merge_existing: bool = True, batch_size: int = 50, 
                  parallel: bool = True, max_workers: int = None) -> pd.DataFrame:
         """
@@ -282,6 +283,7 @@ class PriceDownloader:
             tickers: List of ticker symbols
             start_date: Start date (YYYY-MM-DD)
             end_date: End date (YYYY-MM-DD)
+            interval: Data interval - 1d (daily), 1h (hourly). 1h limited to ~730 days.
             merge_existing: Whether to merge with existing data
             batch_size: Number of tickers to download per batch
         
@@ -333,6 +335,7 @@ class PriceDownloader:
                                 batch,
                                 start=start_date,
                                 end=end_date,
+                                interval=interval,
                                 group_by='ticker',
                                 auto_adjust=True,
                                 progress=False,
@@ -397,6 +400,7 @@ class PriceDownloader:
                 # Continue to merge existing data if needed
                 if all_data:
                     result_df = pd.concat(all_data, ignore_index=True)
+                    result_df = self._standardize_result(result_df, interval)
                     if merge_existing:
                         result_df = self._merge_with_existing(result_df)
                     return result_df
@@ -426,6 +430,7 @@ class PriceDownloader:
                         batch,
                         start=start_date,
                         end=end_date,
+                        interval=interval,
                         group_by='ticker',
                         auto_adjust=True,
                         progress=False,
@@ -514,31 +519,13 @@ class PriceDownloader:
         # Combine all data
         if all_data:
             result_df = pd.concat(all_data, ignore_index=True)
-            
-            # Standardize columns
-            result_df = result_df.rename(columns={
-                'date': 'date',
-                'open': 'open',
-                'high': 'high',
-                'low': 'low',
-                'close': 'close',
-                'volume': 'volume'
-            })
-            
-            # Ensure required columns
-            required_cols = ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
-            for col in required_cols:
-                if col not in result_df.columns:
-                    result_df[col] = np.nan
-            
-            result_df = result_df[required_cols]
-            result_df['date'] = pd.to_datetime(result_df['date']).dt.date
+            result_df = self._standardize_result(result_df, interval)
             
             # Merge with existing if requested
             if merge_existing and self.output_path.exists():
                 print(f"\n   Merging with existing data...")
                 existing_df = pd.read_csv(self.output_path, parse_dates=['date'])
-                existing_df['date'] = pd.to_datetime(existing_df['date']).dt.date
+                existing_df['date'] = pd.to_datetime(existing_df['date'])
                 
                 # Remove duplicates (keep new data)
                 combined = pd.concat([existing_df, result_df], ignore_index=True)
@@ -550,15 +537,35 @@ class PriceDownloader:
         else:
             return pd.DataFrame()
     
+    def _standardize_result(self, result_df: pd.DataFrame, interval: str) -> pd.DataFrame:
+        """Standardize column names and date format."""
+        date_col = next((c for c in result_df.columns if str(c).lower() in ('date', 'datetime')), 'date')
+        if date_col != 'date':
+            result_df = result_df.rename(columns={date_col: 'date'})
+        result_df = result_df.rename(columns={
+            'open': 'open', 'high': 'high', 'low': 'low', 'close': 'close', 'volume': 'volume'
+        })
+        required_cols = ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
+        for col in required_cols:
+            if col not in result_df.columns:
+                result_df[col] = np.nan
+        result_df = result_df[required_cols]
+        result_df['date'] = pd.to_datetime(result_df['date'])
+        if interval in ('1d', '1day', '5d', '1wk', '1mo', '3mo'):
+            result_df['date'] = result_df['date'].dt.tz_localize(None).dt.normalize()
+        else:
+            result_df['date'] = result_df['date'].dt.tz_localize(None)
+        return result_df
+
     def _merge_with_existing(self, result_df: pd.DataFrame) -> pd.DataFrame:
         """Merge new download data with existing prices.csv, deduplicating by (date, ticker)."""
         if not self.output_path.exists():
             return result_df
         try:
             existing_df = pd.read_csv(self.output_path, parse_dates=['date'])
-            existing_df['date'] = pd.to_datetime(existing_df['date']).dt.date
+            existing_df['date'] = pd.to_datetime(existing_df['date'])
             if 'date' in result_df.columns:
-                result_df['date'] = pd.to_datetime(result_df['date']).dt.date
+                result_df['date'] = pd.to_datetime(result_df['date'])
             combined = pd.concat([existing_df, result_df], ignore_index=True)
             combined = combined.drop_duplicates(subset=['date', 'ticker'], keep='last')
             combined = combined.sort_values(['ticker', 'date'])
@@ -699,12 +706,16 @@ Examples:
 """
     )
     
-    parser.add_argument("--watchlist", "-w", type=str, default="custom",
-                       help="Watchlist to download (default: custom)")
+    parser.add_argument("--watchlist", "-w", type=str, default=None,
+                       help="Watchlist to download (e.g. tech_giants, precious_metals)")
+    parser.add_argument("--tickers", "-t", nargs="+", type=str, default=None,
+                       help="Specific tickers to download (e.g. AMD SLV). Overrides --watchlist.")
     parser.add_argument("--start", "-s", type=str, default=None,
                        help="Start date (YYYY-MM-DD, default: 3 years ago)")
     parser.add_argument("--end", "-e", type=str, default=None,
                        help="End date (YYYY-MM-DD, default: today)")
+    parser.add_argument("--interval", "-i", type=str, default=None,
+                       help="Data interval: 1d (daily), 1h (hourly). Default from config or 1d. Note: 1h limited to ~730 days")
     parser.add_argument("--output", "-o", type=str, default="data/prices.csv",
                        help="Output file path")
     parser.add_argument("--validate-only", action="store_true",
@@ -716,33 +727,56 @@ Examples:
     
     args = parser.parse_args()
     
-    # Set default dates
+    # Resolve interval from config if not specified
+    if args.interval is None:
+        try:
+            from src.config.config import load_config
+            cfg = load_config()
+            args.interval = getattr(cfg.data, 'interval', '1d')
+        except Exception:
+            args.interval = '1d'
+    
+    # Set default dates (for 1h, yfinance limits to ~730 days)
     if args.end is None:
         args.end = datetime.now().strftime('%Y-%m-%d')
     if args.start is None:
-        args.start = (datetime.now() - timedelta(days=3*365)).strftime('%Y-%m-%d')
+        max_days = 730 if args.interval in ('1h', '60m') else 3*365
+        args.start = (datetime.now() - timedelta(days=max_days)).strftime('%Y-%m-%d')
+    
+    # Cap date range for hourly (yfinance limit ~730 days)
+    if args.interval in ('1h', '60m'):
+        start_dt = datetime.strptime(args.start, '%Y-%m-%d')
+        end_dt = datetime.strptime(args.end, '%Y-%m-%d')
+        if (end_dt - start_dt).days > 730:
+            args.start = (end_dt - timedelta(days=730)).strftime('%Y-%m-%d')
+            print(f"   ⚠️  Hourly data limited to 730 days. Adjusted start to {args.start}")
     
     print("=" * 70)
     print("STOCK PRICE DOWNLOAD & VALIDATION")
     print("=" * 70)
-    print(f"Watchlist: {args.watchlist}")
+    
+    # Resolve tickers: --tickers overrides --watchlist
+    if args.tickers:
+        tickers = [t.upper().strip() for t in args.tickers]
+        print(f"Tickers: {', '.join(tickers)}")
+    else:
+        wl_name = args.watchlist or "custom"
+        print(f"Watchlist: {wl_name}")
+        from src.data.watchlists import WatchlistManager
+        wm = WatchlistManager.from_config_dir('config')
+        watchlist = wm.get_watchlist(wl_name)
+        if not watchlist:
+            print(f"❌ Watchlist '{wl_name}' not found")
+            print(f"   Available: {', '.join(wm.list_watchlists())}")
+            print(f"   Or use --tickers AMD SLV to download specific tickers")
+            return 1
+        tickers = watchlist.symbols
+        print(f"\n📋 Watchlist '{wl_name}' contains {len(tickers)} tickers")
+    
+    print(f"Interval: {args.interval}")
     print(f"Period: {args.start} to {args.end}")
     print(f"Output: {args.output}")
     print("=" * 70)
-    
-    # Load watchlist
-    from src.data.watchlists import WatchlistManager
-    
-    wm = WatchlistManager.from_config_dir('config')
-    watchlist = wm.get_watchlist(args.watchlist)
-    
-    if not watchlist:
-        print(f"❌ Watchlist '{args.watchlist}' not found")
-        print(f"   Available: {', '.join(wm.list_watchlists())}")
-        return 1
-    
-    tickers = watchlist.symbols
-    print(f"\n📋 Watchlist '{args.watchlist}' contains {len(tickers)} tickers")
     
     download_report = None
     
@@ -760,6 +794,7 @@ Examples:
                 tickers=tickers,
                 start_date=args.start,
                 end_date=args.end,
+                interval=args.interval,
                 merge_existing=not args.no_merge,
                 parallel=True,
                 max_workers=8

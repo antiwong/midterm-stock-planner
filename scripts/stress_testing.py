@@ -102,6 +102,26 @@ STRESS_SCENARIOS = {
             'default': -0.10,
         }
     },
+    'vix_spike_40': {
+        'name': 'VIX Spike to 40',
+        'description': 'Volatility spike (VIX ~40): broad risk-off, growth stocks down 20-30%',
+        'shocks': {
+            'Technology': -0.30,
+            'Communication Services': -0.25,
+            'Consumer Cyclical': -0.25,
+            'Consumer Discretionary': -0.25,
+            'default': -0.15,
+        }
+    },
+    'vix_elevated_30': {
+        'name': 'VIX Elevated (30)',
+        'description': 'Sustained elevated volatility: moderate drawdowns across sectors',
+        'shocks': {
+            'Technology': -0.15,
+            'Consumer Cyclical': -0.12,
+            'default': -0.08,
+        }
+    },
 }
 
 

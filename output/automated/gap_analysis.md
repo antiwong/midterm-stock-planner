@@ -1,17 +1,17 @@
 # Data Gap Analysis Report
 
-**Generated**: 2026-03-13T23:22:01.279269
+**Generated**: 2026-03-14T06:15:28.940555
 
-## Overall Data Quality: D (68.1/100)
+## Overall Data Quality: C (75/100)
 
 ## Data Summary
 
 | Property | Value |
 |----------|-------|
-| Total Rows | 24,548 |
-| Tickers | 9 (AAPL, AMD, AMZN, GOOGL, META, MSFT, NVDA, SLV, TSLA) |
-| Date Range | 2023-02-22 00:00:00 to 2026-02-20 20:30:00 |
-| Span | 1094 days |
+| Total Rows | 50,850 |
+| Tickers | 14 (AAPL, ADBE, AMD, AMZN, CRM, GOOGL, INTC, META, MSFT, NFLX, NVDA, ORCL, SLV, TSLA) |
+| Date Range | 2023-02-22 00:00:00 to 2026-03-13 19:30:00 |
+| Span | 1115 days |
 
 ## Resolution Analysis
 
@@ -25,33 +25,43 @@
 
 ## Ticker Coverage
 
-- **Loaded**: 9 tickers
+- **Loaded**: 14 tickers
 
 ## Data Quality per Ticker
 
 | Ticker | Issues | Completeness | Details |
 |--------|--------|-------------|---------|
-| AAPL | 2 | 100.0% | zero_volume(2); price_outliers_3std(41) |
+| AAPL | 1 | 100.0% | price_outliers_3std(42) |
+| ADBE | 1 | 100.0% | price_outliers_3std(63) |
 | AMD | 1 | 100.0% | price_outliers_3std(5) |
-| AMZN | 1 | 100.0% | price_outliers_3std(40) |
-| GOOGL | 1 | 100.0% | price_outliers_3std(45) |
-| META | 2 | 100.0% | zero_volume(1); price_outliers_3std(40) |
-| MSFT | 2 | 100.0% | zero_volume(1); price_outliers_3std(46) |
-| NVDA | 2 | 100.0% | zero_volume(3); price_outliers_3std(37) |
+| AMZN | 1 | 100.0% | price_outliers_3std(43) |
+| CRM | 1 | 100.0% | price_outliers_3std(61) |
+| GOOGL | 1 | 100.0% | price_outliers_3std(48) |
+| INTC | 1 | 100.0% | price_outliers_3std(55) |
+| META | 1 | 100.0% | price_outliers_3std(40) |
+| MSFT | 1 | 100.0% | price_outliers_3std(48) |
+| NFLX | 1 | 100.0% | price_outliers_3std(56) |
+| NVDA | 1 | 100.0% | price_outliers_3std(37) |
+| ORCL | 1 | 100.0% | price_outliers_3std(63) |
 | SLV | 1 | 100.0% | price_outliers_3std(6) |
-| TSLA | 2 | 100.0% | zero_volume(1); price_outliers_3std(34) |
+| TSLA | 1 | 100.0% | price_outliers_3std(37) |
 
 ## Date Range Gaps
 
 | Ticker | Suspicious Gaps | Largest Gap (hours) |
 |--------|----------------|---------------------|
 | AAPL | 20 | 94.0h |
+| ADBE | 30 | 94.0h |
 | AMD | 31 | 96.0h |
 | AMZN | 20 | 94.0h |
+| CRM | 30 | 94.0h |
 | GOOGL | 20 | 94.0h |
+| INTC | 30 | 94.0h |
 | META | 20 | 94.0h |
 | MSFT | 20 | 94.0h |
+| NFLX | 30 | 94.0h |
 | NVDA | 20 | 94.0h |
+| ORCL | 30 | 94.0h |
 | SLV | 31 | 96.0h |
 | TSLA | 20 | 94.0h |
 
@@ -59,10 +69,10 @@
 
 | Property | Value |
 |----------|-------|
-| Price Dates | 752 |
-| Benchmark Dates | 494 |
-| Overlap | 65.7% |
-| Missing in Benchmark | 258 dates |
+| Price Dates | 767 |
+| Benchmark Dates | 801 |
+| Overlap | 100.0% |
+| Missing in Benchmark | 0 dates |
 
 ## Recommendations
 
@@ -71,9 +81,3 @@
 Current data is 1h. Higher resolution (5m/15m) via Alpaca Markets would enable better intraday signal detection and more walk-forward windows.
 
 **Action**: Install alpaca-py and run download with --interval 5m or 15m
-
-### [MEDIUM] benchmark_alignment
-
-Benchmark-price date overlap is 65.7%. Misaligned dates cause NaN in excess return calculations.
-
-**Action**: Re-download benchmark data to match price date range

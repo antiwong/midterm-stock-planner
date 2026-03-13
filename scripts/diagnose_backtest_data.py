@@ -15,7 +15,7 @@ from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.pipeline import load_data, make_training_dataset
+from src.pipeline import prepare_data_from_config
 from src.config.config import load_config
 
 
@@ -28,24 +28,29 @@ def diagnose_backtest_data():
     print()
     
     # Load config
-    config = load_config()
+    config_path = Path(__file__).parent.parent / "config" / "config.yaml"
+    config = load_config(config_path if config_path.exists() else None)
     
     print("📊 Configuration:")
     print(f"   Training years: {config.backtest.train_years}")
     print(f"   Test years: {config.backtest.test_years}")
-    print(f"   Step years: {config.backtest.step_years}")
+    print(f"   Step: {config.backtest.step_value} {config.backtest.step_unit}")
     print(f"   Rebalance frequency: {config.backtest.rebalance_freq}")
     print()
     
     # Load data
     print("📥 Loading data...")
     try:
-        price_data, benchmark_data, fundamentals_data = load_data(config)
+        training_data, feature_cols, price_data, benchmark_data = prepare_data_from_config(
+            config, for_training=True
+        )
         print(f"   ✅ Price data: {len(price_data)} rows")
         print(f"   ✅ Benchmark data: {len(benchmark_data)} rows")
-        print(f"   ✅ Fundamentals data: {len(fundamentals_data) if fundamentals_data is not None else 0} rows")
+        print(f"   ✅ Training data: {len(training_data)} rows, {len(feature_cols)} features")
     except Exception as e:
         print(f"   ❌ Error loading data: {e}")
+        import traceback
+        traceback.print_exc()
         return
     
     print()
@@ -56,15 +61,15 @@ def diagnose_backtest_data():
         price_data['date'] = pd.to_datetime(price_data['date'])
         price_min = price_data['date'].min()
         price_max = price_data['date'].max()
-        price_span = (price_max - price_min).days / 365.25
-        print(f"   Price data: {price_min.date()} to {price_max.date} ({price_span:.1f} years)")
+        price_span = (price_max - price_min).total_seconds() / (365.25 * 86400)
+        print(f"   Price data: {price_min} to {price_max} ({price_span:.1f} years)")
     
     if 'date' in benchmark_data.columns:
         benchmark_data['date'] = pd.to_datetime(benchmark_data['date'])
         bench_min = benchmark_data['date'].min()
         bench_max = benchmark_data['date'].max()
-        bench_span = (bench_max - bench_min).days / 365.25
-        print(f"   Benchmark data: {bench_min.date()} to {bench_max.date()} ({bench_span:.1f} years)")
+        bench_span = (bench_max - bench_min).total_seconds() / (365.25 * 86400)
+        print(f"   Benchmark data: {bench_min} to {bench_max} ({bench_span:.1f} years)")
     
     print()
     
@@ -87,32 +92,18 @@ def diagnose_backtest_data():
     
     print()
     
-    # Try to create training dataset
-    print("🔧 Creating training dataset...")
-    try:
-        training_data, feature_cols = make_training_dataset(
-            price_data,
-            benchmark_data,
-            fundamentals_data,
-            config
-        )
-        print(f"   ✅ Training data created: {len(training_data)} rows, {len(feature_cols)} features")
-        
-        if 'date' in training_data.columns:
+    # Training dataset already created above
+    print("🔧 Training dataset:")
+    if 'date' in training_data.columns:
             training_data['date'] = pd.to_datetime(training_data['date'])
             train_min = training_data['date'].min()
             train_max = training_data['date'].max()
-            train_span = (train_max - train_min).days / 365.25
-            print(f"   Date range: {train_min.date()} to {train_max.date()} ({train_span:.1f} years)")
+            train_span = (train_max - train_min).total_seconds() / (365.25 * 86400)
+            print(f"   Date range: {train_min} to {train_max} ({train_span:.1f} years)")
             
             if train_span < min_required:
                 print(f"   ⚠️  WARNING: Training data span ({train_span:.1f} years) is insufficient!")
                 print(f"      Need at least {min_required:.1f} years for walk-forward backtest")
-    except Exception as e:
-        print(f"   ❌ Error creating training dataset: {e}")
-        import traceback
-        traceback.print_exc()
-        return
     
     print()
     

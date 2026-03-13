@@ -8,11 +8,24 @@ model:
     learning_rate: 0.05
     max_depth: -1
     num_leaves: 31
+# MACD/RSI params for trigger backtest and feature engineering.
+# Run scripts/optimize_macd_rsi_bayesian.py and use --save to overwrite with optimized values.
+trigger:
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  rsi_period: 14
+  rsi_overbought: 70
+  rsi_oversold: 30
+  # Path to Bayesian-optimized params JSON (overrides above when set and file exists)
+  optimized_params_path: output/best_params.json
+
 backtest:
-  train_years: 5.0
-  test_years: 1.0
-  step_years: 1.0
-  rebalance_freq: MS
+  train_years: 1.0   # Reduced for hourly data (~730 day limit); use 5.0 for daily
+  test_years: 0.25   # 3 months test window
+  step_value: 1.0
+  step_unit: days   # Walk-forward step (7 days = ~20 windows); rebalance every 4h
+  rebalance_freq: 4h  # Rebalance portfolio every 4 hours
   top_n: 10
   top_pct: 0.1
   min_stocks: 5
@@ -20,6 +33,7 @@ backtest:
   start_date: null
   end_date: null
 data:
+  interval: 1h  # 1d (daily) or 1h (hourly). Note: yfinance limits 1h to ~730 days
   price_data_path: data/prices.csv
   fundamental_data_path: data/fundamentals.csv
   benchmark_data_path: data/benchmark.csv
@@ -28,6 +42,11 @@ data:
   output_dir: output
   models_dir: models
 features:
+  # RSI/MACD params for feature engineering (used in walk-forward backtest)
+  rsi_period: 14
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
   return_periods:
   - 21
   - 63
@@ -66,6 +85,8 @@ cli:
   verbose: true
   save_results: true
   results_path: null
+  # Set to false to store returns/positions only in database (reduces CSV files)
+  save_backtest_csv: true
 analysis:
   # Composite domain score weights (must sum to 1.0)
   # Optimized to balance factor variance contributions (reduces value_score dominance)

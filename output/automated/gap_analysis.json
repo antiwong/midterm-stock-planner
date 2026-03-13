@@ -1,34 +1,44 @@
 {
-  "timestamp": "2026-03-13T23:22:01.279269",
+  "timestamp": "2026-03-14T06:15:28.940555",
   "data_summary": {
-    "total_rows": 24548,
+    "total_rows": 50850,
     "unique_tickers": [
       "AAPL",
+      "ADBE",
       "AMD",
       "AMZN",
+      "CRM",
       "GOOGL",
+      "INTC",
       "META",
       "MSFT",
+      "NFLX",
       "NVDA",
+      "ORCL",
       "SLV",
       "TSLA"
     ],
-    "n_tickers": 9,
+    "n_tickers": 14,
     "date_range": {
       "start": "2023-02-22 00:00:00",
-      "end": "2026-02-20 20:30:00",
-      "span_days": 1094
+      "end": "2026-03-13 19:30:00",
+      "span_days": 1115
     },
     "rows_per_ticker": {
-      "AAPL": 3292,
-      "AMD": 752,
-      "AMZN": 3292,
-      "GOOGL": 3292,
-      "META": 3292,
-      "MSFT": 3292,
-      "NVDA": 3292,
-      "SLV": 752,
-      "TSLA": 3292
+      "AAPL": 3397,
+      "ADBE": 5069,
+      "AMD": 864,
+      "AMZN": 3397,
+      "CRM": 5068,
+      "GOOGL": 3397,
+      "INTC": 5069,
+      "META": 3397,
+      "MSFT": 3397,
+      "NFLX": 5069,
+      "NVDA": 3397,
+      "ORCL": 5068,
+      "SLV": 864,
+      "TSLA": 3397
     },
     "columns": [
       "date",
@@ -105,6 +115,73 @@
           "to": "2025-02-18T14:30:00.000000",
           "hours": 90.0,
           "type": "weekend"
+        }
+      ]
+    },
+    "ADBE": {
+      "n_gaps": 30,
+      "total_gap_hours": 2144.0,
+      "largest_gap_hours": 94.0,
+      "gaps": [
+        {
+          "from": "2023-05-26T19:30:00.000000",
+          "to": "2023-05-30T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-06-16T19:30:00.000000",
+          "to": "2023-06-20T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-07-03T15:30:00.000000",
+          "to": "2023-07-05T13:30:00.000000",
+          "hours": 46.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-09-01T19:30:00.000000",
+          "to": "2023-09-05T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-11-22T20:30:00.000000",
+          "to": "2023-11-24T14:30:00.000000",
+          "hours": 42.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-12-22T20:30:00.000000",
+          "to": "2023-12-26T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-12-29T20:30:00.000000",
+          "to": "2024-01-02T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-01-12T20:30:00.000000",
+          "to": "2024-01-16T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-02-16T20:30:00.000000",
+          "to": "2024-02-20T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-03-28T19:30:00.000000",
+          "to": "2024-04-01T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekday_gap"
         }
       ]
     },
@@ -242,6 +319,73 @@
         }
       ]
     },
+    "CRM": {
+      "n_gaps": 30,
+      "total_gap_hours": 2144.0,
+      "largest_gap_hours": 94.0,
+      "gaps": [
+        {
+          "from": "2023-05-26T19:30:00.000000",
+          "to": "2023-05-30T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-06-16T19:30:00.000000",
+          "to": "2023-06-20T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-07-03T15:30:00.000000",
+          "to": "2023-07-05T13:30:00.000000",
+          "hours": 46.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-09-01T19:30:00.000000",
+          "to": "2023-09-05T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-11-22T20:30:00.000000",
+          "to": "2023-11-24T14:30:00.000000",
+          "hours": 42.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-12-22T20:30:00.000000",
+          "to": "2023-12-26T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-12-29T20:30:00.000000",
+          "to": "2024-01-02T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-01-12T20:30:00.000000",
+          "to": "2024-01-16T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-02-16T20:30:00.000000",
+          "to": "2024-02-20T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-03-28T19:30:00.000000",
+          "to": "2024-04-01T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekday_gap"
+        }
+      ]
+    },
     "GOOGL": {
       "n_gaps": 20,
       "total_gap_hours": 1336.0,
@@ -306,6 +450,73 @@
           "to": "2025-02-18T14:30:00.000000",
           "hours": 90.0,
           "type": "weekend"
+        }
+      ]
+    },
+    "INTC": {
+      "n_gaps": 30,
+      "total_gap_hours": 2144.0,
+      "largest_gap_hours": 94.0,
+      "gaps": [
+        {
+          "from": "2023-05-26T19:30:00.000000",
+          "to": "2023-05-30T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-06-16T19:30:00.000000",
+          "to": "2023-06-20T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-07-03T15:30:00.000000",
+          "to": "2023-07-05T13:30:00.000000",
+          "hours": 46.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-09-01T19:30:00.000000",
+          "to": "2023-09-05T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-11-22T20:30:00.000000",
+          "to": "2023-11-24T14:30:00.000000",
+          "hours": 42.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-12-22T20:30:00.000000",
+          "to": "2023-12-26T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-12-29T20:30:00.000000",
+          "to": "2024-01-02T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-01-12T20:30:00.000000",
+          "to": "2024-01-16T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-02-16T20:30:00.000000",
+          "to": "2024-02-20T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-03-28T19:30:00.000000",
+          "to": "2024-04-01T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekday_gap"
         }
       ]
     },
@@ -443,6 +654,73 @@
         }
       ]
     },
+    "NFLX": {
+      "n_gaps": 30,
+      "total_gap_hours": 2144.0,
+      "largest_gap_hours": 94.0,
+      "gaps": [
+        {
+          "from": "2023-05-26T19:30:00.000000",
+          "to": "2023-05-30T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-06-16T19:30:00.000000",
+          "to": "2023-06-20T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-07-03T15:30:00.000000",
+          "to": "2023-07-05T13:30:00.000000",
+          "hours": 46.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-09-01T19:30:00.000000",
+          "to": "2023-09-05T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-11-22T20:30:00.000000",
+          "to": "2023-11-24T14:30:00.000000",
+          "hours": 42.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-12-22T20:30:00.000000",
+          "to": "2023-12-26T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-12-29T20:30:00.000000",
+          "to": "2024-01-02T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-01-12T20:30:00.000000",
+          "to": "2024-01-16T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-02-16T20:30:00.000000",
+          "to": "2024-02-20T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-03-28T19:30:00.000000",
+          "to": "2024-04-01T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekday_gap"
+        }
+      ]
+    },
     "NVDA": {
       "n_gaps": 20,
       "total_gap_hours": 1336.0,
@@ -507,6 +785,73 @@
           "to": "2025-02-18T14:30:00.000000",
           "hours": 90.0,
           "type": "weekend"
+        }
+      ]
+    },
+    "ORCL": {
+      "n_gaps": 30,
+      "total_gap_hours": 2144.0,
+      "largest_gap_hours": 94.0,
+      "gaps": [
+        {
+          "from": "2023-05-26T19:30:00.000000",
+          "to": "2023-05-30T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-06-16T19:30:00.000000",
+          "to": "2023-06-20T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-07-03T15:30:00.000000",
+          "to": "2023-07-05T13:30:00.000000",
+          "hours": 46.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-09-01T19:30:00.000000",
+          "to": "2023-09-05T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-11-22T20:30:00.000000",
+          "to": "2023-11-24T14:30:00.000000",
+          "hours": 42.0,
+          "type": "weekday_gap"
+        },
+        {
+          "from": "2023-12-22T20:30:00.000000",
+          "to": "2023-12-26T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2023-12-29T20:30:00.000000",
+          "to": "2024-01-02T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-01-12T20:30:00.000000",
+          "to": "2024-01-16T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-02-16T20:30:00.000000",
+          "to": "2024-02-20T14:30:00.000000",
+          "hours": 90.0,
+          "type": "weekend"
+        },
+        {
+          "from": "2024-03-28T19:30:00.000000",
+          "to": "2024-04-01T13:30:00.000000",
+          "hours": 90.0,
+          "type": "weekday_gap"
         }
       ]
     },
@@ -648,29 +993,39 @@
   "ticker_coverage": {
     "loaded_tickers": [
       "AAPL",
+      "ADBE",
       "AMD",
       "AMZN",
+      "CRM",
       "GOOGL",
+      "INTC",
       "META",
       "MSFT",
+      "NFLX",
       "NVDA",
+      "ORCL",
       "SLV",
       "TSLA"
     ],
-    "n_loaded": 9
+    "n_loaded": 14
   },
   "data_quality": {
     "AAPL": {
-      "n_issues": 2,
+      "n_issues": 1,
       "issues": [
         {
-          "type": "zero_volume",
-          "count": 2,
-          "pct": 0.060753341433778855
-        },
+          "type": "price_outliers_3std",
+          "count": 42
+        }
+      ],
+      "completeness_pct": 100.0
+    },
+    "ADBE": {
+      "n_issues": 1,
+      "issues": [
         {
           "type": "price_outliers_3std",
-          "count": 41
+          "count": 63
         }
       ],
       "completeness_pct": 100.0
@@ -690,7 +1045,17 @@
       "issues": [
         {
           "type": "price_outliers_3std",
-          "count": 40
+          "count": 43
+        }
+      ],
+      "completeness_pct": 100.0
+    },
+    "CRM": {
+      "n_issues": 1,
+      "issues": [
+        {
+          "type": "price_outliers_3std",
+          "count": 61
         }
       ],
       "completeness_pct": 100.0
@@ -700,19 +1065,24 @@
       "issues": [
         {
           "type": "price_outliers_3std",
-          "count": 45
+          "count": 48
+        }
+      ],
+      "completeness_pct": 100.0
+    },
+    "INTC": {
+      "n_issues": 1,
+      "issues": [
+        {
+          "type": "price_outliers_3std",
+          "count": 55
         }
       ],
       "completeness_pct": 100.0
     },
     "META": {
-      "n_issues": 2,
+      "n_issues": 1,
       "issues": [
-        {
-          "type": "zero_volume",
-          "count": 1,
-          "pct": 0.030376670716889428
-        },
         {
           "type": "price_outliers_3std",
           "count": 40
@@ -721,31 +1091,41 @@
       "completeness_pct": 100.0
     },
     "MSFT": {
-      "n_issues": 2,
+      "n_issues": 1,
       "issues": [
         {
-          "type": "zero_volume",
-          "count": 1,
-          "pct": 0.030376670716889428
-        },
+          "type": "price_outliers_3std",
+          "count": 48
+        }
+      ],
+      "completeness_pct": 100.0
+    },
+    "NFLX": {
+      "n_issues": 1,
+      "issues": [
         {
           "type": "price_outliers_3std",
-          "count": 46
+          "count": 56
         }
       ],
       "completeness_pct": 100.0
     },
     "NVDA": {
-      "n_issues": 2,
+      "n_issues": 1,
       "issues": [
-        {
-          "type": "zero_volume",
-          "count": 3,
-          "pct": 0.09113001215066828
-        },
         {
           "type": "price_outliers_3std",
           "count": 37
+        }
+      ],
+      "completeness_pct": 100.0
+    },
+    "ORCL": {
+      "n_issues": 1,
+      "issues": [
+        {
+          "type": "price_outliers_3std",
+          "count": 63
         }
       ],
       "completeness_pct": 100.0
@@ -761,16 +1141,11 @@
       "completeness_pct": 100.0
     },
     "TSLA": {
-      "n_issues": 2,
+      "n_issues": 1,
       "issues": [
         {
-          "type": "zero_volume",
-          "count": 1,
-          "pct": 0.030376670716889428
-        },
-        {
           "type": "price_outliers_3std",
-          "count": 34
+          "count": 37
         }
       ],
       "completeness_pct": 100.0
@@ -791,11 +1166,11 @@
     "bars_per_day_estimate": 24.0
   },
   "benchmark_alignment": {
-    "price_date_count": 752,
-    "benchmark_date_count": 494,
-    "missing_in_benchmark": 258,
-    "missing_in_price": 0,
-    "overlap_pct": 65.69148936170212,
+    "price_date_count": 767,
+    "benchmark_date_count": 801,
+    "missing_in_benchmark": 0,
+    "missing_in_price": 34,
+    "overlap_pct": 100.0,
     "benchmark_ticker": [
       "SPY"
     ]
@@ -806,16 +1181,10 @@
       "category": "data_resolution",
       "message": "Current data is 1h. Higher resolution (5m/15m) via Alpaca Markets would enable better intraday signal detection and more walk-forward windows.",
       "action": "Install alpaca-py and run download with --interval 5m or 15m"
-    },
-    {
-      "priority": "MEDIUM",
-      "category": "benchmark_alignment",
-      "message": "Benchmark-price date overlap is 65.7%. Misaligned dates cause NaN in excess return calculations.",
-      "action": "Re-download benchmark data to match price date range"
     }
   ],
   "overall_score": {
-    "score": 68.1,
-    "grade": "D"
+    "score": 75,
+    "grade": "C"
   }
 }

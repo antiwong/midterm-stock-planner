@@ -42,6 +42,9 @@ openpyxl>=3.1.0
 # Optional: Technical analysis library (faster indicator computation)
 # ta>=0.10.0  # Uncomment if you want to use the ta library
 
+# Bayesian / hyperparameter optimization
+scikit-optimize>=0.9.0
+
 # Optional: Development and testing
 pytest>=7.0.0
 pytest-cov>=4.0.0
