@@ -21,11 +21,11 @@ trigger:
   optimized_params_path: output/best_params.json
 
 backtest:
-  train_years: 3.0   # 3yr training window for daily data (covers regime changes)
+  train_years: 3.0   # 3yr training on daily features (covers regime changes)
   test_years: 0.5    # 6 months test window
-  step_value: 30
-  step_unit: days   # Walk-forward step: monthly rebalancing
-  rebalance_freq: 1w  # Rebalance portfolio weekly
+  step_value: 1
+  step_unit: days   # Walk-forward step: daily
+  rebalance_freq: 4h  # Mid-term trading: rebalance every 4 hours
   top_n: 10
   top_pct: 0.1
   min_stocks: 5
@@ -33,11 +33,14 @@ backtest:
   start_date: null
   end_date: null
 data:
-  interval: 1d  # 1d (daily) or 1h (hourly). Default: 1d for 10yr history
-  price_data_path: data/prices_daily.csv  # 10yr daily (21 tickers, 2016-2026)
-  price_data_path_hourly: data/prices.csv  # 22mo hourly (14 tickers, 2024-2026)
+  interval: 1h  # 1h for 4h rebalancing. Features computed from daily data.
+  price_data_path: data/prices.csv  # Hourly data for execution/rebalancing
+  price_data_path_daily: data/prices_daily.csv  # 10yr daily for features (114 tickers)
+  price_data_path_15m: data/prices_15m.csv  # 15m intraday (when available)
   fundamental_data_path: data/fundamentals.csv
-  benchmark_data_path: data/benchmark_daily.csv  # 10yr daily SPY
+  benchmark_data_path: data/benchmark.csv  # Hourly SPY for backtest alignment
+  benchmark_data_path_daily: data/benchmark_daily.csv  # 10yr daily SPY for features
+  macro_data_path: data/macro_fred.csv  # FRED macro data (yields, inflation, etc.)
   universe_path: data/universe.txt
   sentiment_news_path: data/news.csv
   output_dir: output
