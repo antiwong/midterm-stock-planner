@@ -21,11 +21,11 @@ trigger:
   optimized_params_path: output/best_params.json
 
 backtest:
-  train_years: 1.0   # Reduced for hourly data (~730 day limit); use 5.0 for daily
-  test_years: 0.25   # 3 months test window
-  step_value: 1.0
-  step_unit: days   # Walk-forward step (7 days = ~20 windows); rebalance every 4h
-  rebalance_freq: 4h  # Rebalance portfolio every 4 hours
+  train_years: 3.0   # 3yr training window for daily data (covers regime changes)
+  test_years: 0.5    # 6 months test window
+  step_value: 30
+  step_unit: days   # Walk-forward step: monthly rebalancing
+  rebalance_freq: 1w  # Rebalance portfolio weekly
   top_n: 10
   top_pct: 0.1
   min_stocks: 5
@@ -33,10 +33,11 @@ backtest:
   start_date: null
   end_date: null
 data:
-  interval: 1h  # 1d (daily) or 1h (hourly). Note: yfinance limits 1h to ~730 days
-  price_data_path: data/prices.csv
+  interval: 1d  # 1d (daily) or 1h (hourly). Default: 1d for 10yr history
+  price_data_path: data/prices_daily.csv  # 10yr daily (21 tickers, 2016-2026)
+  price_data_path_hourly: data/prices.csv  # 22mo hourly (14 tickers, 2024-2026)
   fundamental_data_path: data/fundamentals.csv
-  benchmark_data_path: data/benchmark.csv
+  benchmark_data_path: data/benchmark_daily.csv  # 10yr daily SPY
   universe_path: data/universe.txt
   sentiment_news_path: data/news.csv
   output_dir: output

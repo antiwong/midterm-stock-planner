@@ -2,28 +2,37 @@
 """
 Download Stock Prices Script
 ============================
-Downloads historical price data for watchlist stocks using yfinance.
+Downloads historical price data using Alpaca Markets (primary) or yfinance (fallback).
 
 Features:
 - Downloads OHLCV data for all stocks in a watchlist
+- Alpaca: free, reliable, 7yr+ intraday, unlimited daily
+- yfinance: fallback, no API key needed, 730-day hourly limit
 - Validates data integrity (missing stocks, date ranges, gaps)
 - Generates a validation report
 - Merges with existing price data
 
 Usage:
-    # Download for a specific watchlist
+    # Download for a specific watchlist (uses Alpaca if keys set)
     python scripts/download_prices.py --watchlist nasdaq_100
-    
+
+    # Force yfinance backend
+    python scripts/download_prices.py --watchlist tech_giants --backend yfinance
+
+    # Download 10yr daily data
+    python scripts/download_prices.py --watchlist tech_giants --interval 1d --start 2016-01-01
+
     # Download for all watchlists (everything)
     python scripts/download_prices.py --watchlist everything
-    
+
     # Specify date range
     python scripts/download_prices.py --watchlist sp500 --start 2020-01-01 --end 2024-12-31
-    
+
     # Validate only (no download)
     python scripts/download_prices.py --validate-only
 """
 
+import os
 import sys
 from pathlib import Path
 from datetime import datetime, timedelta
@@ -42,7 +51,11 @@ try:
     YFINANCE_AVAILABLE = True
 except ImportError:
     YFINANCE_AVAILABLE = False
-    print("⚠️ yfinance not installed. Run: pip install yfinance")
+
+try:
+    from src.data.alpaca_client import AlpacaClient, ALPACA_AVAILABLE
+except ImportError:
+    ALPACA_AVAILABLE = False
 
 
 class DataValidator:
@@ -722,11 +735,14 @@ Examples:
                        help="Only validate existing data, don't download")
     parser.add_argument("--no-merge", action="store_true",
                        help="Don't merge with existing data (fresh download)")
+    parser.add_argument("--backend", "-b", type=str, default="auto",
+                       choices=["auto", "alpaca", "yfinance"],
+                       help="Data backend: auto (Alpaca if keys set, else yfinance), alpaca, yfinance")
     parser.add_argument("--report-dir", type=str, default="output",
                        help="Directory for validation reports")
-    
+
     args = parser.parse_args()
-    
+
     # Resolve interval from config if not specified
     if args.interval is None:
         try:
@@ -735,21 +751,34 @@ Examples:
             args.interval = getattr(cfg.data, 'interval', '1d')
         except Exception:
             args.interval = '1d'
-    
-    # Set default dates (for 1h, yfinance limits to ~730 days)
+
+    # Resolve backend
+    if args.backend == "auto":
+        if ALPACA_AVAILABLE and os.environ.get("ALPACA_API_KEY"):
+            args.backend = "alpaca"
+        elif YFINANCE_AVAILABLE:
+            args.backend = "yfinance"
+        else:
+            print("No data backend available. Install alpaca-py or yfinance.")
+            return 1
+
+    # Set default dates
     if args.end is None:
         args.end = datetime.now().strftime('%Y-%m-%d')
     if args.start is None:
-        max_days = 730 if args.interval in ('1h', '60m') else 3*365
+        if args.backend == "yfinance" and args.interval in ('1h', '60m'):
+            max_days = 730
+        else:
+            max_days = 10 * 365  # 10 years for Alpaca daily
         args.start = (datetime.now() - timedelta(days=max_days)).strftime('%Y-%m-%d')
-    
-    # Cap date range for hourly (yfinance limit ~730 days)
-    if args.interval in ('1h', '60m'):
+
+    # Cap date range for hourly on yfinance only
+    if args.backend == "yfinance" and args.interval in ('1h', '60m'):
         start_dt = datetime.strptime(args.start, '%Y-%m-%d')
         end_dt = datetime.strptime(args.end, '%Y-%m-%d')
         if (end_dt - start_dt).days > 730:
             args.start = (end_dt - timedelta(days=730)).strftime('%Y-%m-%d')
-            print(f"   ⚠️  Hourly data limited to 730 days. Adjusted start to {args.start}")
+            print(f"   yfinance hourly limited to 730 days. Adjusted start to {args.start}")
     
     print("=" * 70)
     print("STOCK PRICE DOWNLOAD & VALIDATION")
@@ -773,46 +802,78 @@ Examples:
         tickers = watchlist.symbols
         print(f"\n📋 Watchlist '{wl_name}' contains {len(tickers)} tickers")
     
+    print(f"Backend: {args.backend}")
     print(f"Interval: {args.interval}")
     print(f"Period: {args.start} to {args.end}")
     print(f"Output: {args.output}")
     print("=" * 70)
-    
+
     download_report = None
-    
+
     if not args.validate_only:
-        # Download data
-        if not YFINANCE_AVAILABLE:
-            print("\n❌ yfinance is required for downloading.")
-            print("   Install with: pip install yfinance")
-            return 1
-        
-        downloader = PriceDownloader(args.output)
-        
         try:
-            df = downloader.download(
-                tickers=tickers,
-                start_date=args.start,
-                end_date=args.end,
-                interval=args.interval,
-                merge_existing=not args.no_merge,
-                parallel=True,
-                max_workers=8
-            )
-            
-            if not df.empty:
-                downloader.save(df)
-                download_report = downloader.get_report()
-                
-                print(f"\n📊 Download Summary:")
-                print(f"   ✅ Successful: {download_report['successful']}")
-                print(f"   ❌ Failed: {download_report['failed']}")
+            if args.backend == "alpaca":
+                # --- Alpaca download path ---
+                alpaca = AlpacaClient()
+                df = alpaca.download(
+                    tickers=tickers,
+                    start_date=args.start,
+                    end_date=args.end,
+                    interval=args.interval,
+                    batch_size=20,
+                )
+                download_report = alpaca.get_report()
+
+                if not df.empty:
+                    # Merge with existing
+                    output_path = Path(args.output)
+                    if not args.no_merge and output_path.exists():
+                        print("  Merging with existing data...")
+                        existing = pd.read_csv(output_path, parse_dates=["date"])
+                        existing["date"] = pd.to_datetime(existing["date"])
+                        df = pd.concat([existing, df], ignore_index=True)
+                        df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
+                        df = df.sort_values(["ticker", "date"])
+
+                    output_path.parent.mkdir(parents=True, exist_ok=True)
+                    df.to_csv(output_path, index=False)
+                    print(f"  Saved to {output_path}")
+                else:
+                    print("\nNo data downloaded")
+                    return 1
+
             else:
-                print("\n❌ No data downloaded")
-                return 1
-                
+                # --- yfinance download path (legacy) ---
+                if not YFINANCE_AVAILABLE:
+                    print("\nyfinance is required. Install with: pip install yfinance")
+                    return 1
+
+                downloader = PriceDownloader(args.output)
+                df = downloader.download(
+                    tickers=tickers,
+                    start_date=args.start,
+                    end_date=args.end,
+                    interval=args.interval,
+                    merge_existing=not args.no_merge,
+                    parallel=True,
+                    max_workers=8,
+                )
+
+                if not df.empty:
+                    downloader.save(df)
+                    download_report = downloader.get_report()
+                else:
+                    print("\nNo data downloaded")
+                    return 1
+
+            print(f"\nDownload Summary:")
+            print(f"  Successful: {download_report['successful']}")
+            print(f"  Failed: {download_report['failed']}")
+            if download_report.get('failed_tickers'):
+                print(f"  Failed tickers: {', '.join(download_report['failed_tickers'][:20])}")
+
         except Exception as e:
-            print(f"\n❌ Download failed: {e}")
+            print(f"\nDownload failed: {e}")
             import traceback
             traceback.print_exc()
             return 1
