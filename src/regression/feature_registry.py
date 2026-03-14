@@ -20,6 +20,7 @@ class FeatureGroup(Enum):
     MOMENTUM = "momentum"
     MEAN_REVERSION = "mean_reversion"
     SENTIMENT = "sentiment"
+    CROSS_ASSET = "cross_asset"
 
 
 @dataclass
@@ -242,6 +243,42 @@ class FeatureRegistry:
             group=FeatureGroup.SENTIMENT,
             enabled_by_default=False,
             description="News sentiment features (disabled by default)",
+        ))
+
+        # --- Cross-asset features (commodity/macro) ---
+        self.register(FeatureSpec(
+            name="cross_asset_commodities",
+            columns=[
+                "gold_silver_ratio", "gold_silver_ratio_zscore",
+                "dxy_momentum", "real_yield_proxy",
+            ],
+            group=FeatureGroup.CROSS_ASSET,
+            tunable_params={
+                "zscore_window": TunableParam("int", 20, 120, 60),
+                "dxy_lookback": TunableParam("int", 10, 42, 21),
+                "real_yield_lookback": TunableParam("int", 21, 126, 63),
+            },
+            enabled_by_default=False,
+            description="Commodity/macro cross-asset features (SLV focus): "
+                        "gold/silver ratio, DXY momentum, real yield proxy",
+        ))
+
+        # --- Cross-asset features (semiconductor) ---
+        self.register(FeatureSpec(
+            name="cross_asset_semiconductor",
+            columns=[
+                "peer_momentum_nvda", "sector_breadth_semis",
+                "qqq_relative_strength",
+            ],
+            group=FeatureGroup.CROSS_ASSET,
+            tunable_params={
+                "nvda_lookback": TunableParam("int", 10, 42, 21),
+                "breadth_lookback": TunableParam("int", 10, 42, 21),
+                "qqq_lookback": TunableParam("int", 21, 126, 63),
+            },
+            enabled_by_default=False,
+            description="Semiconductor cross-asset features (AMD focus): "
+                        "NVDA peer momentum, sector breadth, QQQ relative strength",
         ))
 
     def register(self, spec: FeatureSpec) -> None:

@@ -70,6 +70,15 @@ features:
   - 14
   sentiment_min_count: 1
   sentiment_fillna: 0.0
+  # Cross-asset / macro features (disabled by default; enable per-ticker)
+  use_cross_asset: false
+  cross_asset:
+    zscore_window: 60         # Gold/silver ratio z-score lookback
+    dxy_lookback: 21          # Dollar index momentum lookback (days)
+    real_yield_lookback: 63   # TIP real yield proxy lookback (days)
+    nvda_lookback: 21         # NVDA peer momentum lookback (days)
+    breadth_lookback: 21      # Semi sector breadth lookback (days)
+    qqq_lookback: 63          # QQQ relative strength lookback (days)
 sentiment:
   news_data_path: null
   model_type: lexicon

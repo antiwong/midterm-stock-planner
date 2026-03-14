@@ -25,10 +25,17 @@ def _render_hub(phase_id: str):
 
     render_page_header(phase["label"], phase["description"])
 
+    # Hub summary line
     children = phase.get("children", [])
     if not children:
         st.info("No sub-pages in this phase.")
         return
+
+    st.markdown(
+        f'<p style="color: {COLORS["muted"]}; font-size: 0.9rem; margin-bottom: 1.5rem;">'
+        f'{len(children)} tools available in the <strong>{phase["label"]}</strong> workflow phase.</p>',
+        unsafe_allow_html=True,
+    )
 
     # Render cards in a 2-column grid
     cols_per_row = 2
@@ -48,10 +55,10 @@ def _render_hub(phase_id: str):
                     padding: 1.5rem;
                     margin-bottom: 1rem;
                     min-height: 120px;
-                    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+                    transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
                     cursor: pointer;
                 ">
-                    <div style="font-size: 1.05rem; font-weight: 600; color: {COLORS['dark']}; font-family: 'DM Sans', sans-serif; margin-bottom: 0.5rem;">
+                    <div style="font-size: 1.05rem; font-weight: 600; color: {COLORS['dark']}; font-family: 'Instrument Sans', sans-serif; margin-bottom: 0.5rem;">
                         {label}
                     </div>
                     <div style="font-size: 0.85rem; color: {COLORS['muted']}; line-height: 1.5;">

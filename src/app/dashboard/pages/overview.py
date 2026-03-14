@@ -39,24 +39,27 @@ def render_overview():
         return
 
     _render_summary_metrics(runs)
-    _render_data_quality_summary()
-    st.markdown("---")
 
-    col1, col2 = st.columns([2, 1])
+    tab_metrics, tab_activity, tab_data, tab_pages = st.tabs([
+        "Key Metrics",
+        "Recent Activity",
+        "Data Status",
+        "Page Reference",
+    ])
 
-    with col1:
+    with tab_metrics:
+        _render_quick_insights(runs)
+        if len(runs) >= 2:
+            _render_performance_chart(runs)
+
+    with tab_activity:
         _render_recent_runs(runs)
 
-    with col2:
-        _render_quick_insights(runs)
+    with tab_data:
+        _render_data_quality_summary()
 
-    if len(runs) >= 2:
-        st.markdown("---")
-        _render_performance_chart(runs)
-
-    # Page reference tree
-    st.markdown("---")
-    _render_page_tree()
+    with tab_pages:
+        _render_page_tree()
 
 
 def _render_empty_state():
@@ -616,7 +619,7 @@ def _render_page_tree():
         border: 1px solid {COLORS['card_border']};
         border-radius: 12px;
         padding: 1.75rem 2rem;
-        font-family: 'IBM Plex Sans', sans-serif;
+        font-family: 'Source Sans 3', sans-serif;
         line-height: 1.8;
     ">
     """
@@ -629,7 +632,7 @@ def _render_page_tree():
 
         tree_html += f"""
         <div style="margin-bottom: 1.25rem;">
-            <div style="font-size: 1rem; font-weight: 600; color: {COLORS['dark']}; font-family: 'DM Sans', sans-serif;">
+            <div style="font-size: 1rem; font-weight: 600; color: {COLORS['dark']}; font-family: 'Instrument Sans', sans-serif;">
                 {icon} {label}
                 <span style="font-weight: 400; font-size: 0.8rem; color: {COLORS['muted']}; margin-left: 0.5rem;">{desc}</span>
             </div>

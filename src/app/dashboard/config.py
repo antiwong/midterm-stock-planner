@@ -10,7 +10,7 @@ from .utils import load_ui_settings
 
 # Color palette
 COLORS = {
-    'primary': '#F4B8A5',      # Soft peach (AnuPpuccin-inspired)
+    'primary': '#E8735A',      # Warm coral (vibrant AnuPuccin accent)
     'secondary': '#E9C7B8',    # Muted clay
     'accent': '#CFE6DA',       # Soft mint
     'success': '#BFE6CF',      # Pastel green
@@ -91,18 +91,18 @@ def inject_custom_css():
     }}
 
     /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&display=swap');
     
     /* Global Styles */
     .stApp {{
-        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: calc(16px * var(--font-scale));
         background-color: {bg_color};
         color: {text_color};
     }}
 
     .block-container {{
-        padding-top: 0.75rem;
+        padding-top: 1.25rem;
     }}
     
     /* Hide Streamlit top bar/decorator - multiple selectors */
@@ -148,7 +148,7 @@ def inject_custom_css():
     
     /* Adjust top padding since header is hidden */
     .block-container {{
-        padding-top: 0.5rem !important;
+        padding-top: 1rem !important;
     }}
     
     /* Hide Streamlit's header but NOT our page-header */
@@ -175,7 +175,7 @@ def inject_custom_css():
 
     /* Sidebar Styling */
     [data-testid="stSidebar"] {{
-        background: {sidebar_bg_start};
+        background: linear-gradient(180deg, {sidebar_bg_start} 0%, {sidebar_bg_end} 100%);
     }}
     
     [data-testid="stSidebar"] * {{
@@ -292,7 +292,7 @@ def inject_custom_css():
     
     /* Main Header */
     .main-header {{
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Instrument Sans', sans-serif;
         font-size: 1.8rem;
         font-weight: 700;
         color: {text_color};
@@ -302,67 +302,68 @@ def inject_custom_css():
     }}
     
     .sub-header {{
-        font-family: 'DM Sans', sans-serif;
+        font-family: 'Instrument Sans', sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: {text_color};
-        margin: 1.5rem 0 1.5rem 0;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1.5rem;
+        margin: 2rem 0 1.75rem 0;
+        padding-bottom: 0.6rem;
         border-bottom: 2px solid var(--primary-color);
     }}
     
     /* Metric Cards */
     .metric-card {{
         background: {COLORS['primary'] if not dark_mode else card_bg};
-        padding: 0.5rem 0.85rem;
+        padding: 0.85rem 1.1rem;
         border-radius: var(--card-radius);
         color: {COLORS['dark'] if not dark_mode else text_color};
         box-shadow: 0 8px 20px rgba(43, 42, 47, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
-        min-height: 75px;
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
+        min-height: 85px;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
+        margin-bottom: 0.5rem;
     }}
-    
+
     .metric-card:hover {{
-        transform: translateY(-3px);
-        box-shadow: 0 16px 32px rgba(43, 42, 47, 0.12);
+        transform: scale(1.02);
+        box-shadow: 0 16px 32px rgba(43, 42, 47, 0.14);
     }}
-    
+
     .metric-card h3 {{
-        font-size: 0.75rem;
-        font-weight: 600;
-        opacity: 0.9;
+        font-size: 0.7rem;
+        font-weight: 500;
+        opacity: 0.7;
+        margin: 0;
+        margin-bottom: 0.3rem;
+        padding: 0;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        line-height: 1.1;
+    }}
+
+    .metric-card .value {{
+        font-size: 1.65rem;
+        font-weight: 700;
+        font-family: 'Instrument Sans', sans-serif;
         margin: 0;
         margin-bottom: 0.15rem;
         padding: 0;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        line-height: 1.1;
-    }}
-    
-    .metric-card .value {{
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin: 0;
-        margin-bottom: 0.1rem;
-        padding: 0;
-        line-height: 1.1;
+        line-height: 1.15;
         word-break: break-word;
     }}
-    
+
     .metric-card .delta {{
-        font-size: 0.75rem;
-        opacity: 0.9;
+        font-size: 0.72rem;
+        opacity: 0.75;
         line-height: 1.1;
         word-break: break-word;
         margin: 0;
         padding: 0;
         min-height: 1.1em;
     }}
-    
+
     /* Hide empty delta but preserve space for consistent card height */
     .metric-card .delta.delta-empty {{
         visibility: hidden;
@@ -373,39 +374,41 @@ def inject_custom_css():
     /* Info Cards */
     .info-card {{
         background: {card_bg};
-        padding: 0.65rem 0.85rem;
+        padding: 0.85rem 1.1rem;
         border-radius: var(--card-radius);
         border: 1px solid {card_border};
         box-shadow: 0 4px 16px rgba(43, 42, 47, 0.05);
-        transition: box-shadow 0.2s ease;
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
         line-height: 1.2;
         word-break: break-word;
-        min-height: 85px;
+        min-height: 90px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         color: {text_color};
+        margin-bottom: 0.5rem;
     }}
-    
+
     .info-card:hover {{
-        box-shadow: 0 8px 20px rgba(43, 42, 47, 0.08);
+        transform: scale(1.015);
+        box-shadow: 0 8px 24px rgba(43, 42, 47, 0.1);
     }}
     
     /* Stock Cards */
     .stock-card {{
         background: {card_bg};
-        padding: 0.85rem 1rem;
+        padding: 1rem 1.15rem;
         border-radius: var(--card-radius);
         border-left: 4px solid {COLORS['primary']};
-        margin: 0.5rem 0;
+        margin: 0.65rem 0;
         box-shadow: 0 4px 14px rgba(43, 42, 47, 0.06);
-        transition: all 0.2s ease;
+        transition: transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.3s ease;
         line-height: 1.3;
     }}
-    
+
     .stock-card:hover {{
-        transform: translateX(4px);
-        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.15);
+        transform: scale(1.01);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.15);
     }}
     
     .stock-card.positive {{
@@ -491,9 +494,9 @@ def inject_custom_css():
         background: #ffffff;
         border: 1px solid {COLORS['card_border']};
         border-radius: var(--card-radius);
-        padding: 0.4rem 0.9rem;
+        padding: 0.6rem 1.1rem;
         box-shadow: 0 2px 8px rgba(43, 42, 47, 0.04);
-        margin-bottom: 1rem;
+        margin-bottom: 1.5rem;
         display: flex !important;
         align-items: center !important;
         justify-content: flex-start !important;
@@ -643,7 +646,7 @@ def inject_custom_css():
     
     /* Data Tables */
     .stDataFrame {{
-        font-family: 'Inter', sans-serif;
+        font-family: 'Source Sans 3', sans-serif;
         font-size: 0.875rem;
     }}
     
@@ -676,12 +679,12 @@ def inject_custom_css():
         border-radius: 8px;
         font-weight: 600;
         padding: 0.5rem 1.25rem;
-        transition: all 0.2s ease;
+        transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.25s ease;
         border: none;
     }}
-    
+
     .stButton > button:hover {{
-        transform: translateY(-1px);
+        transform: scale(1.02);
         box-shadow: 0 4px 12px rgba(10, 132, 255, 0.2);
     }}
     

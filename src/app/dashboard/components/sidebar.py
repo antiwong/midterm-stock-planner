@@ -26,7 +26,7 @@ def render_sidebar() -> str:
     else:
         st.sidebar.markdown("""
         <div style="text-align: center; padding: 1.25rem 0 0.75rem;">
-            <div style="font-size: 1.6rem; font-weight: 700; color: white; font-family: 'DM Sans', sans-serif; letter-spacing: -0.03em;">
+            <div style="font-size: 1.6rem; font-weight: 700; color: white; font-family: 'Instrument Sans', sans-serif; letter-spacing: -0.03em;">
                 QuantaAlpha
             </div>
             <div style="font-size: 0.7rem; color: rgba(255,255,255,0.45); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.2rem;">

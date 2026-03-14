@@ -131,7 +131,29 @@ def _render_test_browser(db):
         return
 
     if not tests:
-        st.info("No regression tests found. Launch one below.")
+        st.markdown(f"""
+        <div style="
+            text-align: center;
+            padding: 3rem 2rem;
+            background: {COLORS['card_bg']};
+            border: 1px solid {COLORS['card_border']};
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        ">
+            <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">🧪</div>
+            <h3 style="color: {COLORS['dark']}; font-family: 'Instrument Sans', sans-serif; margin-bottom: 0.5rem;">
+                No Regression Tests Yet
+            </h3>
+            <p style="color: {COLORS['muted']}; max-width: 480px; margin: 0 auto 1.25rem auto; font-size: 0.9rem; line-height: 1.6;">
+                Feature regression tests add features one-by-one to measure each one's marginal contribution
+                to Sharpe ratio and Rank IC. Launch your first test below to discover which features
+                genuinely improve model performance.
+            </p>
+            <p style="color: {COLORS['muted']}; font-size: 0.8rem;">
+                <strong>How to start:</strong> Expand "Launch New Regression Test" below, select a watchlist and features, then click Run.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     # Build summary table

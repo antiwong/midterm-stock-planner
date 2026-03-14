@@ -848,6 +848,12 @@ watchlists:
     category: "custom"
     symbols: []  # Add tickers here before earnings season
 
+# Reference ETFs for cross-asset feature computation
+# These tickers provide macro/inter-market signals merged by date
+reference_etfs:
+  commodities: [GLD, UUP, TIP]       # Gold, Dollar index proxy, TIPS (real yields)
+  semiconductor: [NVDA, INTC, QCOM, TXN, MU, MRVL, AVGO, QQQ]  # Semi peers + QQQ
+
 # Default watchlist to use when none specified
 default_watchlist: "tech_giants"
 

@@ -584,6 +584,9 @@ def compute_all_features_extended(
     include_technical: bool = True,
     include_momentum: bool = True,
     include_mean_reversion: bool = True,
+    include_cross_asset: bool = False,
+    cross_asset_prices: Optional[dict] = None,
+    cross_asset_params: Optional[dict] = None,
     bars_per_day: float = 1.0,
     rsi_period: int = 14,
     macd_fast: int = 12,
@@ -592,13 +595,14 @@ def compute_all_features_extended(
 ) -> pd.DataFrame:
     """
     Compute all features including technical indicators and strategy features.
-    
+
     This is an extended version of compute_all_features that includes:
     - Basic features (returns, volatility, volume, valuation)
     - Technical indicators (RSI, MACD, Bollinger Bands, ATR, ADX)
     - Momentum features (composite score, relative strength)
     - Mean reversion features (z-scores, distance from MA)
-    
+    - Cross-asset features (commodity/macro for SLV, semiconductor for AMD)
+
     Args:
         price_df: DataFrame with columns ['date', 'ticker', 'open', 'high', 'low', 'close', 'volume']
         fundamental_df: Optional DataFrame with fundamental data
@@ -606,7 +610,10 @@ def compute_all_features_extended(
         include_technical: Whether to add technical indicators
         include_momentum: Whether to add momentum features
         include_mean_reversion: Whether to add mean reversion features
-    
+        include_cross_asset: Whether to add cross-asset features
+        cross_asset_prices: Dict mapping reference ticker -> price DataFrame
+        cross_asset_params: Dict of tunable params (zscore_window, dxy_lookback, etc.)
+
     Returns:
         DataFrame with all features computed
     """
@@ -687,15 +694,35 @@ def compute_all_features_extended(
                 calculate_mean_reversion_score,
                 calculate_zscore,
             )
-            
+
             df = calculate_zscore(df, lookback_days=20)
             df = df.rename(columns={'zscore': 'zscore_20d'})
-            
+
             df = calculate_zscore(df, lookback_days=60)
             df = df.rename(columns={'zscore': 'zscore_60d'})
-            
+
             df = calculate_mean_reversion_score(df)
         except ImportError:
             pass  # Mean reversion module not available
-    
+
+    # Add cross-asset features (commodity/macro for SLV, semiconductor for AMD)
+    if include_cross_asset and cross_asset_prices:
+        try:
+            from .cross_asset import add_cross_asset_features
+
+            ca_params = cross_asset_params or {}
+            df = add_cross_asset_features(
+                df,
+                reference_prices=cross_asset_prices,
+                zscore_window=ca_params.get("zscore_window", 60),
+                dxy_lookback=ca_params.get("dxy_lookback", 21),
+                real_yield_lookback=ca_params.get("real_yield_lookback", 63),
+                nvda_lookback=ca_params.get("nvda_lookback", 21),
+                breadth_lookback=ca_params.get("breadth_lookback", 21),
+                qqq_lookback=ca_params.get("qqq_lookback", 63),
+            )
+        except Exception as e:
+            import warnings
+            warnings.warn(f"Failed to add cross-asset features: {e}")
+
     return df
