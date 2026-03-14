@@ -4,7 +4,6 @@ This module implements rolling window backtests with configurable
 training periods, test periods, and portfolio construction rules.
 """
 
-import os as _os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
@@ -15,11 +14,107 @@ import numpy as np
 from ..config.config import BacktestConfig
 from ..models.trainer import train_lgbm_regressor, ModelConfig
 
-try:
-    from joblib import Parallel, delayed
-    JOBLIB_AVAILABLE = True
-except ImportError:
-    JOBLIB_AVAILABLE = False
+from multiprocessing import Pool, cpu_count as mp_cpu_count
+
+# Module-level shared state for multiprocessing workers (set before Pool.map)
+_MP_SHARED = {}
+
+
+def _mp_process_window(args):
+    """Module-level worker for multiprocessing. Reads shared data from _MP_SHARED."""
+    w_num, w_train_start, w_test_start, w_test_end = args
+    s = _MP_SHARED
+    training_data = s['training_data']
+    feature_cols = s['feature_cols']
+    mc = s['model_config']
+    config = s['config']
+    price_data = s['price_data']
+    benchmark_data = s['benchmark_data']
+    benchmark_price_col = s['benchmark_price_col']
+
+    # Extract training window
+    train_mask = (training_data['date'] >= w_train_start) & (training_data['date'] < w_test_start)
+    train_window = training_data[train_mask]
+    test_mask = (training_data['date'] >= w_test_start) & (training_data['date'] < w_test_end)
+    test_window = training_data[test_mask]
+
+    if len(train_window) == 0 or len(test_window) == 0:
+        return None, None, None, {'window': w_num, 'reason': f"Insufficient data (train={len(train_window)}, test={len(test_window)})"}
+
+    # Train model
+    try:
+        model, X_train, X_valid, metrics = train_lgbm_regressor(train_window, feature_cols, mc)
+    except Exception as e:
+        return None, None, None, {'window': w_num, 'reason': f"Error training model: {e}"}
+
+    # Predictions on test window
+    X_test = test_window[feature_cols].fillna(0)
+    predictions = model.predict(X_test)
+    test_predictions = test_window[['date', 'ticker']].copy()
+    test_predictions['prediction'] = predictions
+
+    # IC / Rank IC
+    target_col = getattr(mc, "target_col", "target")
+    ic, rank_ic = None, None
+    if target_col in test_window.columns:
+        ic, rank_ic = _compute_ic(test_predictions["prediction"].values, test_window[target_col].values)
+
+    # Train-period Sharpe (overfitting detection)
+    train_sharpe = None
+    train_rebalance_dates = _get_rebalance_dates(w_train_start, w_test_start, config.rebalance_freq)
+    train_predictions_df = train_window[['date', 'ticker']].copy()
+    train_predictions_df['prediction'] = model.predict(train_window[feature_cols].fillna(0))
+    train_positions_list = []
+    for rebal_date in train_rebalance_dates:
+        if rebal_date >= w_test_start:
+            break
+        portfolio = _construct_portfolio(train_predictions_df, rebal_date, config.top_n, config.top_pct, config.min_stocks)
+        if len(portfolio) > 0:
+            portfolio['date'] = rebal_date
+            train_positions_list.append(portfolio[['date', 'ticker', 'weight']])
+    if train_positions_list:
+        train_positions_df = pd.concat(train_positions_list, ignore_index=True)
+        train_port_ret, train_bench_ret = _calculate_portfolio_returns(train_positions_df, price_data, benchmark_data, benchmark_price_col)
+        if len(train_port_ret) > 0:
+            train_metrics = _calculate_metrics(train_port_ret, train_bench_ret, train_positions_df)
+            train_sharpe = train_metrics['sharpe_ratio']
+
+    # Test-period portfolio
+    rebalance_dates = _get_rebalance_dates(w_test_start, w_test_end, config.rebalance_freq)
+    window_positions_list = []
+    for rebal_date in rebalance_dates:
+        if rebal_date >= w_test_end:
+            break
+        portfolio = _construct_portfolio(test_predictions, rebal_date, config.top_n, config.top_pct, config.min_stocks)
+        if len(portfolio) > 0:
+            portfolio['date'] = rebal_date
+            window_positions_list.append(portfolio[['date', 'ticker', 'weight']])
+
+    test_sharpe = None
+    if window_positions_list:
+        window_positions_df = pd.concat(window_positions_list, ignore_index=True)
+        window_port_ret, window_bench_ret = _calculate_portfolio_returns(window_positions_df, price_data, benchmark_data, benchmark_price_col)
+        if len(window_port_ret) > 0:
+            window_metrics = _calculate_metrics(window_port_ret, window_bench_ret, window_positions_df)
+            test_sharpe = window_metrics['sharpe_ratio']
+
+    wr = {
+        'window': w_num,
+        'train_start': w_train_start, 'train_end': w_test_start,
+        'test_start': w_test_start, 'test_end': w_test_end,
+        'n_train_samples': len(train_window), 'n_test_samples': len(test_window),
+        'train_rmse': metrics.get('rmse'),
+    }
+    if ic is not None:
+        wr['ic'] = ic
+    if rank_ic is not None:
+        wr['rank_ic'] = rank_ic
+    if train_sharpe is not None:
+        wr['train_sharpe'] = train_sharpe
+    if test_sharpe is not None:
+        wr['test_sharpe'] = test_sharpe
+
+    return test_predictions, window_positions_list, wr, None
 
 
 @dataclass
@@ -338,118 +433,50 @@ def run_walk_forward_backtest(
     if verbose:
         print(f"  Total windows: {window_num}")
 
-    def _process_window(w_num, w_train_start, w_test_start, w_test_end, mc=None):
-        """Process a single walk-forward window. Returns (predictions, positions, window_result, skip_info)."""
-        mc = mc or model_config
-        # Extract training window
-        train_mask = (training_data['date'] >= w_train_start) & (training_data['date'] < w_test_start)
-        train_window = training_data[train_mask]
-        test_mask = (training_data['date'] >= w_test_start) & (training_data['date'] < w_test_end)
-        test_window = training_data[test_mask]
+    # Run windows — parallel via multiprocessing.Pool (fork), else sequential
+    n_cpus = mp_cpu_count() or 4
+    n_workers = min(n_cpus, max(2, len(windows) // 4))
+    use_parallel = len(windows) > 4 and not verbose
 
-        if len(train_window) == 0 or len(test_window) == 0:
-            return None, None, None, {'window': w_num, 'reason': f"Insufficient data (train={len(train_window)}, test={len(test_window)})"}
-
-        # Train model
-        try:
-            model, X_train, X_valid, metrics = train_lgbm_regressor(train_window, feature_cols, mc)
-        except Exception as e:
-            return None, None, None, {'window': w_num, 'reason': f"Error training model: {e}"}
-
-        # Predictions on test window
-        X_test = test_window[feature_cols].fillna(0)
-        predictions = model.predict(X_test)
-        test_predictions = test_window[['date', 'ticker']].copy()
-        test_predictions['prediction'] = predictions
-
-        # IC / Rank IC
-        target_col = getattr(mc, "target_col", "target")
-        ic, rank_ic = None, None
-        if target_col in test_window.columns:
-            ic, rank_ic = _compute_ic(test_predictions["prediction"].values, test_window[target_col].values)
-
-        # Train-period Sharpe (overfitting detection)
-        train_sharpe = None
-        train_rebalance_dates = _get_rebalance_dates(w_train_start, w_test_start, config.rebalance_freq)
-        train_predictions_df = train_window[['date', 'ticker']].copy()
-        train_predictions_df['prediction'] = model.predict(train_window[feature_cols].fillna(0))
-        train_positions_list = []
-        for rebal_date in train_rebalance_dates:
-            if rebal_date >= w_test_start:
-                break
-            portfolio = _construct_portfolio(train_predictions_df, rebal_date, config.top_n, config.top_pct, config.min_stocks)
-            if len(portfolio) > 0:
-                portfolio['date'] = rebal_date
-                train_positions_list.append(portfolio[['date', 'ticker', 'weight']])
-        if train_positions_list:
-            train_positions_df = pd.concat(train_positions_list, ignore_index=True)
-            train_port_ret, train_bench_ret = _calculate_portfolio_returns(train_positions_df, price_data, benchmark_data, benchmark_price_col)
-            if len(train_port_ret) > 0:
-                train_metrics = _calculate_metrics(train_port_ret, train_bench_ret, train_positions_df)
-                train_sharpe = train_metrics['sharpe_ratio']
-
-        # Test-period portfolio
-        rebalance_dates = _get_rebalance_dates(w_test_start, w_test_end, config.rebalance_freq)
-        window_positions_list = []
-        for rebal_date in rebalance_dates:
-            if rebal_date >= w_test_end:
-                break
-            portfolio = _construct_portfolio(test_predictions, rebal_date, config.top_n, config.top_pct, config.min_stocks)
-            if len(portfolio) > 0:
-                portfolio['date'] = rebal_date
-                window_positions_list.append(portfolio[['date', 'ticker', 'weight']])
-
-        test_sharpe = None
-        if window_positions_list:
-            window_positions_df = pd.concat(window_positions_list, ignore_index=True)
-            window_port_ret, window_bench_ret = _calculate_portfolio_returns(window_positions_df, price_data, benchmark_data, benchmark_price_col)
-            if len(window_port_ret) > 0:
-                window_metrics = _calculate_metrics(window_port_ret, window_bench_ret, window_positions_df)
-                test_sharpe = window_metrics['sharpe_ratio']
-
-        wr = {
-            'window': w_num,
-            'train_start': w_train_start, 'train_end': w_test_start,
-            'test_start': w_test_start, 'test_end': w_test_end,
-            'n_train_samples': len(train_window), 'n_test_samples': len(test_window),
-            'train_rmse': metrics.get('rmse'),
-        }
-        if ic is not None:
-            wr['ic'] = ic
-        if rank_ic is not None:
-            wr['rank_ic'] = rank_ic
-        if train_sharpe is not None:
-            wr['train_sharpe'] = train_sharpe
-        if test_sharpe is not None:
-            wr['test_sharpe'] = test_sharpe
-
-        return test_predictions, window_positions_list, wr, None
-
-    # Run windows — parallel if joblib available, else sequential
-    cpu_count = _os.cpu_count() or 4
-    n_jobs = min(cpu_count, max(2, (len(windows) + 3) // 4))
-    if JOBLIB_AVAILABLE and len(windows) > 4 and not verbose:
-        # Limit LightGBM threads per model to avoid over-subscription
-        # (each parallel worker trains a model, so total threads = n_jobs * lgbm_threads)
-        lgbm_threads = max(1, cpu_count // n_jobs)
-        model_config_parallel = ModelConfig(
+    if use_parallel:
+        # Set shared state for worker processes (fork inherits parent memory)
+        lgbm_threads = max(1, n_cpus // n_workers)
+        _MP_SHARED['training_data'] = training_data
+        _MP_SHARED['feature_cols'] = feature_cols
+        _MP_SHARED['model_config'] = ModelConfig(
             target_col=model_config.target_col,
             test_size=model_config.test_size,
             random_state=model_config.random_state,
             params={**model_config.params, 'n_jobs': lgbm_threads},
         )
-        print(f"  Running {len(windows)} windows in parallel ({n_jobs} workers, {lgbm_threads} LightGBM threads each)...")
-        results = Parallel(n_jobs=n_jobs, prefer="threads")(
-            delayed(_process_window)(wn, ts, te_s, te_e, mc=model_config_parallel) for wn, ts, te_s, te_e in windows
-        )
+        _MP_SHARED['config'] = config
+        _MP_SHARED['price_data'] = price_data
+        _MP_SHARED['benchmark_data'] = benchmark_data
+        _MP_SHARED['benchmark_price_col'] = benchmark_price_col
+
+        print(f"  Running {len(windows)} windows in parallel ({n_workers} processes, {lgbm_threads} LightGBM threads each)...")
+        import multiprocessing as _mp
+        ctx = _mp.get_context('fork')
+        with ctx.Pool(n_workers) as pool:
+            results = pool.map(_mp_process_window, windows)
+        _MP_SHARED.clear()
     else:
         # Sequential (or verbose mode for readable output)
+        # Use the module-level worker with shared state for consistency
+        _MP_SHARED['training_data'] = training_data
+        _MP_SHARED['feature_cols'] = feature_cols
+        _MP_SHARED['model_config'] = model_config
+        _MP_SHARED['config'] = config
+        _MP_SHARED['price_data'] = price_data
+        _MP_SHARED['benchmark_data'] = benchmark_data
+        _MP_SHARED['benchmark_price_col'] = benchmark_price_col
         results = []
-        for i, (wn, ts, te_s, te_e) in enumerate(windows):
+        for i, window_args in enumerate(windows):
             if verbose and i % 50 == 0:
+                wn, ts, te_s, te_e = window_args
                 print(f"  Window {wn}/{len(windows)}: Train {ts.date()} to {te_s.date()}, Test {te_s.date()} to {te_e.date()}")
-            preds, positions, wr, skip = _process_window(wn, ts, te_s, te_e)
-            results.append((preds, positions, wr, skip))
+            results.append(_mp_process_window(window_args))
+        _MP_SHARED.clear()
 
     # Collect results
     for preds, positions, wr, skip in results:

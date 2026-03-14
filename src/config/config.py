@@ -104,6 +104,16 @@ class FeatureConfig:
     sentiment_lookbacks: List[int] = field(default_factory=lambda: [1, 7, 14])
     sentiment_min_count: int = 1  # Minimum articles to compute sentiment
     sentiment_fillna: float = 0.0  # Value for missing sentiment (use 0 for neutral)
+    # Cross-asset features
+    use_cross_asset: bool = False
+    cross_asset: Dict[str, Any] = field(default_factory=lambda: {
+        'zscore_window': 60,
+        'dxy_lookback': 21,
+        'real_yield_lookback': 63,
+        'peer_momentum_lookback': 21,
+        'sector_breadth_lookback': 21,
+        'relative_strength_lookback': 63,
+    })
 
 
 @dataclass
