@@ -56,6 +56,12 @@ from src.app.dashboard.pages import (
     render_notifications,
     render_trigger_backtester,
     render_strategy_optimizer,
+    render_regression_testing,
+    render_setup_hub,
+    render_analyze_hub,
+    render_build_hub,
+    render_monitor_hub,
+    render_review_hub,
 )
 
 
@@ -113,8 +119,14 @@ def main():
         "Notifications": render_notifications,
         "Trigger Backtester": render_trigger_backtester,
         "Strategy Optimizer": render_strategy_optimizer,
+        "Regression Testing": render_regression_testing,
         "Documentation": render_documentation,
         "Settings": render_settings,
+        "Setup Hub": render_setup_hub,
+        "Analyze Hub": render_analyze_hub,
+        "Build Hub": render_build_hub,
+        "Monitor Hub": render_monitor_hub,
+        "Review Hub": render_review_hub,
     }
     
     # Render selected page

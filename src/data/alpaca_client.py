@@ -103,6 +103,18 @@ class AlpacaClient:
             raise ValueError(f"Unsupported interval: {interval}. Use one of: {list(INTERVAL_MAP.keys())}")
 
         tickers = [t.upper().strip() for t in tickers]
+
+        # Filter known delisted tickers
+        try:
+            from scripts.download_prices import DELISTED_TICKERS
+            before = len(tickers)
+            tickers = [t for t in tickers if t not in DELISTED_TICKERS]
+            skipped = before - len(tickers)
+            if skipped:
+                print(f"  Skipped {skipped} delisted ticker(s)")
+        except ImportError:
+            pass
+
         start_dt = datetime.strptime(start_date, "%Y-%m-%d")
         end_dt = datetime.strptime(end_date, "%Y-%m-%d")
 

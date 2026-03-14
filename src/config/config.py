@@ -62,8 +62,12 @@ class DataConfig:
     """Configuration for data paths and sources."""
     interval: str = "1d"  # 1d (daily) or 1h (hourly). yfinance limits 1h to ~730 days
     price_data_path: str = "data/prices.csv"
+    price_data_path_daily: str = "data/prices_daily.csv"  # 10yr daily for features (114 tickers)
+    price_data_path_15m: str = "data/prices_15m.csv"  # 15m intraday (when available)
     fundamental_data_path: Optional[str] = None
     benchmark_data_path: str = "data/benchmark.csv"
+    benchmark_data_path_daily: str = "data/benchmark_daily.csv"  # 10yr daily SPY
+    macro_data_path: str = "data/macro_fred.csv"  # FRED macro data
     universe_path: Optional[str] = None
     sentiment_news_path: Optional[str] = None  # Path to news data for sentiment
     output_dir: str = "output"

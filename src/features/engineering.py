@@ -161,8 +161,10 @@ def add_valuation_features(
     fund_df = fundamental_df.copy()
     
     # Ensure date columns are datetime
-    df['date'] = pd.to_datetime(df['date'])
-    fund_df['date'] = pd.to_datetime(fund_df['date'])
+    if not pd.api.types.is_datetime64_any_dtype(df['date']):
+        df['date'] = pd.to_datetime(df['date'], format='mixed')
+    if not pd.api.types.is_datetime64_any_dtype(fund_df['date']):
+        fund_df['date'] = pd.to_datetime(fund_df['date'], format='mixed')
     
     # For each ticker, merge fundamentals using merge_asof
     result_dfs = []
@@ -270,9 +272,9 @@ def make_training_dataset(
     
     # Ensure date columns are datetime
     if not pd.api.types.is_datetime64_any_dtype(df['date']):
-        df['date'] = pd.to_datetime(df['date'])
+        df['date'] = pd.to_datetime(df['date'], format='mixed')
     if not pd.api.types.is_datetime64_any_dtype(benchmark['date']):
-        benchmark['date'] = pd.to_datetime(benchmark['date'])
+        benchmark['date'] = pd.to_datetime(benchmark['date'], format='mixed')
     
     # Identify the price column in benchmark_df
     price_cols = ['close', 'price', 'value']
@@ -384,8 +386,10 @@ def add_sentiment_features(
     sent_df = sentiment_feature_df.copy()
     
     # Ensure date columns are datetime
-    df['date'] = pd.to_datetime(df['date'])
-    sent_df['date'] = pd.to_datetime(sent_df['date'])
+    if not pd.api.types.is_datetime64_any_dtype(df['date']):
+        df['date'] = pd.to_datetime(df['date'], format='mixed')
+    if not pd.api.types.is_datetime64_any_dtype(sent_df['date']):
+        sent_df['date'] = pd.to_datetime(sent_df['date'], format='mixed')
     
     # Remove timezone if present
     if df['date'].dt.tz is not None:

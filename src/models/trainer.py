@@ -29,6 +29,8 @@ class ModelConfig:
         "learning_rate": 0.05,
         "max_depth": -1,
         "num_leaves": 31,
+        "n_jobs": -1,          # Use all available cores for training
+        "verbose": -1,         # Suppress LightGBM output
     })
 
 

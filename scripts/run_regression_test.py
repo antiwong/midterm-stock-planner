@@ -43,15 +43,28 @@ from src.regression.reporting import RegressionReporter
 
 
 def load_data(config, watchlist_name=None):
-    """Load price, benchmark, and training data."""
+    """Load price, benchmark, and training data.
+
+    Prefers daily data paths (10yr, 114 tickers) when available, falling back
+    to the default hourly paths.
+    """
     import pandas as pd
     from src.features.engineering import (
         compute_all_features_extended,
         make_training_dataset,
     )
 
-    # Load price data
-    price_df = pd.read_csv(config.data.price_data_path, parse_dates=["date"])
+    # Prefer daily data (10yr, more tickers) over hourly for regression testing
+    daily_price_path = Path(getattr(config.data, "price_data_path_daily", "data/prices_daily.csv"))
+    hourly_price_path = Path(config.data.price_data_path)
+    if daily_price_path.exists():
+        price_path = daily_price_path
+        print(f"Using daily data: {daily_price_path}")
+    else:
+        price_path = hourly_price_path
+        print(f"Using hourly data: {hourly_price_path}")
+
+    price_df = pd.read_csv(price_path, parse_dates=["date"])
 
     # Filter by watchlist if specified
     if watchlist_name:
@@ -68,8 +81,17 @@ def load_data(config, watchlist_name=None):
         except Exception as e:
             print(f"Warning: Could not load watchlist '{watchlist_name}': {e}")
 
-    # Load benchmark
-    benchmark_df = pd.read_csv(config.data.benchmark_data_path, parse_dates=["date"])
+    # Load benchmark — prefer daily
+    daily_bench_path = Path(getattr(config.data, "benchmark_data_path_daily", "data/benchmark_daily.csv"))
+    hourly_bench_path = Path(config.data.benchmark_data_path)
+    if daily_bench_path.exists():
+        bench_path = daily_bench_path
+        print(f"Using daily benchmark: {daily_bench_path}")
+    else:
+        bench_path = hourly_bench_path
+        print(f"Using hourly benchmark: {hourly_bench_path}")
+
+    benchmark_df = pd.read_csv(bench_path, parse_dates=["date"])
 
     # Load fundamentals
     fundamental_df = None

@@ -36,14 +36,12 @@ CHART_COLORS = {
 def configure_page():
     """Configure Streamlit page settings."""
     st.set_page_config(
-        page_title="The Long Game",
-        page_icon="🎯",
+        page_title="QuantaAlpha",
+        page_icon="📊",
         layout="wide",
         initial_sidebar_state="expanded",
         menu_items={
-            'Get Help': 'https://github.com/yourusername/midterm-stock-planner',
-            'Report a bug': 'https://github.com/yourusername/midterm-stock-planner/issues',
-            'About': '# The Long Game\nMid-term portfolio intelligence and analysis.'
+            'About': '# QuantaAlpha\nMid-term portfolio intelligence and analysis.'
         }
     )
 
@@ -93,11 +91,11 @@ def inject_custom_css():
     }}
 
     /* Import Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
     
     /* Global Styles */
     .stApp {{
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
         font-size: calc(16px * var(--font-scale));
         background-color: {bg_color};
         color: {text_color};
@@ -164,7 +162,17 @@ def inject_custom_css():
         display: flex !important;
         visibility: visible !important;
     }}
-    
+
+    /* Hide Streamlit's auto-discovered multipage nav links */
+    [data-testid="stSidebarNav"],
+    [data-testid="stSidebarNavItems"],
+    section[data-testid="stSidebar"] nav,
+    section[data-testid="stSidebar"] ul[data-testid="stSidebarNavItems"] {{
+        display: none !important;
+        height: 0 !important;
+        overflow: hidden !important;
+    }}
+
     /* Sidebar Styling */
     [data-testid="stSidebar"] {{
         background: {sidebar_bg_start};
@@ -284,6 +292,7 @@ def inject_custom_css():
     
     /* Main Header */
     .main-header {{
+        font-family: 'DM Sans', sans-serif;
         font-size: 1.8rem;
         font-weight: 700;
         color: {text_color};
@@ -293,6 +302,7 @@ def inject_custom_css():
     }}
     
     .sub-header {{
+        font-family: 'DM Sans', sans-serif;
         font-size: 1.5rem;
         font-weight: 600;
         color: {text_color};
@@ -1166,6 +1176,7 @@ STANDALONE_TOOLS = [
     ("Stock Explorer", "stock_explorer"),
     ("Trigger Backtester", "trigger_backtester"),
     ("Strategy Optimizer", "strategy_optimizer"),
+    ("Regression Testing", "regression_testing"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
 ]
@@ -1194,3 +1205,89 @@ UTILITIES = [
 
 # Combined list for backward compatibility
 PAGES = MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES
+
+# Process-flow navigation phases
+# Each phase groups related pages and has a hub page
+PROCESS_PHASES = [
+    {
+        "id": "dashboard",
+        "label": "Dashboard",
+        "icon": "📊",
+        "description": "Portfolio overview and key metrics",
+        "page": "Overview",  # Direct page, no hub needed
+    },
+    {
+        "id": "setup",
+        "label": "Setup",
+        "icon": "⚙️",
+        "description": "Configure watchlists, data sources, and settings",
+        "page": "Setup Hub",
+        "children": [
+            ("Watchlist Manager", "watchlist_manager", "Define stock universes and watchlists"),
+            ("Data Quality", "data_quality", "Validate data completeness and accuracy"),
+            ("Fundamentals Status", "fundamentals_status", "Check fundamental data coverage"),
+            ("Settings", "settings", "Configure system preferences"),
+        ],
+    },
+    {
+        "id": "analyze",
+        "label": "Analyze",
+        "icon": "🔬",
+        "description": "Run analyses, backtest strategies, and test features",
+        "page": "Analyze Hub",
+        "children": [
+            ("Run Analysis", "run_analysis", "Execute walk-forward backtests on watchlists"),
+            ("Regression Testing", "regression_testing", "Test features one-by-one for marginal contribution"),
+            ("Strategy Optimizer", "strategy_optimizer", "Optimize MACD/RSI parameters via Bayesian search"),
+            ("Trigger Backtester", "trigger_backtester", "Backtest buy/sell trigger signals"),
+            ("Stock Explorer", "stock_explorer", "Browse individual stock scores and features"),
+            ("AI Insights", "ai_insights", "AI-generated commentary on analysis results"),
+        ],
+    },
+    {
+        "id": "build",
+        "label": "Build",
+        "icon": "🏗️",
+        "description": "Construct and optimize portfolios",
+        "page": "Build Hub",
+        "children": [
+            ("Portfolio Builder", "portfolio_builder", "Build risk-optimized portfolios from scored stocks"),
+            ("Purchase Triggers", "purchase_triggers", "Generate actionable buy/sell signals"),
+            ("Tax Optimization", "tax_optimization", "Tax-loss harvesting and wash sale analysis"),
+        ],
+    },
+    {
+        "id": "monitor",
+        "label": "Monitor",
+        "icon": "📡",
+        "description": "Track portfolio performance and market signals",
+        "page": "Monitor Hub",
+        "children": [
+            ("Real-Time Monitoring", "realtime_monitoring", "Live portfolio and market tracking"),
+            ("Recommendation Tracking", "recommendation_tracking", "Track recommendation accuracy over time"),
+            ("Alert Management", "alert_management", "Configure price and event alerts"),
+            ("Earnings Calendar", "earnings_calendar", "Upcoming earnings dates and estimates"),
+            ("Notifications", "notifications", "View notification history"),
+        ],
+    },
+    {
+        "id": "review",
+        "label": "Review",
+        "icon": "📋",
+        "description": "Compare results, generate reports, and deep-dive analytics",
+        "page": "Review Hub",
+        "children": [
+            ("Portfolio Analysis", "portfolio_analysis", "Analyze portfolio composition and risk"),
+            ("Comprehensive Analysis", "comprehensive_analysis", "Full-spectrum analysis suite"),
+            ("Compare Runs", "compare_runs", "Compare analysis runs side-by-side"),
+            ("Advanced Comparison", "advanced_comparison", "Statistical comparison of run results"),
+            ("Reports", "reports", "Generate PDF and markdown reports"),
+            ("Report Templates", "report_templates", "Manage report templates"),
+            ("Analysis Runs", "analysis_runs", "Browse run history and results"),
+            ("Event Analysis", "event_analysis", "Analyze market event impacts"),
+            ("Monte Carlo", "monte_carlo", "Monte Carlo portfolio simulations"),
+            ("Turnover Analysis", "turnover_analysis", "Portfolio turnover and rebalancing costs"),
+            ("Performance Monitoring", "performance_monitoring", "System performance metrics"),
+        ],
+    },
+]

@@ -111,7 +111,7 @@ watchlists:
       - AEP     # American Electric Power
       # Other
       - CTAS    # Cintas Corporation
-      - ANSS    # ANSYS Inc
+      # ANSS (ANSYS) — removed, acquired by Synopsys Jan 2025
       - CDW     # CDW Corporation
       - GEHC    # GE HealthCare
       - ON      # ON Semiconductor
@@ -188,7 +188,7 @@ watchlists:
       - CL      # Colgate-Palmolive
       - KMB     # Kimberly-Clark
       - GIS     # General Mills
-      - K       # Kellanova
+      # K (Kellanova) — removed, acquired by Mars 2025
       - KHC     # Kraft Heinz
       - HSY     # Hershey Company
       - SYY     # Sysco Corporation
@@ -375,7 +375,7 @@ watchlists:
       - UNH     # UnitedHealth Group
       - V       # Visa Inc
       - VZ      # Verizon Communications
-      - WBA     # Walgreens Boots Alliance
+      # WBA (Walgreens) — removed, taken private 2025
       - WMT     # Walmart Inc
 
   # Russell 2000 - Small Cap (Representative Sample)
@@ -388,16 +388,12 @@ watchlists:
       - SIRI    # Sirius XM Holdings
       - RKT     # Rocket Companies
       - PLUG    # Plug Power
-      - SPCE    # Virgin Galactic
-      - BBBY    # Bed Bath & Beyond
       - CLOV    # Clover Health
       - SOFI    # SoFi Technologies
       - OPEN    # Opendoor Technologies
       - UPST    # Upstart Holdings
       - AFRM    # Affirm Holdings
       - PATH    # UiPath Inc
-      - DM      # Desktop Metal
-      - STEM    # Stem Inc
       - QS      # QuantumScape
       - CHPT    # ChargePoint Holdings
       - BLNK    # Blink Charging

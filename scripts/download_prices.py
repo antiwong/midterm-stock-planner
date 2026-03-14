@@ -253,37 +253,90 @@ class DataValidator:
         return '\n'.join(lines)
 
 
+# Tickers that are delisted/bankrupt and should be skipped
+DELISTED_TICKERS = {
+    'BBBY',   # Bed Bath & Beyond — bankrupt June 2023
+    'SPCE',   # Virgin Galactic — delisted Jan 2024
+    'DM',     # Desktop Metal — bankrupt 2024
+    'STEM',   # Stem Inc — acquired by Generac 2024
+    'ATVI',   # Activision Blizzard — acquired by Microsoft Oct 2023
+    'SPLK',   # Splunk — acquired by Cisco Mar 2024
+    'PXD',    # Pioneer Natural Resources — acquired by Exxon May 2024
+    'VMW',    # VMware — acquired by Broadcom Nov 2023
+    'TWTR',   # Twitter — taken private by Elon Musk Oct 2022
+    'LUMN',   # Lumen Technologies — bankrupt 2024
+    'ANSS',   # ANSYS Inc — acquired by Synopsys Jan 2025
+    'K',      # Kellanova — acquired by Mars Inc 2025
+    'WBA',    # Walgreens Boots Alliance — taken private 2025
+}
+
+# Yahoo Finance ↔ Alpaca ticker format mapping
+# Yahoo uses dots (.) for class shares; Alpaca/yfinance download uses dashes (-)
+TICKER_FORMAT_YAHOO_TO_STANDARD = {
+    'BRK.B': 'BRK-B',
+    'BRK.A': 'BRK-A',
+    'BF.B': 'BF-B',
+    'BF.A': 'BF-A',
+    'LEN.B': 'LEN-B',
+    'BRKB': 'BRK-B',
+}
+
+# Alpaca → yfinance format (reverse mapping for when Alpaca format is input)
+TICKER_FORMAT_ALPACA_TO_YFINANCE = {
+    'BRK/B': 'BRK-B',
+    'BRK/A': 'BRK-A',
+    'BF/B': 'BF-B',
+    'BF/A': 'BF-A',
+}
+
+
 class PriceDownloader:
     """Downloads historical price data using yfinance."""
-    
+
     def __init__(self, output_path: str = "data/prices.csv"):
         self.output_path = Path(output_path)
         self.download_log = []
         self.failed_tickers = []
         self.successful_tickers = []
         self.failed_reasons = {}  # Track why each ticker failed
-    
+        self.skipped_delisted = []  # Track skipped delisted tickers
+
     def _normalize_ticker(self, ticker: str) -> tuple[str, Optional[str]]:
         """Normalize ticker format and return (normalized_ticker, original_if_changed).
-        
+
+        Handles Yahoo Finance vs Alpaca format differences:
+        - Yahoo: BRK.B, BF.B (dots for class shares)
+        - Alpaca: BRK/B (slashes)
+        - yfinance download: BRK-B (dashes work best)
+
         Args:
             ticker: Original ticker symbol
-        
+
         Returns:
             Tuple of (normalized_ticker, original_if_changed_or_None)
         """
-        original = ticker.upper()
-        
-        # Known format fixes
-        format_fixes = {
-            'BRK.B': 'BRK-B',
-            'BRKB': 'BRK-B',
-        }
-        
-        if original in format_fixes:
-            return format_fixes[original], original
-        
+        original = ticker.upper().strip()
+
+        # Check all format mappings
+        all_fixes = {**TICKER_FORMAT_YAHOO_TO_STANDARD, **TICKER_FORMAT_ALPACA_TO_YFINANCE}
+
+        if original in all_fixes:
+            return all_fixes[original], original
+
         return original, None
+
+    def _filter_delisted(self, tickers: List[str]) -> List[str]:
+        """Remove known delisted/bankrupt tickers and log them."""
+        filtered = []
+        for t in tickers:
+            if t.upper() in DELISTED_TICKERS:
+                self.skipped_delisted.append(t.upper())
+                self._log(f"⏭ {t}: Skipped (delisted/bankrupt)")
+            else:
+                filtered.append(t)
+        if self.skipped_delisted:
+            print(f"   ⏭ Skipped {len(self.skipped_delisted)} delisted tickers: {', '.join(self.skipped_delisted)}")
+        return filtered
     
     def download(self, tickers: List[str], start_date: str, end_date: str,
                  interval: str = "1d",
@@ -306,23 +359,26 @@ class PriceDownloader:
         if not YFINANCE_AVAILABLE:
             raise ImportError("yfinance is required. Install with: pip install yfinance")
         
+        # Filter out known delisted tickers first
+        tickers = self._filter_delisted(tickers)
+
         print(f"\n📥 Downloading price data for {len(tickers)} tickers...")
         print(f"   Period: {start_date} to {end_date}")
         if parallel:
             print(f"   Using parallel processing (max_workers: {max_workers or 'auto'})")
-        
+
         all_data = []
         # Normalize tickers and track format changes
         normalized_tickers = []
         ticker_map = {}  # Maps normalized -> original for display
-        
+
         for t in tickers:
             normalized, original = self._normalize_ticker(t)
             normalized_tickers.append(normalized)
             if original:
                 ticker_map[normalized] = original
                 print(f"   ℹ️  Format fix: {original} → {normalized}")
-        
+
         tickers = normalized_tickers
         
         # Use parallel processing for multiple batches if enabled
@@ -603,6 +659,7 @@ class PriceDownloader:
             'failed': len(self.failed_tickers),
             'failed_tickers': self.failed_tickers,
             'failed_reasons': getattr(self, 'failed_reasons', {}),
+            'skipped_delisted': getattr(self, 'skipped_delisted', []),
             'log': self.download_log
         }
 

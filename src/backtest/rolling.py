@@ -4,6 +4,7 @@ This module implements rolling window backtests with configurable
 training periods, test periods, and portfolio construction rules.
 """
 
+import os as _os
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple, Any
@@ -13,6 +14,12 @@ import numpy as np
 
 from ..config.config import BacktestConfig
 from ..models.trainer import train_lgbm_regressor, ModelConfig
+
+try:
+    from joblib import Parallel, delayed
+    JOBLIB_AVAILABLE = True
+except ImportError:
+    JOBLIB_AVAILABLE = False
 
 
 @dataclass
@@ -81,52 +88,61 @@ def _construct_portfolio(
     date: pd.Timestamp,
     top_n: Optional[int],
     top_pct: float,
-    min_stocks: int
+    min_stocks: int,
+    weighting: str = "score"
 ) -> pd.DataFrame:
     """
-    Construct equal-weight portfolio from predictions at a given date.
-    
+    Construct portfolio from predictions at a given date.
+
     Args:
         predictions: DataFrame with columns ['date', 'ticker', 'prediction']
         date: Date to construct portfolio for
         top_n: Number of top stocks to select (if None, use top_pct)
         top_pct: Top percentage of stocks to select
         min_stocks: Minimum stocks required
-    
+        weighting: Weight scheme - "equal" or "score" (prediction-proportional)
+
     Returns:
         DataFrame with columns ['ticker', 'weight']
     """
     # Find closest date in predictions
     available_dates = predictions['date'].unique()
     closest_date = min(available_dates, key=lambda d: abs((d - date).total_seconds()))
-    
+
     date_predictions = predictions[predictions['date'] == closest_date].copy()
-    
+
     if len(date_predictions) == 0:
         return pd.DataFrame(columns=['ticker', 'weight'])
-    
+
     # Sort by prediction (descending - higher is better)
     date_predictions = date_predictions.sort_values('prediction', ascending=False)
-    
+
     # Determine number of stocks to select
     if top_n is not None:
         n_stocks = min(top_n, len(date_predictions))
     else:
         n_stocks = max(min_stocks, int(len(date_predictions) * top_pct))
-    
+
     n_stocks = max(n_stocks, 1)  # At least 1 stock
-    
+
     # Select top stocks
     selected = date_predictions.head(n_stocks)
-    
-    # Equal weight
-    weight = 1.0 / len(selected)
-    
+
+    if weighting == "score" and len(selected) > 1:
+        # Score-weighted: use prediction values as weights (higher prediction → larger weight)
+        scores = selected['prediction'].values.astype(float)
+        # Shift scores to be positive (in case of negative predictions)
+        scores_shifted = scores - scores.min() + 1e-8
+        weights = scores_shifted / scores_shifted.sum()
+    else:
+        # Equal weight fallback
+        weights = np.full(len(selected), 1.0 / len(selected))
+
     portfolio = pd.DataFrame({
         'ticker': selected['ticker'].values,
-        'weight': [weight] * len(selected)
+        'weight': weights
     })
-    
+
     return portfolio
 
 
@@ -263,11 +279,14 @@ def run_walk_forward_backtest(
     
     # Ensure dates are datetime
     training_data = training_data.copy()
-    training_data['date'] = pd.to_datetime(training_data['date'])
+    if not pd.api.types.is_datetime64_any_dtype(training_data['date']):
+        training_data['date'] = pd.to_datetime(training_data['date'], format='mixed')
     price_data = price_data.copy()
-    price_data['date'] = pd.to_datetime(price_data['date'])
+    if not pd.api.types.is_datetime64_any_dtype(price_data['date']):
+        price_data['date'] = pd.to_datetime(price_data['date'], format='mixed')
     benchmark_data = benchmark_data.copy()
-    benchmark_data['date'] = pd.to_datetime(benchmark_data['date'])
+    if not pd.api.types.is_datetime64_any_dtype(benchmark_data['date']):
+        benchmark_data['date'] = pd.to_datetime(benchmark_data['date'], format='mixed')
     
     # Sort data
     training_data = training_data.sort_values(['date', 'ticker'])
@@ -303,156 +322,96 @@ def run_walk_forward_backtest(
     if benchmark_price_col is None:
         raise ValueError(f"benchmark_data must have one of {price_cols}")
     
-    # Walk-forward loop
+    # Pre-compute all window boundaries
+    windows = []
     train_start = min_date
-    test_start = train_start + pd.Timedelta(days=train_days)
-    test_end = test_start + pd.Timedelta(days=test_days)
-    
+    test_start_dt = train_start + pd.Timedelta(days=train_days)
+    test_end_dt = test_start_dt + pd.Timedelta(days=test_days)
     window_num = 0
-    while test_end <= max_date:
+    while test_end_dt <= max_date:
         window_num += 1
-        
-        if verbose:
-            print(f"Window {window_num}: Train {train_start.date()} to {test_start.date()}, "
-                  f"Test {test_start.date()} to {test_end.date()}")
-        
+        windows.append((window_num, train_start, test_start_dt, test_end_dt))
+        train_start = train_start + step_delta
+        test_start_dt = train_start + pd.Timedelta(days=train_days)
+        test_end_dt = test_start_dt + pd.Timedelta(days=test_days)
+
+    if verbose:
+        print(f"  Total windows: {window_num}")
+
+    def _process_window(w_num, w_train_start, w_test_start, w_test_end, mc=None):
+        """Process a single walk-forward window. Returns (predictions, positions, window_result, skip_info)."""
+        mc = mc or model_config
         # Extract training window
-        train_mask = (training_data['date'] >= train_start) & (training_data['date'] < test_start)
-        train_window = training_data[train_mask].copy()
-        
-        # Extract test window
-        test_mask = (training_data['date'] >= test_start) & (training_data['date'] < test_end)
-        test_window = training_data[test_mask].copy()
-        
+        train_mask = (training_data['date'] >= w_train_start) & (training_data['date'] < w_test_start)
+        train_window = training_data[train_mask]
+        test_mask = (training_data['date'] >= w_test_start) & (training_data['date'] < w_test_end)
+        test_window = training_data[test_mask]
+
         if len(train_window) == 0 or len(test_window) == 0:
-            reason = f"Insufficient data (train={len(train_window)}, test={len(test_window)})"
-            if verbose:
-                print(f"  Skipping window: {reason}")
-            skipped_windows.append({'window': window_num, 'reason': reason})
-            train_start = train_start + step_delta
-            test_start = train_start + pd.Timedelta(days=train_days)
-            test_end = test_start + pd.Timedelta(days=test_days)
-            continue
-        
+            return None, None, None, {'window': w_num, 'reason': f"Insufficient data (train={len(train_window)}, test={len(test_window)})"}
+
         # Train model
         try:
-            model, X_train, X_valid, metrics = train_lgbm_regressor(
-                train_window,
-                feature_cols,
-                model_config
-            )
-            if verbose:
-                print(f"  Model trained: RMSE={metrics.get('rmse', 'N/A'):.4f}")
+            model, X_train, X_valid, metrics = train_lgbm_regressor(train_window, feature_cols, mc)
         except Exception as e:
-            reason = f"Error training model: {e}"
-            if verbose:
-                print(f"  Skipping: {reason}")
-            skipped_windows.append({'window': window_num, 'reason': reason})
-            train_start = train_start + step_delta
-            test_start = train_start + pd.Timedelta(days=train_days)
-            test_end = test_start + pd.Timedelta(days=test_days)
-            continue
-        
-        # Make predictions on test window
+            return None, None, None, {'window': w_num, 'reason': f"Error training model: {e}"}
+
+        # Predictions on test window
         X_test = test_window[feature_cols].fillna(0)
         predictions = model.predict(X_test)
-        
         test_predictions = test_window[['date', 'ticker']].copy()
         test_predictions['prediction'] = predictions
-        all_predictions.append(test_predictions)
-        
-        # Information Coefficient (IC) and Rank IC per window
-        target_col = getattr(model_config, "target_col", "target")
+
+        # IC / Rank IC
+        target_col = getattr(mc, "target_col", "target")
         ic, rank_ic = None, None
         if target_col in test_window.columns:
-            ic, rank_ic = _compute_ic(
-                test_predictions["prediction"].values,
-                test_window[target_col].values,
-            )
-        if verbose and ic is not None:
-            print(f"  IC={ic:.4f}" + (f"  Rank_IC={rank_ic:.4f}" if rank_ic is not None else ""))
-        ic_threshold = getattr(config, "ic_min_threshold", None)
-        ic_action = getattr(config, "ic_action", "warn")
-        if ic_threshold is not None and ic_action == "warn" and ic is not None:
-            if abs(ic) < ic_threshold:
-                print(f"  ⚠ IC |{ic:.4f}| < {ic_threshold} (below threshold)")
-        
-        # Train-period Sharpe (for overfitting detection)
-        train_sharpe: Optional[float] = None
-        train_rebalance_dates = _get_rebalance_dates(train_start, test_start, config.rebalance_freq)
+            ic, rank_ic = _compute_ic(test_predictions["prediction"].values, test_window[target_col].values)
+
+        # Train-period Sharpe (overfitting detection)
+        train_sharpe = None
+        train_rebalance_dates = _get_rebalance_dates(w_train_start, w_test_start, config.rebalance_freq)
         train_predictions_df = train_window[['date', 'ticker']].copy()
         train_predictions_df['prediction'] = model.predict(train_window[feature_cols].fillna(0))
-        train_positions_list: List[pd.DataFrame] = []
+        train_positions_list = []
         for rebal_date in train_rebalance_dates:
-            if rebal_date >= test_start:
+            if rebal_date >= w_test_start:
                 break
-            portfolio = _construct_portfolio(
-                train_predictions_df,
-                rebal_date,
-                config.top_n,
-                config.top_pct,
-                config.min_stocks
-            )
+            portfolio = _construct_portfolio(train_predictions_df, rebal_date, config.top_n, config.top_pct, config.min_stocks)
             if len(portfolio) > 0:
                 portfolio['date'] = rebal_date
                 train_positions_list.append(portfolio[['date', 'ticker', 'weight']])
         if train_positions_list:
             train_positions_df = pd.concat(train_positions_list, ignore_index=True)
-            train_port_ret, train_bench_ret = _calculate_portfolio_returns(
-                train_positions_df, price_data, benchmark_data, benchmark_price_col
-            )
+            train_port_ret, train_bench_ret = _calculate_portfolio_returns(train_positions_df, price_data, benchmark_data, benchmark_price_col)
             if len(train_port_ret) > 0:
-                train_metrics = _calculate_metrics(
-                    train_port_ret, train_bench_ret, train_positions_df
-                )
+                train_metrics = _calculate_metrics(train_port_ret, train_bench_ret, train_positions_df)
                 train_sharpe = train_metrics['sharpe_ratio']
 
-        # Get rebalance dates in test window
-        rebalance_dates = _get_rebalance_dates(test_start, test_end, config.rebalance_freq)
-        window_positions_list: List[pd.DataFrame] = []
-
-        # Construct portfolios
+        # Test-period portfolio
+        rebalance_dates = _get_rebalance_dates(w_test_start, w_test_end, config.rebalance_freq)
+        window_positions_list = []
         for rebal_date in rebalance_dates:
-            if rebal_date >= test_end:
+            if rebal_date >= w_test_end:
                 break
-
-            # Construct portfolio
-            portfolio = _construct_portfolio(
-                test_predictions,
-                rebal_date,
-                config.top_n,
-                config.top_pct,
-                config.min_stocks
-            )
-
+            portfolio = _construct_portfolio(test_predictions, rebal_date, config.top_n, config.top_pct, config.min_stocks)
             if len(portfolio) > 0:
                 portfolio['date'] = rebal_date
-                block = portfolio[['date', 'ticker', 'weight']]
-                all_positions.append(block)
-                window_positions_list.append(block)
+                window_positions_list.append(portfolio[['date', 'ticker', 'weight']])
 
-        # Per-window test Sharpe (for overfitting detection)
-        test_sharpe: Optional[float] = None
+        test_sharpe = None
         if window_positions_list:
             window_positions_df = pd.concat(window_positions_list, ignore_index=True)
-            window_port_ret, window_bench_ret = _calculate_portfolio_returns(
-                window_positions_df, price_data, benchmark_data, benchmark_price_col
-            )
+            window_port_ret, window_bench_ret = _calculate_portfolio_returns(window_positions_df, price_data, benchmark_data, benchmark_price_col)
             if len(window_port_ret) > 0:
-                window_metrics = _calculate_metrics(
-                    window_port_ret, window_bench_ret, window_positions_df
-                )
+                window_metrics = _calculate_metrics(window_port_ret, window_bench_ret, window_positions_df)
                 test_sharpe = window_metrics['sharpe_ratio']
 
-        # Store window results
-        wr: Dict[str, Any] = {
-            'window': window_num,
-            'train_start': train_start,
-            'train_end': test_start,
-            'test_start': test_start,
-            'test_end': test_end,
-            'n_train_samples': len(train_window),
-            'n_test_samples': len(test_window),
+        wr = {
+            'window': w_num,
+            'train_start': w_train_start, 'train_end': w_test_start,
+            'test_start': w_test_start, 'test_end': w_test_end,
+            'n_train_samples': len(train_window), 'n_test_samples': len(test_window),
             'train_rmse': metrics.get('rmse'),
         }
         if ic is not None:
@@ -463,12 +422,46 @@ def run_walk_forward_backtest(
             wr['train_sharpe'] = train_sharpe
         if test_sharpe is not None:
             wr['test_sharpe'] = test_sharpe
-        window_results.append(wr)
-        
-        # Move to next window
-        train_start = train_start + step_delta
-        test_start = train_start + pd.Timedelta(days=train_days)
-        test_end = test_start + pd.Timedelta(days=test_days)
+
+        return test_predictions, window_positions_list, wr, None
+
+    # Run windows — parallel if joblib available, else sequential
+    cpu_count = _os.cpu_count() or 4
+    n_jobs = min(cpu_count, max(2, (len(windows) + 3) // 4))
+    if JOBLIB_AVAILABLE and len(windows) > 4 and not verbose:
+        # Limit LightGBM threads per model to avoid over-subscription
+        # (each parallel worker trains a model, so total threads = n_jobs * lgbm_threads)
+        lgbm_threads = max(1, cpu_count // n_jobs)
+        model_config_parallel = ModelConfig(
+            target_col=model_config.target_col,
+            test_size=model_config.test_size,
+            random_state=model_config.random_state,
+            params={**model_config.params, 'n_jobs': lgbm_threads},
+        )
+        print(f"  Running {len(windows)} windows in parallel ({n_jobs} workers, {lgbm_threads} LightGBM threads each)...")
+        results = Parallel(n_jobs=n_jobs, prefer="threads")(
+            delayed(_process_window)(wn, ts, te_s, te_e, mc=model_config_parallel) for wn, ts, te_s, te_e in windows
+        )
+    else:
+        # Sequential (or verbose mode for readable output)
+        results = []
+        for i, (wn, ts, te_s, te_e) in enumerate(windows):
+            if verbose and i % 50 == 0:
+                print(f"  Window {wn}/{len(windows)}: Train {ts.date()} to {te_s.date()}, Test {te_s.date()} to {te_e.date()}")
+            preds, positions, wr, skip = _process_window(wn, ts, te_s, te_e)
+            results.append((preds, positions, wr, skip))
+
+    # Collect results
+    for preds, positions, wr, skip in results:
+        if skip is not None:
+            skipped_windows.append(skip)
+        else:
+            if preds is not None:
+                all_predictions.append(preds)
+            if positions:
+                all_positions.extend(positions)
+            if wr is not None:
+                window_results.append(wr)
     
     # Check if we have any results
     if not all_predictions:
@@ -585,12 +578,14 @@ def run_walk_forward_backtest(
         print(f"  Excess Return: {metrics['excess_return']:.2%}")
     
     # Get final scores (latest prediction for each ticker) with feature values
-    all_predictions_df['date'] = pd.to_datetime(all_predictions_df['date'])
+    if not pd.api.types.is_datetime64_any_dtype(all_predictions_df['date']):
+        all_predictions_df['date'] = pd.to_datetime(all_predictions_df['date'], format='mixed')
     latest_date = all_predictions_df['date'].max()
     final_scores_df = all_predictions_df[all_predictions_df['date'] == latest_date].copy()
-    
+
     # Merge feature values from training_data
-    training_data['date'] = pd.to_datetime(training_data['date'])
+    if not pd.api.types.is_datetime64_any_dtype(training_data['date']):
+        training_data['date'] = pd.to_datetime(training_data['date'], format='mixed')
     latest_features = training_data[training_data['date'] == latest_date][['ticker'] + feature_cols].copy()
     final_scores_df = final_scores_df.merge(latest_features, on='ticker', how='left')
     

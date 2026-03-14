@@ -28,31 +28,35 @@ from src.analytics.fundamentals_status import FundamentalsStatusChecker
 def render_overview():
     """Render the overview page."""
     render_page_header(
-        "The Long Game",
+        "QuantaAlpha",
         "Mid-term portfolio intelligence and analysis"
     )
-    
+
     runs = load_runs()
-    
+
     if not runs:
         _render_empty_state()
         return
-    
+
     _render_summary_metrics(runs)
     _render_data_quality_summary()
     st.markdown("---")
-    
+
     col1, col2 = st.columns([2, 1])
-    
+
     with col1:
         _render_recent_runs(runs)
-    
+
     with col2:
         _render_quick_insights(runs)
-    
+
     if len(runs) >= 2:
         st.markdown("---")
         _render_performance_chart(runs)
+
+    # Page reference tree
+    st.markdown("---")
+    _render_page_tree()
 
 
 def _render_empty_state():
@@ -404,12 +408,15 @@ def _update_prices():
         # Show progress
         status_placeholder.info(f"🔄 Downloading {len(unique_symbols)} symbols... This may take a few minutes.")
         
-        # Download data
+        # Download data sequentially (parallel=False avoids rate limiting by
+        # Yahoo Finance; yf.download internally uses threads for each batch)
         df = downloader.download(
             tickers=unique_symbols,
             start_date=start_date,
             end_date=end_date,
-            merge_existing=True
+            merge_existing=True,
+            batch_size=20,
+            parallel=False,
         )
         
         if df.empty:
@@ -595,3 +602,50 @@ def _update_benchmark():
                 ],
                 show_traceback=True
             )
+
+
+def _render_page_tree():
+    """Render a page tree showing all available pages organized by process phase."""
+    from ..config import PROCESS_PHASES
+
+    render_section_header("Page Reference")
+
+    tree_html = f"""
+    <div style="
+        background: {COLORS['card_bg']};
+        border: 1px solid {COLORS['card_border']};
+        border-radius: 12px;
+        padding: 1.75rem 2rem;
+        font-family: 'IBM Plex Sans', sans-serif;
+        line-height: 1.8;
+    ">
+    """
+
+    for phase in PROCESS_PHASES:
+        icon = phase["icon"]
+        label = phase["label"]
+        desc = phase["description"]
+        children = phase.get("children", [])
+
+        tree_html += f"""
+        <div style="margin-bottom: 1.25rem;">
+            <div style="font-size: 1rem; font-weight: 600; color: {COLORS['dark']}; font-family: 'DM Sans', sans-serif;">
+                {icon} {label}
+                <span style="font-weight: 400; font-size: 0.8rem; color: {COLORS['muted']}; margin-left: 0.5rem;">{desc}</span>
+            </div>
+        """
+
+        if children:
+            for child_label, child_id, child_desc in children:
+                tree_html += f"""
+                <div style="padding-left: 1.75rem; font-size: 0.85rem; color: {COLORS['dark']};">
+                    <span style="color: {COLORS['muted']}; margin-right: 0.4rem;">├─</span>
+                    <strong>{child_label}</strong>
+                    <span style="color: {COLORS['muted']}; margin-left: 0.4rem;">— {child_desc}</span>
+                </div>
+                """
+
+        tree_html += "</div>"
+
+    tree_html += "</div>"
+    st.markdown(tree_html, unsafe_allow_html=True)

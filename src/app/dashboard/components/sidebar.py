@@ -9,7 +9,7 @@ from typing import Optional
 import base64
 from pathlib import Path
 
-from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS
+from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS, PROCESS_PHASES
 from ..data import load_runs, get_available_run_folders
 from ..utils import get_project_root, get_version
 from .search import render_global_search
@@ -17,203 +17,105 @@ from .notifications import render_notification_bell, NotificationManager
 
 
 def render_sidebar() -> str:
-    """Render sidebar navigation and return selected page.
-    
-    Returns:
-        Selected page identifier
-    """
+    """Render process-flow sidebar navigation and return selected page."""
+
     # Logo/Title
     logo_path = get_project_root() / "assets" / "long-game-logo.svg"
     if logo_path.exists():
         st.sidebar.image(str(logo_path), use_container_width=True)
     else:
         st.sidebar.markdown("""
-        <div style="text-align: center; padding: 1rem 0;">
-            <div style="font-size: 2rem;">📈</div>
-            <div style="font-size: 1.25rem; font-weight: 700; color: white; margin-top: 0.5rem;">
-                The Long Game
+        <div style="text-align: center; padding: 1.25rem 0 0.75rem;">
+            <div style="font-size: 1.6rem; font-weight: 700; color: white; font-family: 'DM Sans', sans-serif; letter-spacing: -0.03em;">
+                QuantaAlpha
             </div>
-            <div style="font-size: 0.75rem; color: rgba(255,255,255,0.6);">
-                Mid-term portfolio intelligence
+            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.45); letter-spacing: 0.15em; text-transform: uppercase; margin-top: 0.2rem;">
+                Portfolio Intelligence
             </div>
         </div>
         """, unsafe_allow_html=True)
-    
-    st.sidebar.markdown("---")
-    
-    # Global search
-    search_result = render_global_search()
-    if search_result:
-        st.session_state['selected_nav_item'] = search_result
-        st.rerun()
-    
-    st.sidebar.markdown("---")
-    
-    # Notifications bell
-    if render_notification_bell():
-        st.session_state['selected_nav_item'] = 'Notifications'
-        st.rerun()
-    
-    st.sidebar.markdown("---")
-    
-    # Initialize session state for navigation
-    if 'selected_nav_item' not in st.session_state:
-        st.session_state.selected_nav_item = MAIN_WORKFLOW[0][0]
-    
-    # Track all pages for lookup
-    all_pages = MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES
-    
-    # Find current selection across all groups
-    current_selection = st.session_state.selected_nav_item
-    
-    # Determine which group the current selection belongs to
-    current_group = None
-    if current_selection in [p[0] for p in MAIN_WORKFLOW]:
-        current_group = 'main'
-    elif current_selection in [p[0] for p in STANDALONE_TOOLS]:
-        current_group = 'tools'
-    elif current_selection in [p[0] for p in ADVANCED_ANALYTICS]:
-        current_group = 'advanced'
-    elif current_selection in [p[0] for p in UTILITIES]:
-        current_group = 'utils'
-    else:
-        current_group = 'main'  # Default
-    
-    # Main Workflow Section
-    st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
-        Main Workflow
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Main Workflow Section - Use buttons for better control
-    for label, identifier in MAIN_WORKFLOW:
-        is_selected = (label == current_selection)
-        # Use secondary for all buttons to match style settings
+
+    st.sidebar.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
+
+    # Navigation state — query params are the source of truth (survive reload/hot-reload)
+    # On every run, read from query params first to handle hot-reloads correctly
+    qp = st.query_params.get("page", "Overview")
+    if 'selected_nav_item' not in st.session_state or st.session_state.selected_nav_item != qp:
+        # Session state missing (new session) or query params changed externally
+        st.session_state.selected_nav_item = qp
+
+    current = st.session_state.selected_nav_item
+
+    # Render phase buttons
+    for phase in PROCESS_PHASES:
+        phase_id = phase["id"]
+        icon = phase["icon"]
+        label = phase["label"]
+        page = phase["page"]
+        children = phase.get("children", [])
+
+        # Check if current page is in this phase
+        is_active_phase = (current == page)
+        if children:
+            child_labels = [c[0] for c in children]
+            is_active_phase = is_active_phase or current in child_labels
+
+        # Render phase button
         if st.sidebar.button(
-            label,
-            key=f"nav_btn_{identifier}",
+            f"{icon}  {label}",
+            key=f"phase_{phase_id}",
             use_container_width=True,
-            type="secondary"
+            type="secondary",
         ):
-            st.session_state.selected_nav_item = label
+            st.session_state.selected_nav_item = page
+            st.query_params["page"] = page
             st.rerun()
-    
-    # Standalone Tools Section
+
+        # Show children if this phase is active
+        if is_active_phase and children:
+            for child_label, child_id, child_desc in children:
+                is_child_active = (current == child_label)
+                prefix = "  ▸ " if not is_child_active else "  ▹ "
+                if st.sidebar.button(
+                    f"{prefix}{child_label}",
+                    key=f"nav_{child_id}",
+                    use_container_width=True,
+                    type="secondary",
+                ):
+                    st.session_state.selected_nav_item = child_label
+                    st.query_params["page"] = child_label
+                    st.rerun()
+
     st.sidebar.markdown("---")
-    st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
-        Tools
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Tools Section - Use buttons
-    for label, identifier in STANDALONE_TOOLS:
-        is_selected = (label == current_selection)
-        # Use secondary for all buttons to match style settings
-        if st.sidebar.button(
-            label,
-            key=f"nav_btn_{identifier}",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state.selected_nav_item = label
-            st.rerun()
-    
-    # Advanced Analytics Section
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
-        Advanced Analytics
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Advanced Analytics Section - Use buttons
-    for label, identifier in ADVANCED_ANALYTICS:
-        is_selected = (label == current_selection)
-        # Use secondary for all buttons to match style settings
-        if st.sidebar.button(
-            label,
-            key=f"nav_btn_{identifier}",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state.selected_nav_item = label
-            st.rerun()
-    
-    # Utilities Section
-    st.sidebar.markdown("---")
-    st.sidebar.markdown("""
-    <div style="font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #000000; margin-bottom: 0.5rem; margin-top: 0.5rem;">
-        Utilities
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Utilities Section - Use buttons
-    for label, identifier in UTILITIES:
-        is_selected = (label == current_selection)
-        # Use secondary for all buttons to match style settings
-        if st.sidebar.button(
-            label,
-            key=f"nav_btn_{identifier}",
-            use_container_width=True,
-            type="secondary"
-        ):
-            st.session_state.selected_nav_item = label
-            st.rerun()
-    
-    # Get the final selected label (this is what app.py expects)
-    selected_label = st.session_state.selected_nav_item
-    
-    st.sidebar.markdown("---")
-    
-    # Quick Stats Section
-    st.sidebar.markdown("""
-    <div style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(255,255,255,0.5); margin-bottom: 0.5rem;">
-        Quick Stats
-    </div>
-    """, unsafe_allow_html=True)
-    
+
+    # Compact quick stats
     runs = load_runs()
-    
     if runs:
-        # Total runs
-        st.sidebar.metric("Total Runs", len(runs))
-        
-        # Completed runs
         completed = sum(1 for r in runs if r['status'] == 'completed')
-        st.sidebar.metric("Completed", completed)
-        
-        # Latest run
-        latest = runs[0]
-        latest_name = latest.get('name') or latest['run_id'][:8]
         st.sidebar.markdown(f"""
-        <div style="background: rgba(255,255,255,0.05); padding: 0.75rem; border-radius: 8px; margin-top: 0.5rem;">
-            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); text-transform: uppercase;">Latest Run</div>
-            <div style="font-size: 0.9rem; color: white; font-weight: 500; margin-top: 0.25rem;">{latest_name}</div>
+        <div style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.7rem; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.1em;">Runs</span>
+                <span style="font-size: 0.85rem; color: white; font-weight: 600;">{completed}/{len(runs)}</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
-        
-        # Run folders
-        run_folders = get_available_run_folders()
-        if run_folders:
-            st.sidebar.metric("Output Folders", len(run_folders))
-    else:
-        st.sidebar.info("No runs yet")
-    
-    st.sidebar.markdown("---")
-    
-    # Version info
+
+    # Documentation link
+    if st.sidebar.button("📖  Documentation", key="nav_docs", use_container_width=True, type="secondary"):
+        st.session_state.selected_nav_item = "Documentation"
+        st.query_params["page"] = "Documentation"
+        st.rerun()
+
+    # Version
     version = get_version()
     st.sidebar.markdown(f"""
-    <div style="position: absolute; bottom: 1rem; left: 1rem; right: 1rem;">
-        <div style="font-size: 0.7rem; color: rgba(255,255,255,0.4); text-align: center;">
-            v{version} · The Long Game
-        </div>
+    <div style="text-align: center; padding: 0.5rem 0; margin-top: 0.5rem;">
+        <span style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">v{version}</span>
     </div>
     """, unsafe_allow_html=True)
-    
-    return selected_label
+
+    return st.session_state.selected_nav_item
 
 
 def _get_header_image(title: str) -> Optional[str]:
