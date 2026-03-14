@@ -387,7 +387,25 @@ def run_walk_forward_backtest(
     training_data = training_data.sort_values(['date', 'ticker'])
     price_data = price_data.sort_values(['date', 'ticker'])
     benchmark_data = benchmark_data.sort_values('date')
-    
+
+    # Auto-detect data frequency and adjust rebalance frequency if needed
+    # If price data is daily but rebalance freq is intraday, override to daily
+    _sample_dates = price_data['date'].drop_duplicates().sort_values()
+    if len(_sample_dates) > 2:
+        _median_gap = _sample_dates.diff().dropna().median()
+        _is_daily_data = _median_gap >= pd.Timedelta(hours=12)
+        _rebal = config.rebalance_freq
+        _is_intraday_rebal = any(u in _rebal.lower() for u in ('h', 'min', 't'))
+        if _is_daily_data and _is_intraday_rebal:
+            if verbose:
+                print(f"  WARNING: Daily price data with intraday rebalance ({_rebal}). Overriding to 'B' (business-day).")
+            config = BacktestConfig(
+                train_years=config.train_years, test_years=config.test_years,
+                step_value=config.step_value, step_unit=config.step_unit,
+                rebalance_freq='B', top_n=config.top_n, top_pct=config.top_pct,
+                min_stocks=config.min_stocks,
+            )
+
     # Get date range
     min_date = training_data['date'].min()
     max_date = training_data['date'].max()
@@ -639,89 +657,97 @@ def _calculate_portfolio_returns(
 ) -> Tuple[pd.Series, pd.Series]:
     """
     Calculate daily portfolio and benchmark returns.
-    
+
+    Pre-computes daily returns on the full price dataset, then for each
+    trading day between the first and last rebalance date, looks up the
+    active weights and computes the weighted portfolio return.
+
     Args:
         positions: DataFrame with columns ['date', 'ticker', 'weight']
         price_data: Stock price data with 'date', 'ticker', 'close'
         benchmark_data: Benchmark data with 'date' and price column
         benchmark_price_col: Name of the price column in benchmark_data
-    
+
     Returns:
         Tuple of (portfolio_returns, benchmark_returns) as pd.Series
     """
-    # Get unique rebalance dates
     rebalance_dates = sorted(positions['date'].unique())
-    
     if len(rebalance_dates) < 2:
         return pd.Series(dtype=float), pd.Series(dtype=float)
-    
+
+    # Pre-compute daily returns for all stocks (full dataset)
+    price_sorted = price_data.sort_values(['ticker', 'date'])
+    price_sorted['daily_return'] = price_sorted.groupby('ticker')['close'].pct_change(fill_method=None)
+
+    # Pre-compute benchmark daily returns
+    bench_sorted = benchmark_data.sort_values('date')
+    bench_sorted['bench_return'] = bench_sorted[benchmark_price_col].pct_change(fill_method=None)
+
+    # Build a fast lookup: (date, ticker) -> daily_return
+    returns_df = price_sorted[['date', 'ticker', 'daily_return']].dropna(subset=['daily_return'])
+    returns_pivot = returns_df.pivot_table(index='date', columns='ticker', values='daily_return')
+
+    # Benchmark return series indexed by date
+    bench_ret_series = bench_sorted.set_index('date')['bench_return'].dropna()
+
+    # Get all trading dates between first and last rebalance
+    first_rebal = rebalance_dates[0]
+    last_rebal = rebalance_dates[-1]
+    all_trading_dates = sorted(returns_pivot.index[
+        (returns_pivot.index > first_rebal) & (returns_pivot.index <= last_rebal)
+    ])
+
+    if len(all_trading_dates) == 0:
+        return pd.Series(dtype=float), pd.Series(dtype=float)
+
+    # Build weight schedule: for each trading day, find the active rebalance weights
+    # (the most recent rebalance date <= trading date)
+    rebal_idx = 0
     portfolio_returns_list = []
     benchmark_returns_list = []
     dates_list = []
-    
-    # Calculate returns for each period between rebalances
-    for i in range(len(rebalance_dates) - 1):
-        period_start = rebalance_dates[i]
-        period_end = rebalance_dates[i + 1]
-        
-        # Get positions at start of period
-        period_positions = positions[positions['date'] == period_start]
-        
-        if len(period_positions) == 0:
+
+    for trade_date in all_trading_dates:
+        # Advance rebalance pointer
+        while rebal_idx < len(rebalance_dates) - 1 and rebalance_dates[rebal_idx + 1] <= trade_date:
+            rebal_idx += 1
+
+        active_rebal = rebalance_dates[rebal_idx]
+        active_positions = positions[positions['date'] == active_rebal]
+
+        if len(active_positions) == 0:
             continue
-        
-        # Get daily prices for this period
-        period_prices = price_data[
-            (price_data['date'] > period_start) &
-            (price_data['date'] <= period_end)
-        ].copy()
-        
-        period_benchmark = benchmark_data[
-            (benchmark_data['date'] > period_start) &
-            (benchmark_data['date'] <= period_end)
-        ].copy()
-        
-        if len(period_prices) == 0:
+
+        # Get stock returns for this day
+        if trade_date not in returns_pivot.index:
             continue
-        
-        # Calculate daily returns for each stock
-        period_prices = period_prices.sort_values(['ticker', 'date'])
-        period_prices['daily_return'] = period_prices.groupby('ticker')['close'].pct_change(fill_method=None)
-        
-        # Calculate weighted portfolio return for each day
-        for date in period_prices['date'].unique():
-            day_prices = period_prices[period_prices['date'] == date]
-            
-            portfolio_return = 0.0
-            total_weight = 0.0
-            
-            for _, pos in period_positions.iterrows():
-                ticker = pos['ticker']
-                weight = pos['weight']
-                
-                ticker_return = day_prices[day_prices['ticker'] == ticker]['daily_return'].values
-                if len(ticker_return) > 0 and not np.isnan(ticker_return[0]):
-                    portfolio_return += weight * ticker_return[0]
-                    total_weight += weight
-            
-            # Get benchmark return
-            day_benchmark = period_benchmark[period_benchmark['date'] == date]
-            if len(day_benchmark) > 0:
-                benchmark_prev = benchmark_data[benchmark_data['date'] < date][benchmark_price_col].iloc[-1] if len(benchmark_data[benchmark_data['date'] < date]) > 0 else None
-                if benchmark_prev is not None:
-                    benchmark_return = (day_benchmark[benchmark_price_col].values[0] / benchmark_prev) - 1
-                else:
-                    benchmark_return = 0.0
-                
-                if total_weight > 0:
-                    dates_list.append(date)
-                    portfolio_returns_list.append(portfolio_return)
-                    benchmark_returns_list.append(benchmark_return)
-    
+
+        day_returns = returns_pivot.loc[trade_date]
+
+        # Compute weighted portfolio return
+        port_ret = 0.0
+        total_weight = 0.0
+        for _, pos in active_positions.iterrows():
+            ticker = pos['ticker']
+            weight = pos['weight']
+            if ticker in day_returns.index and not np.isnan(day_returns[ticker]):
+                port_ret += weight * day_returns[ticker]
+                total_weight += weight
+
+        if total_weight == 0:
+            continue
+
+        # Get benchmark return
+        if trade_date in bench_ret_series.index and not np.isnan(bench_ret_series[trade_date]):
+            bench_ret = bench_ret_series[trade_date]
+        else:
+            bench_ret = 0.0
+
+        dates_list.append(trade_date)
+        portfolio_returns_list.append(port_ret)
+        benchmark_returns_list.append(bench_ret)
+
     if len(dates_list) == 0:
         return pd.Series(dtype=float), pd.Series(dtype=float)
-    
-    portfolio_returns = pd.Series(portfolio_returns_list, index=dates_list)
-    benchmark_returns = pd.Series(benchmark_returns_list, index=dates_list)
-    
-    return portfolio_returns, benchmark_returns
+
+    return pd.Series(portfolio_returns_list, index=dates_list), pd.Series(benchmark_returns_list, index=dates_list)

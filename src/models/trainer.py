@@ -30,7 +30,8 @@ class ModelConfig:
         "max_depth": -1,
         "num_leaves": 31,
         "n_jobs": -1,          # Use all available cores for training
-        "verbose": -1,         # Suppress LightGBM output
+        "verbose": -1,         # Suppress sklearn wrapper output
+        "verbosity": -1,       # Suppress native LightGBM C++ output
     })
 
 
