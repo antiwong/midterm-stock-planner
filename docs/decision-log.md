@@ -286,3 +286,86 @@ All correlations are **synchronous** (no lead-lag detected). Rolling correlation
 | Hit Rate | > 52% | Better than random |
 | Turnover | < 50% monthly | Manageable transaction costs |
 | Consistent across regimes | Yes | Must work in both bull and bear |
+
+---
+
+## Decision 007: Data Infrastructure Upgrade
+
+**Date**: 2026-03-14
+**Status**: ACCEPTED
+**Decision**: Complete overhaul of data infrastructure from minimal hourly-only setup to comprehensive multi-resolution, multi-asset, macro-enriched pipeline.
+
+### Background
+
+The original data setup (9 tickers, 22 months hourly, 65.7% benchmark overlap) scored D (68) and was inadequate for serious backtesting. A systematic upgrade was executed across multiple dimensions.
+
+### Changes Implemented
+
+#### 1. Alpaca Markets Integration
+
+- Created `src/data/alpaca_client.py` as primary data backend
+- Supports daily, hourly, and 15-minute resolution downloads
+- Replaced yfinance as default backend for reliability and rate limits
+
+#### 2. Daily Data Expansion (114 tickers, 278,758 rows)
+
+- **10-year daily history** (2016-2026) for all tickers
+- **NASDAQ-100**: 77 tickers with full 10yr coverage
+- **Tech Giants**: 13 core tickers (AAPL, ADBE, AMD, AMZN, CRM, GOOGL, INTC, META, MSFT, NFLX, NVDA, ORCL, TSLA)
+- **Precious Metals**: SLV
+
+#### 3. Cross-Asset ETFs (16 new tickers)
+
+| Category | Tickers | Purpose |
+|----------|---------|---------|
+| Sector ETFs | XLK, XLF, XLE, XLV, XLI, XLP | Sector rotation signals |
+| Bonds | TLT, IEF, HYG | Rate sensitivity, risk appetite |
+| Commodities | USO, UNG | Inflation/energy signals |
+| International | EEM, EFA | Global risk appetite |
+| Miners | GDXJ, SIL | Precious metals breadth |
+| Existing | GLD, GDX, QQQ, SMH | Retained from prior setup |
+
+#### 4. FRED Macro Data (2,695 rows)
+
+| Series | Description |
+|--------|-------------|
+| Treasury Yields | 2yr, 10yr, 30yr |
+| CPI | Consumer Price Index (inflation) |
+| Unemployment | Unemployment rate |
+| Fed Funds | Federal funds rate |
+| USD Index | Dollar strength (DXY) |
+| Yield Curve | Derived: 10yr - 2yr spread |
+| Real Yield | Derived: 10yr - CPI |
+
+#### 5. Finnhub Sentiment Data
+
+| Dataset | Records | Tickers | Notes |
+|---------|---------|---------|-------|
+| News articles | 2,219 | 9 | 180 days of coverage |
+| Insider transactions | 3,313 | 8 | Buy/sell activity |
+| Analyst recommendations | 32 | 8 | Buy/sell/hold ratings |
+| Earnings surprises | 32 | 8 | Actual vs estimate |
+
+### Quality Score Impact
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Quality Score | D (68) | A (94.85) |
+| Tickers | 9 | 114 |
+| Daily Rows | 0 | 278,758 |
+| History Depth | 22 months | 10 years |
+| Benchmark Overlap | 65.7% | 100% |
+| Regime Coverage | 1 (bull only) | 4 (2018 selloff, COVID, 2022 bear, AI bull) |
+
+### Key Configuration
+
+| Parameter | Value | Rationale |
+|-----------|-------|-----------|
+| Rebalancing | 4h on hourly data | Balance between signal freshness and transaction costs |
+| Feature Source | Daily data | More stable features, less noise than intraday |
+| Training Window | 3yr | Spans at least one regime change |
+| Test Window | 6mo | Matches midterm trading horizon |
+
+### In Progress
+
+- **15-minute data**: Downloading 6yr of 15m bars for 13 tickers via Alpaca. Will enable intraday signal generation and finer-grained entry/exit timing.
