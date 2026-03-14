@@ -185,3 +185,23 @@
 **Version**: 3.11.2
 
 **Recent additions (QuantaAlpha)**: evolutionary_backtest.py, diversified_backtest.py, lineage_report.py, config/strategy_templates/. See docs/backtesting.md Related Scripts, docs/quantaalpha-feature-proposal.md.
+
+### Data Infrastructure (added 2026-03)
+
+**Source Code**:
+- `src/data/alpaca_client.py` - Alpaca Markets data client (primary data backend for historical prices)
+
+**Data Download Scripts**:
+- `scripts/download_sentiment.py` - Finnhub sentiment data downloader (news, insider, analyst, earnings)
+- `scripts/download_macro.py` - FRED macro data downloader (yields, inflation, employment, etc.)
+
+**Data Files**:
+- `data/prices_daily.csv` - 10-year daily OHLCV data (114 tickers, 2016-2026)
+- `data/benchmark_daily.csv` - 10-year daily SPY benchmark
+- `data/macro_fred.csv` - FRED economic indicators (yields, inflation, spreads, etc.)
+- `data/sentiment/` - Finnhub sentiment data directory (news, insider transactions, analyst ratings, earnings surprises)
+
+**Documentation**:
+- `docs/data-quality.md` - Data quality tracking and scoring
+- `docs/data-providers-guide.md` - Data provider recommendations and comparison
+- `docs/decision-log.md` - Decision log with regression results and rationale

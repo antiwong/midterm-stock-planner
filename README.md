@@ -131,6 +131,31 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Run-Specific Output**: Each backtest creates its own folder with all outputs
 - **Beads**: Optional git-backed task tracking (e.g. `bd ready`, `bd list`); see `.beads/README.md`
 
+## Data
+
+| Attribute | Value |
+|-----------|-------|
+| **Tickers** | 114 (NASDAQ-100 + cross-asset ETFs) |
+| **Daily History** | 10 years (2016-2026) |
+| **Resolution** | Multi-resolution: daily + hourly + 15m (in progress) |
+| **Primary Backend** | Alpaca Markets (`src/data/alpaca_client.py`) |
+| **Fallback** | yfinance |
+| **Macro Data** | FRED economic indicators (yields, inflation, spreads, employment) via `scripts/download_macro.py` |
+| **Sentiment Data** | Finnhub (news, insider transactions, analyst ratings, earnings surprises) via `scripts/download_sentiment.py` |
+| **Data Quality Score** | A (95/100) -- see `docs/data-quality.md` |
+
+### Data Files
+
+| File | Description |
+|------|-------------|
+| `data/prices_daily.csv` | 10-year daily OHLCV (114 tickers) |
+| `data/benchmark_daily.csv` | 10-year daily SPY benchmark |
+| `data/prices.csv` | Hourly price data |
+| `data/benchmark.csv` | Hourly SPY benchmark |
+| `data/macro_fred.csv` | FRED economic indicators |
+| `data/sentiment/` | Finnhub sentiment data (news, insider, analyst, earnings) |
+| `data/fundamentals.csv` | Fundamental data (PE, PB, ROE, margins) |
+
 ## Tech Stack
 
 - Python 3.11+
@@ -139,7 +164,10 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - shap
 - streamlit, plotly
 - matplotlib, seaborn
-- yfinance (data fetching)
+- alpaca-py (primary data backend)
+- yfinance (fallback data fetching)
+- finnhub-python (sentiment data)
+- fredapi (FRED macro data)
 - google-generativeai (Gemini LLM)
 
 ## Quick Start
@@ -309,9 +337,13 @@ midterm-stock-planner/
 │   ├── strategy_templates/   # value_tilt, momentum_tilt, quality_tilt, balanced, low_vol
 │   └── tickers/             # Per-ticker YAML (RSI, MACD, macro, backtest overrides)
 ├── data/                # Data files
-│   ├── prices.csv
+│   ├── prices_daily.csv     # 10yr daily OHLCV (114 tickers)
+│   ├── benchmark_daily.csv  # 10yr daily SPY
+│   ├── prices.csv           # Hourly price data
+│   ├── benchmark.csv        # Hourly SPY benchmark
+│   ├── macro_fred.csv       # FRED economic indicators
+│   ├── sentiment/           # Finnhub sentiment (news, insider, analyst, earnings)
 │   ├── fundamentals.csv
-│   ├── benchmark.csv
 │   ├── analysis.db
 │   ├── sectors.csv
 │   ├── sectors.json
@@ -374,6 +406,8 @@ midterm-stock-planner/
 | \`fetch_sector_data.py\` | Fetch/update sector classifications |
 | \`download_prices.py\` | Download and validate price data |
 | \`download_benchmark.py\` | Download/extend benchmark series for backtest range |
+| \`download_sentiment.py\` | Download Finnhub sentiment data (news, insider, analyst, earnings) |
+| \`download_macro.py\` | Download FRED macro data (yields, inflation, employment, spreads) |
 
 ### Risk Analysis Scripts
 

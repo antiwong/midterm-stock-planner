@@ -37,9 +37,10 @@ The end-to-end pipeline follows this flow:
 ```
 Data Acquisition  -->  Feature Engineering  -->  Model Training/Prediction
        |                      |                          |
-  yfinance/Alpaca       76+ features               LightGBM
-  prices, benchmark     returns, vol,              walk-forward
-  fundamentals          technicals, gaps           rolling windows
+  Alpaca (primary)      76+ features               LightGBM
+  yfinance (fallback)   returns, vol,              walk-forward
+  Finnhub (sentiment)   technicals, gaps,          rolling windows
+  FRED (macro)          macro, sentiment
                                                        |
                                                        v
                                               Backtesting Engine
@@ -69,7 +70,10 @@ Data Acquisition  -->  Feature Engineering  -->  Model Training/Prediction
 - SHAP (explainability)
 - Streamlit + Plotly (dashboard)
 - matplotlib, seaborn (static charts)
-- yfinance (data fetching)
+- alpaca-py (primary data backend -- Alpaca Markets)
+- yfinance (fallback data fetching)
+- finnhub-python (sentiment data -- news, insider, analyst, earnings)
+- fredapi (FRED macro data -- yields, inflation, spreads, employment)
 - google-generativeai (Gemini LLM for AI insights)
 - scikit-optimize / skopt (Bayesian optimization)
 - SQLite (run tracking, regression database)
@@ -82,19 +86,29 @@ Data Acquisition  -->  Feature Engineering  -->  Model Training/Prediction
 
 | Attribute | Value |
 |-----------|-------|
-| Tickers loaded | 9 (from tech_giants watchlist) |
-| Interval | 1h (hourly bars) |
-| History depth | ~22 months (yfinance 1h limit: ~730 days) |
-| Benchmark | SPY at 1h resolution |
-| Price file | `data/prices.csv` |
-| Benchmark file | `data/benchmark.csv` |
+| Tickers loaded | 114 (NASDAQ-100 + cross-asset ETFs) |
+| Daily data | 10 years (2016-2026) via Alpaca Markets |
+| Hourly data | ~22 months (yfinance 1h limit: ~730 days) |
+| Multi-resolution | daily + hourly + 15m (in progress) |
+| Primary backend | Alpaca Markets (`src/data/alpaca_client.py`) |
+| Fallback | yfinance |
+| Benchmark | SPY (daily: 10yr, hourly: ~22mo) |
+| Macro data | FRED economic indicators (yields, inflation, spreads, employment) |
+| Sentiment data | Finnhub (news, insider transactions, analyst ratings, earnings surprises) |
+| Data quality score | A (95/100) |
+| Daily price file | `data/prices_daily.csv` (10yr, 114 tickers) |
+| Daily benchmark | `data/benchmark_daily.csv` (10yr SPY) |
+| Hourly price file | `data/prices.csv` |
+| Hourly benchmark | `data/benchmark.csv` |
+| Macro file | `data/macro_fred.csv` |
+| Sentiment dir | `data/sentiment/` |
 | Fundamentals | `data/fundamentals.csv` |
 | Database | `data/analysis.db` (SQLite) |
 
 ### Data Download
 
 ```bash
-# Download prices for a specific watchlist
+# Download prices for a specific watchlist (uses Alpaca Markets as primary, yfinance as fallback)
 python scripts/download_prices.py --watchlist <name>
 
 # Download benchmark data
@@ -102,6 +116,12 @@ python scripts/download_benchmark.py
 
 # Download fundamentals (PE, PB, ROE, margins)
 python scripts/download_fundamentals.py
+
+# Download FRED macro data (yields, inflation, spreads, employment)
+python scripts/download_macro.py
+
+# Download Finnhub sentiment data (news, insider, analyst, earnings)
+python scripts/download_sentiment.py
 ```
 
 ### Watchlists
@@ -123,22 +143,36 @@ There are **16 predefined watchlists** in `config/watchlists.yaml`:
 
 ### Data Sources
 
-**Current: yfinance (free)**
+**Primary: Alpaca Markets (alpaca-py)**
+- Client: `src/data/alpaca_client.py`
+- 10 years of daily data (2016-2026) for 114 tickers
+- 7+ years of 1m/5m/15m/1h data available
+- Free tier with API key (free registration)
+- Used for all production data downloads
+
+**Fallback: yfinance (free)**
 - Provides 1h data limited to ~730 days (~2 years)
 - Daily data available for 20+ years
 - No API key required
-- Suitable for prototyping but limited for deep historical analysis
+- Used as fallback when Alpaca is unavailable
 
-**Recommended upgrade: Alpaca Markets (alpaca-py)**
-- Free tier available
-- 7+ years of 1m/5m/15m/1h data
-- Higher resolution enables better signal detection
-- API key required (free registration)
+**Macro data: FRED (fredapi)**
+- Treasury yields (2Y, 10Y, 2s10s spread)
+- Inflation expectations (breakeven rates)
+- Employment data (initial claims, unemployment rate)
+- Credit spreads (BAA-AAA)
+- Downloaded via `scripts/download_macro.py`
+- Stored in `data/macro_fred.csv`
 
-**Sentiment data: moby.co**
-- Evaluated as a potential sentiment data source
-- Has NO programmatic API -- not viable for automated pipelines
-- Alternative sources needed (see Roadmap)
+**Sentiment data: Finnhub (finnhub-python)**
+- Company news sentiment
+- Insider transaction data
+- Analyst ratings and price targets
+- Earnings surprises
+- Downloaded via `scripts/download_sentiment.py`
+- Stored in `data/sentiment/`
+
+See `docs/data-providers-guide.md` for full provider comparison and `docs/data-quality.md` for quality tracking.
 
 ### Data Configuration
 
@@ -146,12 +180,13 @@ From `config/config.yaml`:
 
 ```yaml
 data:
-  interval: 1h          # 1d (daily) or 1h (hourly)
-  price_data_path: data/prices.csv
+  interval: 1d          # 1d (daily) or 1h (hourly)
+  price_data_path: data/prices_daily.csv
   fundamental_data_path: data/fundamentals.csv
-  benchmark_data_path: data/benchmark.csv
+  benchmark_data_path: data/benchmark_daily.csv
+  macro_data_path: data/macro_fred.csv
+  sentiment_dir: data/sentiment
   universe_path: data/universe.txt
-  sentiment_news_path: data/news.csv
   output_dir: output
   models_dir: models
 ```
@@ -562,22 +597,30 @@ Based on the current dataset:
 
 | Finding | Details |
 |---------|---------|
-| Tickers loaded | 9 out of 13 tech_giants tickers |
-| Missing tickers | INTC, ORCL, CRM, ADBE, NFLX |
-| Resolution | 1h (hourly bars) |
-| History depth | ~22 months |
-| yfinance limitation | 1h data capped at ~730 days |
-| Benchmark | SPY at 1h resolution |
+| Tickers loaded | 114 (NASDAQ-100 + cross-asset ETFs) |
+| Daily data | 10 years (2016-2026) via Alpaca Markets |
+| Hourly data | ~22 months (yfinance 1h limit) |
+| Multi-resolution | daily + hourly + 15m (in progress) |
+| Benchmark | SPY (daily: 10yr, hourly: ~22mo) |
+| Macro data | FRED indicators (yields, inflation, spreads, employment) |
+| Sentiment data | Finnhub (news, insider, analyst, earnings) |
+| Data quality score | A (95/100) |
 
-### Identified Gaps
+### Resolved Gaps
 
-1. **Missing tickers**: 4 of 13 tech_giants tickers are not in the current dataset. These need to be downloaded before running comprehensive backtests on the full watchlist.
+1. **Ticker coverage**: Expanded from 9 to 114 tickers (NASDAQ-100 + cross-asset ETFs) with 10 years of daily data.
 
-2. **Limited history**: yfinance 1h data is limited to approximately 730 days. For deeper walk-forward backtesting (especially with `train_years: 5.0`), an alternative data source is required.
+2. **History depth**: Resolved by switching to Alpaca Markets as primary data backend, providing 10 years of daily data (2016-2026). Hourly data remains limited to ~730 days via yfinance.
 
-3. **Resolution**: The current 1h resolution is adequate for mid-term analysis but higher resolution (5m/15m) could improve signal detection for entry/exit timing.
+3. **Sentiment data**: Integrated Finnhub as programmatic sentiment source, providing news sentiment, insider transactions, analyst ratings, and earnings surprises.
 
-4. **Sentiment data**: No programmatic sentiment data source is currently integrated. moby.co was evaluated but has no API, making it unsuitable for automated pipelines.
+4. **Macro data**: Added FRED economic indicators (yields, inflation, employment, credit spreads) via `scripts/download_macro.py`.
+
+### Remaining Gaps
+
+1. **Multi-resolution**: 15-minute data download is in progress. Full multi-resolution pipeline (daily + hourly + 15m) not yet complete.
+
+2. **Cross-resolution comparison**: Need to compare signal quality and portfolio performance across resolutions to identify optimal resolution for the mid-term strategy.
 
 ---
 
@@ -628,7 +671,7 @@ python scripts/automate_regression.py --watchlist tech_giants --resolution 1h
 ### Data Management
 
 ```bash
-# Download prices for a watchlist
+# Download prices for a watchlist (Alpaca Markets primary, yfinance fallback)
 python scripts/download_prices.py --watchlist nasdaq_100
 
 # Download benchmark data
@@ -636,6 +679,12 @@ python scripts/download_benchmark.py
 
 # Download fundamentals
 python scripts/download_fundamentals.py
+
+# Download FRED macro data
+python scripts/download_macro.py
+
+# Download Finnhub sentiment data
+python scripts/download_sentiment.py
 ```
 
 ### Backtesting
@@ -751,8 +800,12 @@ midterm-stock-planner/
 │   ├── strategy_templates/        # Strategy templates (value_tilt, momentum_tilt, etc.)
 │   └── tickers/                   # Per-ticker YAML (RSI, MACD, macro overrides)
 ├── data/                          # Data files
-│   ├── prices.csv                 # Historical price data
-│   ├── benchmark.csv              # SPY benchmark data
+│   ├── prices_daily.csv           # 10yr daily OHLCV (114 tickers, Alpaca Markets)
+│   ├── benchmark_daily.csv        # 10yr daily SPY benchmark
+│   ├── prices.csv                 # Hourly price data (yfinance)
+│   ├── benchmark.csv              # Hourly SPY benchmark
+│   ├── macro_fred.csv             # FRED economic indicators
+│   ├── sentiment/                 # Finnhub sentiment (news, insider, analyst, earnings)
 │   ├── fundamentals.csv           # Fundamental data (PE, PB, ROE, margins)
 │   ├── analysis.db                # SQLite analytics database
 │   ├── sectors.csv / sectors.json # Sector classifications
@@ -813,9 +866,11 @@ midterm-stock-planner/
 |--------|---------|
 | `scripts/run_regression_test.py` | CLI entry point for regression testing |
 | `scripts/automate_regression.py` | Automated gap analysis + regression |
-| `scripts/download_prices.py` | Download and validate price data |
+| `scripts/download_prices.py` | Download and validate price data (Alpaca primary, yfinance fallback) |
 | `scripts/download_benchmark.py` | Download/extend benchmark series |
 | `scripts/download_fundamentals.py` | Download comprehensive fundamentals |
+| `scripts/download_sentiment.py` | Download Finnhub sentiment data |
+| `scripts/download_macro.py` | Download FRED macro data |
 | `scripts/evolutionary_backtest.py` | Evolutionary parameter optimization |
 | `scripts/diversified_backtest.py` | Multi-strategy diversified backtest |
 | `scripts/lineage_report.py` | Run lineage DAG and best-branch analysis |
@@ -852,21 +907,23 @@ midterm-stock-planner/
 
 ## 11. Next Steps / Roadmap
 
+### Completed
+
+| Task | Status |
+|------|--------|
+| Download higher-resolution data via Alpaca Markets | Done -- 10yr daily data for 114 tickers via `src/data/alpaca_client.py` |
+| Download missing tickers | Done -- expanded to 114 tickers (NASDAQ-100 + cross-asset ETFs) |
+| Find alternative sentiment data source | Done -- Finnhub integrated (`scripts/download_sentiment.py`) with news, insider, analyst, earnings |
+| Add macro data | Done -- FRED indicators (`scripts/download_macro.py`) with yields, inflation, spreads, employment |
+
 ### HIGH Priority
 
 | Task | Details |
 |------|---------|
-| Download higher-resolution data via Alpaca Markets | yfinance 1h is limited to ~730 days. Alpaca provides 7+ years of 1m/5m/15m/1h data for free. This would enable deeper walk-forward backtesting with `train_years: 5.0`. |
-| Download missing tickers | INTC, ORCL, CRM, ADBE, NFLX are missing from the current tech_giants dataset. These need to be downloaded to complete the watchlist for comprehensive analysis. |
-
-### MEDIUM Priority
-
-| Task | Details |
-|------|---------|
-| Find alternative sentiment data source | moby.co was evaluated but has no programmatic API. Need to identify a viable alternative with API access for automated sentiment ingestion (candidates: NewsAPI, Alpha Vantage news, Finnhub). |
+| Complete multi-resolution pipeline | 15-minute data download in progress. Need to finalize daily + hourly + 15m pipeline and validate signal quality across resolutions. |
 | Build Streamlit dashboard page for regression results | Currently regression results are only viewable via CLI and file reports. A dashboard page would enable visual exploration of feature leaderboards, step-by-step metric progression, and tuning results. |
 
-### LOW Priority
+### MEDIUM Priority
 
 | Task | Details |
 |------|---------|
@@ -891,6 +948,9 @@ The project contains 67 documentation files across `docs/`. Key references:
 | API Documentation | `docs/api-documentation.md` |
 | User Guide | `docs/user-guide.md` |
 | Quick Start | `docs/quick-start-guide.md` |
+| Data Quality Tracking | `docs/data-quality.md` |
+| Data Providers Guide | `docs/data-providers-guide.md` |
+| Decision Log | `docs/decision-log.md` |
 | Full Documentation Index | `docs/README.md` |
 
 For the complete file inventory (96 files including skills, prompts, and knowledge base), see `CONTENTS.md`.
