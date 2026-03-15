@@ -86,23 +86,15 @@ def _extract_window_data(window_results: List[Dict]) -> Dict[str, List]:
 
 
 def _get_feature_importance_from_backtest(
-    training_data: pd.DataFrame,
-    feature_cols: List[str],
-    model_config: ModelConfig,
+    backtest_results,
 ) -> Dict[str, float]:
-    """Train a model on full data and extract feature importance.
+    """Extract averaged feature importance from walk-forward backtest results.
 
-    This is a lightweight way to get importance without modifying the backtest loop.
+    Uses the per-window LightGBM gain-based importances already computed by
+    _mp_process_window and aggregated in BacktestResults.metrics.  Falls back
+    to an empty dict if the backtest did not produce importance data.
     """
-    from ..models.trainer import train_lgbm_regressor
-
-    try:
-        model, _, _, _ = train_lgbm_regressor(training_data, feature_cols, model_config)
-        importance = dict(zip(feature_cols, model.feature_importances_.tolist()))
-        return importance
-    except Exception as e:
-        logger.warning(f"Could not extract feature importance: {e}")
-        return {}
+    return backtest_results.metrics.get('feature_importance_gain', {})
 
 
 class RegressionOrchestrator:
@@ -307,9 +299,7 @@ class RegressionOrchestrator:
         )
 
         # Feature importance
-        importance = _get_feature_importance_from_backtest(
-            self.training_data, available_cols, model_config
-        )
+        importance = _get_feature_importance_from_backtest(bt_results)
 
         # Marginal metrics
         marginal = None

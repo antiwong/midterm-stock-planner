@@ -123,6 +123,41 @@ def _mp_process_window(args):
     if test_sharpe is not None:
         wr['test_sharpe'] = test_sharpe
 
+    # --- Tier 1 Feature Importance (per-window) ---
+
+    # 1. LightGBM gain-based importance
+    try:
+        wr['feature_importance_gain'] = dict(
+            zip(feature_cols, model.feature_importances_.tolist())
+        )
+    except Exception:
+        pass
+
+    # 2. Marginal IC per feature (model-free: Spearman of each feature vs target)
+    if target_col in test_window.columns:
+        actual = test_window[target_col].values
+        marginal_ics = {}
+        for col in feature_cols:
+            feat_vals = X_test[col].values
+            _, ric = _compute_ic(feat_vals, actual)
+            if ric is not None:
+                marginal_ics[col] = ric
+        if marginal_ics:
+            wr['marginal_ic'] = marginal_ics
+
+    # 3. TreeSHAP (optional, controlled by _MP_SHARED flag)
+    if s.get('compute_shap', False):
+        try:
+            import shap
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(X_test)
+            mean_abs_shap = dict(
+                zip(feature_cols, np.mean(np.abs(shap_values), axis=0).tolist())
+            )
+            wr['shap_importance'] = mean_abs_shap
+        except Exception:
+            pass
+
     return test_predictions, window_positions_list, wr, None
 
 
@@ -359,10 +394,11 @@ def run_walk_forward_backtest(
     config: Optional[BacktestConfig] = None,
     model_config: Optional[ModelConfig] = None,
     verbose: bool = True,
+    compute_shap: bool = False,
 ) -> BacktestResults:
     """
     Run a walk-forward backtest with rolling windows.
-    
+
     Args:
         training_data: Full training dataset with features and target
                       (from make_training_dataset)
@@ -372,7 +408,8 @@ def run_walk_forward_backtest(
         config: Backtest configuration (uses defaults if None)
         model_config: Model training configuration (uses defaults if None)
         verbose: Whether to print progress messages
-    
+        compute_shap: Whether to compute TreeSHAP values per window (~15 min extra)
+
     Returns:
         BacktestResults with portfolio returns, metrics, and positions
     """
@@ -480,6 +517,7 @@ def run_walk_forward_backtest(
         _MP_SHARED['price_data'] = price_data
         _MP_SHARED['benchmark_data'] = benchmark_data
         _MP_SHARED['benchmark_price_col'] = benchmark_price_col
+        _MP_SHARED['compute_shap'] = compute_shap
 
         print(f"  Running {len(windows)} windows in parallel ({n_workers} processes, {lgbm_threads} LightGBM threads each)...")
         import multiprocessing as _mp
@@ -497,6 +535,7 @@ def run_walk_forward_backtest(
         _MP_SHARED['price_data'] = price_data
         _MP_SHARED['benchmark_data'] = benchmark_data
         _MP_SHARED['benchmark_price_col'] = benchmark_price_col
+        _MP_SHARED['compute_shap'] = compute_shap
         results = []
         for i, window_args in enumerate(windows):
             if verbose and i % 50 == 0:
@@ -622,6 +661,27 @@ def run_walk_forward_backtest(
                 f"  ⚠ Overfitting: max(train_sharpe/test_sharpe) = {max_ratio:.2f} "
                 f"(threshold {overfit_threshold}). Consider regularization or shorter train window."
             )
+
+    # --- Aggregate per-window feature importance (Tier 1) ---
+    # The per-window dicts are already in window_results; aggregate here for convenience.
+    # Consumers (e.g. regression orchestrator) can also access raw per-window data.
+    _gain_dicts = [w['feature_importance_gain'] for w in window_results if 'feature_importance_gain' in w]
+    if _gain_dicts:
+        _gain_df = pd.DataFrame(_gain_dicts)
+        metrics['feature_importance_gain'] = _gain_df.mean().to_dict()
+        metrics['feature_importance_gain_std'] = _gain_df.std().to_dict()
+
+    _mic_dicts = [w['marginal_ic'] for w in window_results if 'marginal_ic' in w]
+    if _mic_dicts:
+        _mic_df = pd.DataFrame(_mic_dicts)
+        metrics['marginal_ic_mean'] = _mic_df.mean().to_dict()
+        metrics['marginal_ic_std'] = _mic_df.std().to_dict()
+
+    _shap_dicts = [w['shap_importance'] for w in window_results if 'shap_importance' in w]
+    if _shap_dicts:
+        _shap_df = pd.DataFrame(_shap_dicts)
+        metrics['shap_importance_mean'] = _shap_df.mean().to_dict()
+        metrics['shap_importance_std'] = _shap_df.std().to_dict()
 
     if verbose:
         print(f"\nBacktest Results:")
