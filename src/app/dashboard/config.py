@@ -744,6 +744,7 @@ STANDALONE_TOOLS = [
     ("Trigger Backtester", "trigger_backtester"),
     ("Strategy Optimizer", "strategy_optimizer"),
     ("Regression Testing", "regression_testing"),
+    ("Paper Trading", "paper_trading"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
 ]
@@ -830,6 +831,7 @@ PROCESS_PHASES = [
         "description": "Track portfolio performance and market signals",
         "page": "Monitor Hub",
         "children": [
+            ("Paper Trading", "paper_trading", "Paper trading P&L, positions, signals, and trade history"),
             ("Real-Time Monitoring", "realtime_monitoring", "Live portfolio and market tracking"),
             ("Recommendation Tracking", "recommendation_tracking", "Track recommendation accuracy over time"),
             ("Alert Management", "alert_management", "Configure price and event alerts"),
