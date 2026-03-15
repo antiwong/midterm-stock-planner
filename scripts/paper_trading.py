@@ -358,8 +358,9 @@ class PaperTradingEngine:
             wl_path = PROJECT_ROOT / "config" / "watchlists.yaml"
             with open(wl_path) as f:
                 watchlists = yaml.safe_load(f)
-            if self.watchlist in watchlists:
-                return watchlists[self.watchlist].get("tickers", [])
+            if self.watchlist in watchlists.get("watchlists", watchlists):
+                wl = watchlists.get("watchlists", watchlists)[self.watchlist]
+                return wl.get("symbols", wl.get("tickers", []))
         # Fall back to all tickers in price data
         price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
         if price_path.exists():
@@ -431,9 +432,7 @@ class PaperTradingEngine:
             price_data=price_df,
             feature_cols=feature_cols,
             config=self.config.backtest,
-            model_config=ModelConfig(**self.config.model.params)
-            if hasattr(self.config.model, "params") and isinstance(self.config.model.params, dict)
-            else self.config.model,
+            model_config=self.config.model,
             verbose=False,
         )
         elapsed = time.time() - t0
@@ -495,13 +494,12 @@ class PaperTradingEngine:
         max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
 
         target_tickers = buy_signals.head(top_n)["ticker"].tolist()
-        scores = buy_signals.head(top_n)["prediction"].values.astype(float)
-        scores_shifted = scores - scores.min() + 1e-8
-        raw_weights = scores_shifted / scores_shifted.sum()
+        n = len(target_tickers)
 
-        # Cap weights
-        capped = np.clip(raw_weights, 0, max_weight)
-        target_weights = dict(zip(target_tickers, capped / capped.sum()))
+        # Equal-weight with max_position_weight cap
+        # With top_n=5 and max_weight=0.20, each gets exactly 20%
+        weight_per_stock = min(1.0 / n, max_weight) if n > 0 else 0
+        target_weights = {t: weight_per_stock for t in target_tickers}
 
         trades = []
 

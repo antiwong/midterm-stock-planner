@@ -137,8 +137,10 @@ class DataGapAnalyzer:
                 import yaml
                 with open(self.watchlist_path) as f:
                     watchlists = yaml.safe_load(f)
-                if watchlist_name in watchlists:
-                    expected = watchlists[watchlist_name].get("tickers", [])
+                wl_dict = watchlists.get("watchlists", watchlists)
+                if watchlist_name in wl_dict:
+                    wl_entry = wl_dict[watchlist_name]
+                    expected = wl_entry.get("symbols", wl_entry.get("tickers", []))
                     loaded = set(result["loaded_tickers"])
                     missing = [t for t in expected if t not in loaded]
                     extra = [t for t in loaded if t not in expected]

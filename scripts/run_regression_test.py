@@ -82,8 +82,10 @@ def load_data(config, watchlist_name=None):
             wl_path = Path(__file__).parent.parent / "config" / "watchlists.yaml"
             with open(wl_path) as f:
                 watchlists = yaml.safe_load(f)
-            if watchlist_name in watchlists:
-                tickers = watchlists[watchlist_name].get("tickers", [])
+            wl_dict = watchlists.get("watchlists", watchlists)
+            if watchlist_name in wl_dict:
+                wl_entry = wl_dict[watchlist_name]
+                tickers = wl_entry.get("symbols", wl_entry.get("tickers", []))
                 if tickers:
                     price_df = price_df[price_df["ticker"].isin(tickers)]
                     print(f"Filtered to {len(tickers)} tickers from watchlist '{watchlist_name}'")
