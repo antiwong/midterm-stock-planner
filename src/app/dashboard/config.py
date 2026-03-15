@@ -219,37 +219,44 @@ def inject_custom_css():
         color: {sidebar_text_color} !important;
     }}
 
-    [data-testid="stSidebar"] button {{
-        color: {sidebar_text_color} !important;
-        background-color: {sidebar_button_bg} !important;
-        border: 1px solid {sidebar_button_border} !important;
-    }}
-
-    [data-testid="stSidebar"] button:hover {{
-        background-color: rgba(30, 41, 59, 1) !important;
-        border-color: rgba(99, 102, 241, 0.5) !important;
-    }}
-
+    /* Sidebar buttons — high specificity to override Streamlit defaults */
+    section[data-testid="stSidebar"] button,
+    section[data-testid="stSidebar"] .stButton > button,
+    section[data-testid="stSidebar"] .stButton > button[kind="secondary"],
+    [data-testid="stSidebar"] button,
     [data-testid="stSidebar"] .stButton > button {{
-        background-color: rgba(30, 41, 59, 0.8) !important;
         color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        background-color: #1e293b !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        font-weight: 500 !important;
     }}
 
+    section[data-testid="stSidebar"] button:hover,
+    section[data-testid="stSidebar"] .stButton > button:hover,
+    [data-testid="stSidebar"] button:hover,
     [data-testid="stSidebar"] .stButton > button:hover {{
-        background-color: rgba(30, 41, 59, 1) !important;
-        border-color: rgba(99, 102, 241, 0.5) !important;
+        background-color: #334155 !important;
+        border-color: rgba(232, 115, 90, 0.5) !important;
+        color: white !important;
     }}
 
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"],
     [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
         background: {COLORS['primary']} !important;
         color: white !important;
         border: 1px solid {COLORS['primary']} !important;
     }}
 
+    section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
     [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
         background: {COLORS['secondary']} !important;
-        box-shadow: 0 4px 12px rgba(10, 132, 255, 0.25) !important;
+    }}
+
+    /* Ensure sidebar button text (including p tags inside) is white */
+    section[data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] button p,
+    [data-testid="stSidebar"] .stButton > button p {{
+        color: white !important;
     }}
 
     [data-testid="stSidebar"] [data-testid="stAlert"],
