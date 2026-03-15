@@ -20,48 +20,6 @@ def _inject_sidebar_css():
     """Inject CSS for sidebar visual hierarchy."""
     st.markdown(f"""
 <style>
-    /* Phase group container */
-    [data-testid="stSidebar"] .phase-group {{
-        margin-bottom: 0.15rem;
-    }}
-
-    /* Active phase indicator — left accent bar on the phase button */
-    [data-testid="stSidebar"] button[data-active-phase="true"] {{
-        background: rgba(232, 115, 90, 0.18) !important;
-        border-left: 3px solid {COLORS['primary']} !important;
-        border-right: 1px solid rgba(255,255,255,0.08) !important;
-        border-top: 1px solid rgba(255,255,255,0.08) !important;
-        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
-        font-weight: 600 !important;
-    }}
-
-    /* Child page buttons — smaller, indented */
-    [data-testid="stSidebar"] button[data-child-page="true"] {{
-        font-size: 0.82rem !important;
-        padding-left: 1.8rem !important;
-        padding-top: 0.3rem !important;
-        padding-bottom: 0.3rem !important;
-        background: transparent !important;
-        border: none !important;
-        border-left: 1px solid rgba(255,255,255,0.08) !important;
-        margin-left: 0.75rem !important;
-        opacity: 0.7;
-    }}
-
-    [data-testid="stSidebar"] button[data-child-page="true"]:hover {{
-        opacity: 1;
-        background: rgba(255,255,255,0.05) !important;
-        border-left: 1px solid rgba(232, 115, 90, 0.4) !important;
-    }}
-
-    /* Active child */
-    [data-testid="stSidebar"] button[data-child-active="true"] {{
-        opacity: 1 !important;
-        color: {COLORS['primary']} !important;
-        border-left: 2px solid {COLORS['primary']} !important;
-        background: rgba(232, 115, 90, 0.08) !important;
-    }}
-
     /* Breadcrumb on main content */
     .breadcrumb {{
         font-size: 0.78rem;
@@ -133,32 +91,79 @@ def render_sidebar() -> str:
             child_labels = [c[0] for c in children]
             is_active_phase = is_active_phase or current in child_labels
 
-        # Phase button
-        btn_label = f"{icon}  {label}"
-        if st.sidebar.button(
-            btn_label,
-            key=f"phase_{phase_id}",
-            use_container_width=True,
-            type="secondary",
-        ):
-            st.session_state.selected_nav_item = page
-            st.query_params["page"] = page
-            st.rerun()
+        # Active phase gets a styled indicator
+        if is_active_phase:
+            st.sidebar.markdown(f"""
+            <div style="
+                background: rgba(232, 115, 90, 0.15);
+                border-left: 3px solid {COLORS['primary']};
+                border-radius: 0 6px 6px 0;
+                padding: 0.45rem 0.7rem;
+                margin: 0.15rem 0;
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            ">
+                <span style="font-size: 1.1rem;">{icon}</span>
+                <span style="font-size: 0.85rem; font-weight: 600; color: white; font-family: 'Instrument Sans', sans-serif;">{label}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            # Still need a button for hub page navigation (hidden-ish, but functional)
+            if current != page and children:
+                if st.sidebar.button(
+                    f"  ← Back to {label} Hub",
+                    key=f"phase_{phase_id}",
+                    use_container_width=True,
+                    type="secondary",
+                ):
+                    st.session_state.selected_nav_item = page
+                    st.query_params["page"] = page
+                    st.rerun()
+        else:
+            # Inactive phase — standard button
+            btn_label = f"{icon}  {label}"
+            if st.sidebar.button(
+                btn_label,
+                key=f"phase_{phase_id}",
+                use_container_width=True,
+                type="secondary",
+            ):
+                st.session_state.selected_nav_item = page
+                st.query_params["page"] = page
+                st.rerun()
 
         # Show children if this phase is active
         if is_active_phase and children:
             for child_label, child_id, child_desc in children:
                 is_child_active = (current == child_label)
-                marker = "›" if not is_child_active else "▸"
-                if st.sidebar.button(
-                    f"  {marker} {child_label}",
-                    key=f"nav_{child_id}",
-                    use_container_width=True,
-                    type="secondary",
-                ):
-                    st.session_state.selected_nav_item = child_label
-                    st.query_params["page"] = child_label
-                    st.rerun()
+                if is_child_active:
+                    # Active child — styled indicator
+                    st.sidebar.markdown(f"""
+                    <div style="
+                        margin-left: 0.9rem;
+                        border-left: 2px solid {COLORS['primary']};
+                        padding: 0.3rem 0 0.3rem 0.75rem;
+                        margin-bottom: 0.1rem;
+                    ">
+                        <span style="font-size: 0.82rem; color: {COLORS['primary']}; font-weight: 600;">
+                            {child_label}
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    # Inactive child — small button
+                    if st.sidebar.button(
+                        f"    {child_label}",
+                        key=f"nav_{child_id}",
+                        use_container_width=True,
+                        type="secondary",
+                    ):
+                        st.session_state.selected_nav_item = child_label
+                        st.query_params["page"] = child_label
+                        st.rerun()
+
+            # Small spacer after children
+            st.sidebar.markdown('<div style="height: 0.3rem;"></div>', unsafe_allow_html=True)
 
     st.sidebar.markdown("---")
 
