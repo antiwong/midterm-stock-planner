@@ -189,15 +189,50 @@ def inject_custom_css():
         color: {sidebar_text_color} !important;
     }}
 
+    /* Radio-as-nav: hide circles, style as nav items */
     [data-testid="stSidebar"] .stRadio > div {{
-        background: rgba(255, 255, 255, 0.05);
-        border-radius: 8px;
-        padding: 0.5rem;
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        gap: 0.15rem;
+    }}
+
+    /* Hide radio circle indicators */
+    [data-testid="stSidebar"] .stRadio > div > label > div:first-child {{
+        display: none !important;
+    }}
+
+    /* Each radio label = nav item */
+    [data-testid="stSidebar"] .stRadio > div > label {{
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 0.75rem;
+        margin: 0.1rem 0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-left 0.15s ease;
+        border-left: 3px solid transparent;
+        font-size: 0.88rem;
+        font-weight: 500;
     }}
 
     [data-testid="stSidebar"] .stRadio > div > label:hover {{
-        background: {sidebar_hover_bg};
+        background: rgba(255, 255, 255, 0.08);
         border-radius: 6px;
+    }}
+
+    /* Selected radio item = active nav */
+    [data-testid="stSidebar"] .stRadio > div > label[data-checked="true"],
+    [data-testid="stSidebar"] .stRadio > div > label[aria-checked="true"],
+    [data-testid="stSidebar"] .stRadio > div > label:has(input:checked) {{
+        background: rgba(232, 115, 90, 0.15);
+        border-left: 3px solid {COLORS['primary']};
+        border-radius: 0 6px 6px 0;
+    }}
+    [data-testid="stSidebar"] .stRadio > div > label:has(input:checked) p,
+    [data-testid="stSidebar"] .stRadio > div > label:has(input:checked) span {{
+        color: white !important;
+        font-weight: 600;
     }}
 
     [data-testid="stSidebar"] .stSelectbox label,

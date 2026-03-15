@@ -21,6 +21,19 @@ def _inject_sidebar_css():
     """Inject CSS for sidebar nav and breadcrumbs."""
     st.markdown(f"""
 <style>
+    /* ---- Child radio: indented, smaller ---- */
+    [data-testid="stSidebar"] .stRadio:nth-of-type(2) > div > label {{
+        padding: 0.35rem 0.75rem 0.35rem 1.8rem;
+        font-size: 0.82rem;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        margin-left: 0.5rem;
+        border-radius: 0 4px 4px 0;
+    }}
+    [data-testid="stSidebar"] .stRadio:nth-of-type(2) > div > label:has(input:checked) {{
+        border-left: 2px solid {COLORS['primary']};
+        background: rgba(232, 115, 90, 0.1);
+    }}
+
     /* ---- Breadcrumb on main content ---- */
     .breadcrumb {{
         font-size: 0.78rem;
@@ -113,28 +126,36 @@ def render_sidebar() -> str:
 
     # If this phase has children, show child radio
     if children:
-        child_options = [f"  {active_phase['label']} Hub"]  # Hub as first option
-        child_page_map = {child_options[0]: active_phase["page"]}
+        st.sidebar.markdown(f"""
+        <div style="font-size: 0.65rem; color: rgba(255,255,255,0.35); text-transform: uppercase;
+                    letter-spacing: 0.12em; padding: 0.4rem 0.75rem 0.15rem; margin-top: 0.2rem;">
+            {active_phase['label']} Tools
+        </div>
+        """, unsafe_allow_html=True)
+
+        hub_label = f"{active_phase['icon']}  {active_phase['label']} Hub"
+        child_options = [hub_label]
+        child_page_map = {hub_label: active_phase["page"]}
         for child_label, child_id, child_desc in children:
-            child_options.append(f"  {child_label}")
-            child_page_map[f"  {child_label}"] = child_label
+            child_options.append(child_label)
+            child_page_map[child_label] = child_label
 
         # Find current child index
         child_idx = 0
         for i, opt in enumerate(child_options):
-            if child_page_map[opt] == current:
+            if child_page_map.get(opt) == current:
                 child_idx = i
                 break
 
         selected_child_display = st.sidebar.radio(
-            f"{active_phase['label']} pages",
+            "tools",
             child_options,
             index=child_idx,
             key=f"nav_child_radio_{active_phase['id']}",
             label_visibility="collapsed",
         )
 
-        target_page = child_page_map[selected_child_display]
+        target_page = child_page_map.get(selected_child_display, selected_phase_page)
 
     # Update navigation state
     if target_page != current:
@@ -142,17 +163,28 @@ def render_sidebar() -> str:
         st.session_state.selected_nav_item = target_page
         st.rerun()
 
-    st.sidebar.divider()
+    st.sidebar.markdown('<div style="height:1px; background:rgba(255,255,255,0.08); margin:0.75rem 0.5rem;"></div>', unsafe_allow_html=True)
 
     # Quick stats
     runs = load_runs()
     if runs:
         completed = sum(1 for r in runs if r['status'] == 'completed')
-        st.sidebar.metric("Completed Runs", f"{completed}/{len(runs)}")
+        st.sidebar.markdown(f"""
+        <div style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 0.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.65rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.1em;">Runs</span>
+                <span style="font-size: 0.85rem; color: white; font-weight: 600;">{completed}/{len(runs)}</span>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
     # Version
     version = get_version()
-    st.sidebar.caption(f"v{version}")
+    st.sidebar.markdown(f"""
+    <div style="text-align: center; padding: 0.5rem 0; margin-top: 0.25rem;">
+        <span style="font-size: 0.6rem; color: rgba(255,255,255,0.25);">v{version}</span>
+    </div>
+    """, unsafe_allow_html=True)
 
     return st.session_state.selected_nav_item
 
