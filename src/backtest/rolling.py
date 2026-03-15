@@ -15,6 +15,10 @@ from ..config.config import BacktestConfig
 from ..models.trainer import train_lgbm_regressor, ModelConfig
 
 from multiprocessing import Pool, cpu_count as mp_cpu_count
+import lightgbm as lgb
+
+# Suppress LightGBM C++ Info/Warning messages globally
+lgb.register_logger(lgb.basic._DummyLogger())
 
 # Module-level shared state for multiprocessing workers (set before Pool.map)
 _MP_SHARED = {}
@@ -736,6 +740,11 @@ def _calculate_portfolio_returns(
 
         if total_weight == 0:
             continue
+
+        # Normalize by total weight — overlapping walk-forward windows create
+        # duplicate positions for the same dates, so total_weight >> 1.0.
+        # Normalizing ensures the effective portfolio always sums to 1.0.
+        port_ret /= total_weight
 
         # Get benchmark return
         if trade_date in bench_ret_series.index and not np.isnan(bench_ret_series[trade_date]):
