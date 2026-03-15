@@ -2,7 +2,7 @@
 Sidebar Component
 =================
 Navigation sidebar with process-flow phases and quick stats.
-Uses native st.button with on_click callbacks for reliable navigation.
+Uses st.radio for navigation — already styled for dark sidebar in config.py CSS.
 """
 
 import streamlit as st
@@ -17,14 +17,8 @@ from .search import render_global_search
 from .notifications import render_notification_bell, NotificationManager
 
 
-def _navigate_to(page: str):
-    """Callback to navigate to a page via query params."""
-    st.query_params["page"] = page
-    st.session_state.selected_nav_item = page
-
-
 def _inject_sidebar_css():
-    """Inject minimal CSS for sidebar nav and breadcrumbs."""
+    """Inject CSS for sidebar nav and breadcrumbs."""
     st.markdown(f"""
 <style>
     /* ---- Breadcrumb on main content ---- */
@@ -78,44 +72,75 @@ def render_sidebar() -> str:
 
     current = st.session_state.selected_nav_item
 
-    # Render navigation phases
+    # Build phase options with icons
+    phase_options = []
+    phase_page_map = {}  # display label -> page value
     for phase in PROCESS_PHASES:
-        icon = phase["icon"]
-        label = phase["label"]
-        page = phase["page"]
+        display = f"{phase['icon']}  {phase['label']}"
+        phase_options.append(display)
+        phase_page_map[display] = phase["page"]
+
+    # Find current phase index
+    current_phase_idx = 0
+    for i, phase in enumerate(PROCESS_PHASES):
+        if current == phase["page"]:
+            current_phase_idx = i
+            break
         children = phase.get("children", [])
+        if children and current in [c[0] for c in children]:
+            current_phase_idx = i
+            break
 
-        # Check if current page is in this phase
-        is_active_phase = (current == page)
-        if children:
-            child_labels = [c[0] for c in children]
-            is_active_phase = is_active_phase or current in child_labels
+    # Phase radio
+    selected_phase_display = st.sidebar.radio(
+        "Navigation",
+        phase_options,
+        index=current_phase_idx,
+        key="nav_phase_radio",
+        label_visibility="collapsed",
+    )
 
-        # Phase button
-        phase_label = f"{icon}  {label}"
-        if is_active_phase:
-            phase_label = f"{icon}  **{label}**"
+    selected_phase_page = phase_page_map[selected_phase_display]
+    active_phase = PROCESS_PHASES[phase_options.index(selected_phase_display)]
 
-        st.sidebar.button(
-            phase_label,
-            key=f"nav_phase_{phase['id']}",
-            on_click=_navigate_to,
-            args=(page,),
-            use_container_width=True,
+    # If phase changed (user clicked a different phase), navigate to its hub
+    if selected_phase_page != active_phase["page"]:
+        pass  # shouldn't happen
+    children = active_phase.get("children", [])
+
+    # Determine the target page
+    target_page = selected_phase_page
+
+    # If this phase has children, show child radio
+    if children:
+        child_options = [f"  {active_phase['label']} Hub"]  # Hub as first option
+        child_page_map = {child_options[0]: active_phase["page"]}
+        for child_label, child_id, child_desc in children:
+            child_options.append(f"  {child_label}")
+            child_page_map[f"  {child_label}"] = child_label
+
+        # Find current child index
+        child_idx = 0
+        for i, opt in enumerate(child_options):
+            if child_page_map[opt] == current:
+                child_idx = i
+                break
+
+        selected_child_display = st.sidebar.radio(
+            f"{active_phase['label']} pages",
+            child_options,
+            index=child_idx,
+            key=f"nav_child_radio_{active_phase['id']}",
+            label_visibility="collapsed",
         )
 
-        # Children (only if active phase)
-        if is_active_phase and children:
-            for child_label, child_id, child_desc in children:
-                is_child_active = (current == child_label)
-                display = f"    → **{child_label}**" if is_child_active else f"    → {child_label}"
-                st.sidebar.button(
-                    display,
-                    key=f"nav_child_{child_id}",
-                    on_click=_navigate_to,
-                    args=(child_label,),
-                    use_container_width=True,
-                )
+        target_page = child_page_map[selected_child_display]
+
+    # Update navigation state
+    if target_page != current:
+        st.query_params["page"] = target_page
+        st.session_state.selected_nav_item = target_page
+        st.rerun()
 
     st.sidebar.divider()
 
@@ -123,31 +148,11 @@ def render_sidebar() -> str:
     runs = load_runs()
     if runs:
         completed = sum(1 for r in runs if r['status'] == 'completed')
-        st.sidebar.markdown(f"""
-        <div style="padding: 0.5rem 0.75rem; background: rgba(255,255,255,0.04); border-radius: 8px; margin-bottom: 0.5rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-size: 0.7rem; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.1em;">Runs</span>
-                <span style="font-size: 0.85rem; color: white; font-weight: 600;">{completed}/{len(runs)}</span>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    # Documentation link
-    st.sidebar.button(
-        "📖  Documentation",
-        key="nav_docs",
-        on_click=_navigate_to,
-        args=("Documentation",),
-        use_container_width=True,
-    )
+        st.sidebar.metric("Completed Runs", f"{completed}/{len(runs)}")
 
     # Version
     version = get_version()
-    st.sidebar.markdown(f"""
-    <div style="text-align: center; padding: 0.5rem 0; margin-top: 0.5rem;">
-        <span style="font-size: 0.65rem; color: rgba(255,255,255,0.3);">v{version}</span>
-    </div>
-    """, unsafe_allow_html=True)
+    st.sidebar.caption(f"v{version}")
 
     return st.session_state.selected_nav_item
 
