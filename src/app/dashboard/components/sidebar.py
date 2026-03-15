@@ -1,7 +1,7 @@
 """
 Sidebar Component
 =================
-Navigation sidebar with quick stats.
+Navigation sidebar with process-flow phases and quick stats.
 """
 
 import streamlit as st
@@ -16,8 +16,83 @@ from .search import render_global_search
 from .notifications import render_notification_bell, NotificationManager
 
 
+def _inject_sidebar_css():
+    """Inject CSS for sidebar visual hierarchy."""
+    st.markdown(f"""
+<style>
+    /* Phase group container */
+    [data-testid="stSidebar"] .phase-group {{
+        margin-bottom: 0.15rem;
+    }}
+
+    /* Active phase indicator — left accent bar on the phase button */
+    [data-testid="stSidebar"] button[data-active-phase="true"] {{
+        background: rgba(232, 115, 90, 0.18) !important;
+        border-left: 3px solid {COLORS['primary']} !important;
+        border-right: 1px solid rgba(255,255,255,0.08) !important;
+        border-top: 1px solid rgba(255,255,255,0.08) !important;
+        border-bottom: 1px solid rgba(255,255,255,0.08) !important;
+        font-weight: 600 !important;
+    }}
+
+    /* Child page buttons — smaller, indented */
+    [data-testid="stSidebar"] button[data-child-page="true"] {{
+        font-size: 0.82rem !important;
+        padding-left: 1.8rem !important;
+        padding-top: 0.3rem !important;
+        padding-bottom: 0.3rem !important;
+        background: transparent !important;
+        border: none !important;
+        border-left: 1px solid rgba(255,255,255,0.08) !important;
+        margin-left: 0.75rem !important;
+        opacity: 0.7;
+    }}
+
+    [data-testid="stSidebar"] button[data-child-page="true"]:hover {{
+        opacity: 1;
+        background: rgba(255,255,255,0.05) !important;
+        border-left: 1px solid rgba(232, 115, 90, 0.4) !important;
+    }}
+
+    /* Active child */
+    [data-testid="stSidebar"] button[data-child-active="true"] {{
+        opacity: 1 !important;
+        color: {COLORS['primary']} !important;
+        border-left: 2px solid {COLORS['primary']} !important;
+        background: rgba(232, 115, 90, 0.08) !important;
+    }}
+
+    /* Breadcrumb on main content */
+    .breadcrumb {{
+        font-size: 0.78rem;
+        color: {COLORS['muted']};
+        margin-bottom: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+    }}
+    .breadcrumb .bc-phase {{
+        color: {COLORS['primary']};
+        font-weight: 600;
+        cursor: pointer;
+    }}
+    .breadcrumb .bc-phase:hover {{
+        text-decoration: underline;
+    }}
+    .breadcrumb .bc-sep {{
+        color: {COLORS['card_border']};
+    }}
+    .breadcrumb .bc-page {{
+        color: {COLORS['dark']};
+        font-weight: 500;
+    }}
+</style>
+""", unsafe_allow_html=True)
+
+
 def render_sidebar() -> str:
     """Render process-flow sidebar navigation and return selected page."""
+    _inject_sidebar_css()
 
     # Logo/Title
     logo_path = get_project_root() / "assets" / "long-game-logo.svg"
@@ -38,10 +113,8 @@ def render_sidebar() -> str:
     st.sidebar.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
 
     # Navigation state — query params are the source of truth (survive reload/hot-reload)
-    # On every run, read from query params first to handle hot-reloads correctly
     qp = st.query_params.get("page", "Overview")
     if 'selected_nav_item' not in st.session_state or st.session_state.selected_nav_item != qp:
-        # Session state missing (new session) or query params changed externally
         st.session_state.selected_nav_item = qp
 
     current = st.session_state.selected_nav_item
@@ -60,9 +133,10 @@ def render_sidebar() -> str:
             child_labels = [c[0] for c in children]
             is_active_phase = is_active_phase or current in child_labels
 
-        # Render phase button
+        # Phase button
+        btn_label = f"{icon}  {label}"
         if st.sidebar.button(
-            f"{icon}  {label}",
+            btn_label,
             key=f"phase_{phase_id}",
             use_container_width=True,
             type="secondary",
@@ -75,9 +149,9 @@ def render_sidebar() -> str:
         if is_active_phase and children:
             for child_label, child_id, child_desc in children:
                 is_child_active = (current == child_label)
-                prefix = "  ▸ " if not is_child_active else "  ▹ "
+                marker = "›" if not is_child_active else "▸"
                 if st.sidebar.button(
-                    f"{prefix}{child_label}",
+                    f"  {marker} {child_label}",
                     key=f"nav_{child_id}",
                     use_container_width=True,
                     type="secondary",
@@ -118,6 +192,33 @@ def render_sidebar() -> str:
     return st.session_state.selected_nav_item
 
 
+def render_breadcrumb(current_page: str):
+    """Render a breadcrumb showing Phase > Page for child pages.
+
+    Call this at the top of child pages (before render_page_header) to show
+    navigation context. Clicking the phase name navigates to the hub page.
+    """
+    # Find which phase this page belongs to
+    for phase in PROCESS_PHASES:
+        children = phase.get("children", [])
+        child_labels = [c[0] for c in children]
+        if current_page in child_labels:
+            phase_label = phase["label"]
+            phase_page = phase["page"]
+            st.markdown(f"""
+            <div class="breadcrumb">
+                <span class="bc-phase" onclick="
+                    const url = new URL(window.location);
+                    url.searchParams.set('page', '{phase_page}');
+                    window.location = url;
+                ">{phase_label}</span>
+                <span class="bc-sep">›</span>
+                <span class="bc-page">{current_page}</span>
+            </div>
+            """, unsafe_allow_html=True)
+            return
+
+
 def _get_header_image(title: str) -> Optional[str]:
     """Get a header image path based on title."""
     title_lower = title.lower()
@@ -147,6 +248,11 @@ def _get_header_image(title: str) -> Optional[str]:
         "fundamentals status": "header-data.svg",
         "documentation": "header-report.svg",
         "settings": "header-settings.svg",
+        "setup": "header-settings.svg",
+        "analyze": "header-analytics.svg",
+        "build": "header-portfolio.svg",
+        "monitor": "header-analytics.svg",
+        "review": "header-report.svg",
     }
 
     for key, filename in mapping.items():
@@ -168,14 +274,14 @@ def _encode_image(image_path: str) -> str:
 
 def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh: bool = True):
     """Render a page header with optional refresh button.
-    
+
     Args:
         title: Page title
         subtitle: Optional subtitle
         show_refresh: Whether to show refresh button
     """
     header_image = _get_header_image(title)
-    
+
     # Build header HTML
     image_html = ""
     if header_image:
@@ -185,12 +291,12 @@ def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh:
                 image_html = f'<div class="page-image"><img src="data:image/svg+xml;base64,{encoded}" alt="header" /></div>'
         except Exception:
             pass
-    
+
     title_html = f'<div class="page-title-wrap"><h1 class="main-header">{title}</h1>'
     if subtitle:
         title_html += f'<p class="page-subtitle">{subtitle}</p>'
     title_html += '</div>'
-    
+
     st.markdown(
         f'<div class="page-header">{image_html}{title_html}</div>',
         unsafe_allow_html=True
@@ -199,7 +305,7 @@ def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh:
 
 def render_section_header(title: str, icon: str = ""):
     """Render a section header.
-    
+
     Args:
         title: Section title
         icon: Optional emoji icon
