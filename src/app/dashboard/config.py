@@ -217,6 +217,31 @@ def inject_custom_css():
         color: {sidebar_text_color} !important;
     }}
 
+    /* Sidebar buttons — transparent background on dark sidebar */
+    [data-testid="stSidebar"] .stButton {{
+        background: transparent !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button {{
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: {sidebar_text_color} !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button:hover {{
+        background: rgba(255, 255, 255, 0.1) !important;
+        background-color: rgba(255, 255, 255, 0.1) !important;
+        border: none !important;
+        color: white !important;
+    }}
+    [data-testid="stSidebar"] .stButton > button > div,
+    [data-testid="stSidebar"] .stButton > button > div > p,
+    [data-testid="stSidebar"] .stButton > button p,
+    [data-testid="stSidebar"] .stButton > button span {{
+        color: {sidebar_text_color} !important;
+        background: transparent !important;
+    }}
+
     [data-testid="stSidebar"] [data-testid="stAlert"],
     [data-testid="stSidebar"] [data-testid="stAlert"] p {{
         background: rgba(255, 255, 255, 0.1) !important;
