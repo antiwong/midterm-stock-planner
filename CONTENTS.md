@@ -17,7 +17,7 @@
 
 ### Knowledge Base (4 files)
 - `knowledgebase/AGENT_PROMPT.md` - AI agent system prompt for midterm_stock_planner
-- `knowledgebase/module_summaries.md` - Module overviews (17 modules: app, analytics, backtest, risk, etc.)
+- `knowledgebase/module_summaries.md` - Module overviews (19 modules: app, analytics, backtest, risk, regression, etc.)
 - `knowledgebase/glossary.md` - Domain terminology (stock analysis, ML, risk management, backtesting)
 - `knowledgebase/README.md` - Knowledge base index
 
@@ -164,7 +164,7 @@
 - **Purpose**: ML-driven stock ranking and portfolio optimization for mid-term investors
 - **Source Files**: ~130+ files (Python)
 - **Lines of Code**: ~49,000 (Python)
-- **Modules**: 17 (app, analytics, analysis, backtest, models, features, indicators, sentiment, risk, fundamental, data, config, validation, explain, visualization, strategies, exceptions)
+- **Modules**: 19 (app, analytics, analysis, backtest, models, features, indicators, sentiment, risk, fundamental, data, config, validation, explain, visualization, strategies, regression, exceptions, pipeline)
 - **Branch**: main
 - **Version**: 3.11.2
 - **Tests**: 208+ tests (19 test files)
@@ -185,6 +185,21 @@
 **Version**: 3.11.2
 
 **Recent additions (QuantaAlpha)**: evolutionary_backtest.py, diversified_backtest.py, lineage_report.py, config/strategy_templates/. See docs/backtesting.md Related Scripts, docs/quantaalpha-feature-proposal.md.
+
+### Feature Regression Testing (added 2026-03)
+
+**Source Code** (`src/regression/`):
+- `src/regression/feature_registry.py` - Feature spec definitions and registry
+- `src/regression/orchestrator.py` - Regression test runner and orchestration
+- `src/regression/metrics.py` - Metrics framework (PRIMARY, SECONDARY, GUARD)
+- `src/regression/tuning.py` - Bayesian parameter tuning via skopt
+- `src/regression/database.py` - SQLite result storage and tracking
+- `src/regression/reporting.py` - JSON/Markdown/CSV report generation
+
+### Cross-Asset Features (added 2026-03)
+
+**Source Code**:
+- `src/features/cross_asset.py` - Cross-asset feature engineering (inter-market signals)
 
 ### Data Infrastructure (added 2026-03)
 

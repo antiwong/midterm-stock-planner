@@ -17,8 +17,13 @@ from ..models.trainer import train_lgbm_regressor, ModelConfig
 from multiprocessing import Pool, cpu_count as mp_cpu_count
 import lightgbm as lgb
 
+class _SilentLogger:
+    """Suppress LightGBM C++ Info/Warning messages."""
+    def info(self, msg): pass
+    def warning(self, msg): pass
+
 # Suppress LightGBM C++ Info/Warning messages globally
-lgb.register_logger(lgb.basic._DummyLogger())
+lgb.register_logger(_SilentLogger())
 
 # Module-level shared state for multiprocessing workers (set before Pool.map)
 _MP_SHARED = {}
@@ -589,8 +594,8 @@ def run_walk_forward_backtest(
     )
     
     # Aggregate IC metrics from window_results
-    ics = [w["ic"] for w in window_results if w.get("ic") is not None]
-    rank_ics = [w["rank_ic"] for w in window_results if w.get("rank_ic") is not None]
+    ics = [w["ic"] for w in window_results if w.get("ic") is not None and not np.isnan(w["ic"])]
+    rank_ics = [w["rank_ic"] for w in window_results if w.get("rank_ic") is not None and not np.isnan(w["rank_ic"])]
     if ics:
         metrics["mean_ic"] = float(np.mean(ics))
         if rank_ics:
@@ -681,11 +686,11 @@ def _calculate_portfolio_returns(
 
     # Pre-compute daily returns for all stocks (full dataset)
     price_sorted = price_data.sort_values(['ticker', 'date'])
-    price_sorted['daily_return'] = price_sorted.groupby('ticker')['close'].pct_change(fill_method=None)
+    price_sorted['daily_return'] = price_sorted.groupby('ticker')['close'].pct_change()
 
     # Pre-compute benchmark daily returns
     bench_sorted = benchmark_data.sort_values('date')
-    bench_sorted['bench_return'] = bench_sorted[benchmark_price_col].pct_change(fill_method=None)
+    bench_sorted['bench_return'] = bench_sorted[benchmark_price_col].pct_change()
 
     # Build a fast lookup: (date, ticker) -> daily_return
     returns_df = price_sorted[['date', 'ticker', 'daily_return']].dropna(subset=['daily_return'])

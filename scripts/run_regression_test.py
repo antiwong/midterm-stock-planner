@@ -146,7 +146,7 @@ def cmd_run(args, config):
     else:
         features_to_test = registry.get_default_order()
 
-    # Filter out sentinel if present
+    # Filter out sentiment if present
     if args.exclude_sentiment and "sentiment" in features_to_test:
         features_to_test.remove("sentiment")
 

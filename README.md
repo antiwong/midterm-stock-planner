@@ -355,10 +355,18 @@ midterm-stock-planner/
 │   ├── app/            # CLI & dashboard
 │   ├── backtest/       # Walk-forward backtest
 │   ├── config/         # Configuration management
-│   ├── features/       # Feature engineering
+│   ├── data/           # Data loading & Alpaca client
+│   ├── explain/        # SHAP explainability
+│   ├── features/       # Feature engineering (incl. cross_asset, gap)
+│   ├── fundamental/    # Fundamental data fetching
+│   ├── indicators/     # Technical indicators
 │   ├── models/         # Model training/prediction
+│   ├── regression/     # Feature regression testing framework
 │   ├── risk/           # Risk management
-│   └── sentiment/      # Sentiment analysis
+│   ├── sentiment/      # Sentiment analysis
+│   ├── strategies/     # Trading strategies (momentum, mean reversion)
+│   ├── validation/     # Portfolio safeguards & validation
+│   └── visualization/  # Charts & visual reporting
 ├── scripts/            # Analysis scripts
 │   ├── full_analysis_workflow.py
 │   ├── run_portfolio_optimizer.py

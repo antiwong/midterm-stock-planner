@@ -78,10 +78,10 @@ def _generate_regression_id(name: str) -> str:
 def _extract_window_data(window_results: List[Dict]) -> Dict[str, List]:
     """Extract per-window arrays from window_results."""
     return {
-        "ics": [w.get("ic") for w in window_results],
-        "rank_ics": [w.get("rank_ic") for w in window_results],
-        "test_sharpes": [w.get("test_sharpe") for w in window_results],
-        "train_sharpes": [w.get("train_sharpe") for w in window_results],
+        "ics": [w.get("ic") for w in window_results if w.get("ic") is not None],
+        "rank_ics": [w.get("rank_ic") for w in window_results if w.get("rank_ic") is not None],
+        "test_sharpes": [w.get("test_sharpe") for w in window_results if w.get("test_sharpe") is not None],
+        "train_sharpes": [w.get("train_sharpe") for w in window_results if w.get("train_sharpe") is not None],
     }
 
 
@@ -315,8 +315,13 @@ class RegressionOrchestrator:
         marginal = None
         significance = None
         if previous_result is not None:
+            # Resolve columns for the added feature so importance is summed
+            # across all columns belonging to it (e.g. macd -> macd, macd_signal, macd_histogram)
+            added_cols = self.registry.resolve_columns([feature_added])
+            added_cols = [c for c in added_cols if c in available_cols]
             marginal = compute_feature_contribution(
-                metrics, previous_result.metrics, importance, feature_added
+                metrics, previous_result.metrics, importance, feature_added,
+                feature_columns=added_cols,
             )
 
             # Statistical significance

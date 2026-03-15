@@ -310,6 +310,7 @@ def compute_feature_contribution(
     prev_metrics: Optional[Dict[str, float]],
     step_feature_importance: Dict[str, float],
     feature_added: str,
+    feature_columns: Optional[List[str]] = None,
 ) -> Dict[str, float]:
     """Compute marginal contribution metrics for the newly added feature.
 
@@ -318,6 +319,10 @@ def compute_feature_contribution(
         prev_metrics: Metrics from the previous step (None for baseline).
         step_feature_importance: LightGBM feature importance dict.
         feature_added: Name of the feature added in this step.
+        feature_columns: Column names produced by this feature (e.g.,
+            ["macd", "macd_signal", "macd_histogram"]).  When provided,
+            importance is summed across all matching columns instead of
+            doing a single key lookup on feature_added.
 
     Returns:
         Dict with marginal contribution metrics.
@@ -353,27 +358,28 @@ def compute_feature_contribution(
     }
 
     # Feature importance of the new feature
+    # feature_importance keys are column names (e.g. "macd_signal"), not spec
+    # names (e.g. "macd").  Sum importance across all columns that belong to
+    # the added feature.
     total_importance = sum(step_feature_importance.values()) if step_feature_importance else 0.0
-    if total_importance > 0 and feature_added in step_feature_importance:
-        contribution["feature_importance_pct"] = (
-            step_feature_importance[feature_added] / total_importance
-        )
+    cols = feature_columns or [feature_added]
+    feature_imp = sum(
+        step_feature_importance.get(c, 0.0) for c in cols
+    )
+    if total_importance > 0:
+        contribution["feature_importance_pct"] = feature_imp / total_importance
     else:
-        # Sum importance of columns belonging to this feature
-        # (feature_importance keys are column names, not spec names)
         contribution["feature_importance_pct"] = 0.0
 
-    # Rank of this feature among all features by importance
+    # Rank of this feature (summed importance) among all per-column importances
     if step_feature_importance:
         sorted_features = sorted(
-            step_feature_importance.items(), key=lambda x: x[1], reverse=True
+            step_feature_importance.values(), reverse=True
         )
-        for rank, (fname, _) in enumerate(sorted_features, 1):
-            if fname == feature_added:
-                contribution["feature_importance_rank"] = rank
-                break
-        else:
-            contribution["feature_importance_rank"] = len(sorted_features) + 1
+        # Count how many individual column importances exceed our summed value
+        contribution["feature_importance_rank"] = (
+            sum(1 for v in sorted_features if v > feature_imp) + 1
+        )
     else:
         contribution["feature_importance_rank"] = 0
 

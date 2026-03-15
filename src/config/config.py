@@ -110,9 +110,9 @@ class FeatureConfig:
         'zscore_window': 60,
         'dxy_lookback': 21,
         'real_yield_lookback': 63,
-        'peer_momentum_lookback': 21,
-        'sector_breadth_lookback': 21,
-        'relative_strength_lookback': 63,
+        'nvda_lookback': 21,
+        'breadth_lookback': 21,
+        'qqq_lookback': 63,
     })
 
 
@@ -440,6 +440,8 @@ def save_config(config: AppConfig, path: Union[str, Path]) -> None:
             'sentiment_lookbacks': config.features.sentiment_lookbacks,
             'sentiment_min_count': config.features.sentiment_min_count,
             'sentiment_fillna': config.features.sentiment_fillna,
+            'use_cross_asset': config.features.use_cross_asset,
+            'cross_asset': config.features.cross_asset,
         },
         'sentiment': {
             'news_data_path': config.sentiment.news_data_path,
