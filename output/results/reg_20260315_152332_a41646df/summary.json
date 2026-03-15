@@ -1,0 +1,66 @@
+{
+  "regression_id": "reg_20260315_152332_a41646df",
+  "name": "Regression tech_giants",
+  "date": "2026-03-15",
+  "watchlist": "tech_giants",
+  "duration_seconds": 2299.7,
+  "walk_forward": {
+    "windows": 265,
+    "step_days": 7,
+    "test_period": "6 months"
+  },
+  "baseline": {
+    "sharpe_ratio": 0.778,
+    "mean_rank_ic": 0.415,
+    "excess_return": 0.125,
+    "max_drawdown": -0.721,
+    "total_return": 3.384
+  },
+  "final": {
+    "sharpe_ratio": 0.889,
+    "mean_rank_ic": 0.522,
+    "excess_return": 0.173,
+    "max_drawdown": -0.638,
+    "total_return": 4.422,
+    "hit_rate": 0.531
+  },
+  "peak": {
+    "step": 6,
+    "feature": "adx",
+    "sharpe_ratio": 1.339,
+    "mean_rank_ic": 0.478,
+    "total_return": 9.586,
+    "features": ["baseline", "valuation", "rsi", "macd", "bollinger", "atr", "adx"]
+  },
+  "optimal_set": {
+    "features": ["baseline", "macd", "bollinger", "adx"],
+    "rationale": "Top 3 positive marginal Sharpe contributors; baseline+macd+bollinger gives Sharpe=1.29"
+  },
+  "feature_leaderboard": [
+    {"feature": "bollinger", "marginal_sharpe": 0.641, "marginal_ic": 0.058, "importance_pct": 21.9, "significant": true},
+    {"feature": "macd", "marginal_sharpe": 0.153, "marginal_ic": 0.009, "importance_pct": 10.4, "significant": true},
+    {"feature": "adx", "marginal_sharpe": 0.078, "marginal_ic": -0.001, "importance_pct": 2.1, "significant": false},
+    {"feature": "gap", "marginal_sharpe": 0.022, "marginal_ic": -0.001, "importance_pct": 1.8, "significant": false},
+    {"feature": "valuation", "marginal_sharpe": 0.0, "marginal_ic": 0.0, "importance_pct": 0.0, "significant": false},
+    {"feature": "sentiment", "marginal_sharpe": 0.0, "marginal_ic": 0.0, "importance_pct": 0.0, "significant": false},
+    {"feature": "atr", "marginal_sharpe": -0.031, "marginal_ic": 0.0, "importance_pct": 4.5, "significant": false},
+    {"feature": "mean_reversion", "marginal_sharpe": -0.052, "marginal_ic": -0.001, "importance_pct": 1.0, "significant": false},
+    {"feature": "obv", "marginal_sharpe": -0.180, "marginal_ic": 0.051, "importance_pct": 15.5, "significant": true},
+    {"feature": "momentum", "marginal_sharpe": -0.240, "marginal_ic": -0.006, "importance_pct": 25.1, "significant": true},
+    {"feature": "rsi", "marginal_sharpe": -0.280, "marginal_ic": -0.003, "importance_pct": 2.9, "significant": true}
+  ],
+  "guard_violations": {
+    "max_drawdown": "All steps violate -0.30 threshold (range: -0.55 to -0.74)",
+    "train_test_sharpe_ratio": "All steps violate 2.5x threshold (range: 18x to 727x)",
+    "severity": "critical",
+    "note": "Severe overfitting indicated across all configurations"
+  },
+  "key_insights": [
+    "Bollinger bands is the single most impactful feature (+0.64 Sharpe, p<1e-12)",
+    "MACD is the second most valuable (+0.15 Sharpe, p<1e-5)",
+    "OBV paradox: improves IC (+0.05) but hurts Sharpe (-0.18)",
+    "Momentum uses 25.1% model capacity but decreases Sharpe by 0.24",
+    "All configurations show severe overfitting (train/test Sharpe ratio 18-727x)",
+    "Optimal feature set: baseline + macd + bollinger + adx (Sharpe=1.34)"
+  ]
+}

@@ -43,7 +43,32 @@ class RegressionReporter:
                 json.dump(tuned, f, indent=2)
             paths["tuned_params"] = str(tp_path)
 
+        # Single-page HTML report with embedded Plotly charts
+        try:
+            html_path = self.generate_html_report(out / "report.html")
+            paths["html"] = str(html_path)
+        except Exception:
+            pass  # Non-fatal: HTML report is optional (requires plotly)
+
         return paths
+
+    def generate_html_report(self, output_path: Path) -> Path:
+        """Generate a single-page HTML report with embedded Plotly charts.
+
+        Uses the standalone report generator script as a library.
+        """
+        import sys
+        from pathlib import Path as P
+        scripts_dir = P(__file__).parent.parent.parent / "scripts"
+        if str(scripts_dir) not in sys.path:
+            sys.path.insert(0, str(scripts_dir))
+
+        from generate_regression_report import load_regression_data, build_html_report
+
+        data = load_regression_data(self.db, self.regression_id)
+        html = build_html_report(data)
+        output_path.write_text(html, encoding="utf-8")
+        return output_path
 
     def generate_summary_json(self, output_path: Path) -> Path:
         """Full structured JSON with all steps, metrics, significance."""
