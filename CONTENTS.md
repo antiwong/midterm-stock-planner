@@ -63,6 +63,7 @@
 - `docs/visualization-analytics.md` - Visualization and analytics
 - `docs/comprehensive-analysis-system.md` - Comprehensive analysis overview
 - `docs/feature-importance-methods.md` - Multi-method feature importance (LightGBM gain, marginal IC, TreeSHAP)
+- `docs/daily-run.md` - Daily run guide: paper trading pipeline, signal generation, cron setup
 
 **API & Configuration (3)**:
 - `docs/api-configuration.md` - API configuration reference
@@ -152,10 +153,10 @@
 |----------|-------|
 | **Core Guides** | 5 |
 | **Knowledge Base** | 4 |
-| **Project Documentation** | 65 |
+| **Project Documentation** | 66 |
 | **Skills** | 19 |
 | **Prompt Templates** | 4 |
-| **Total** | **97 files** |
+| **Total** | **98 files** |
 
 ---
 
@@ -210,6 +211,36 @@
 **Output Structure**:
 - `output/regression/<regression_id>/` - Raw regression output (JSON, MD, CSV, HTML report)
 - `output/results/<regression_id>/` - Consolidated results folder (report.html, summary.json, metrics CSV, leaderboard CSV, markdown report)
+
+### Paper Trading Pipeline (added 2026-03-15)
+
+**Script**: `scripts/paper_trading.py` - Daily paper trading with simulated execution
+
+**Features**:
+- Daily cycle: refresh data → retrain model → generate signals → execute → track P&L
+- SQLite persistence (`data/paper_trading.db`): positions, trades, daily snapshots, signals
+- Simulated execution with transaction costs, position sizing (20% cap), stop-loss (-15%)
+- VIX-based exposure scaling using benchmark volatility proxy
+- CLI: `run`, `status`, `history`, `refresh`, `setup-cron`
+- Cron-ready for automated daily execution (5:30 PM ET weekdays)
+
+**Documentation**: `docs/daily-run.md` - Daily run guide and paper trading walkthrough
+
+### Position Sizing Controls (added 2026-03-15)
+
+Added to `src/backtest/rolling.py` and `src/config/config.py`:
+- `max_position_weight: 0.20` - Cap any single stock at 20% of portfolio
+- `stop_loss_pct: -0.15` - Exit position if stock drops 15% from entry
+- VIX-based exposure scaling: reduce to 60% at VIX>30, 30% at VIX>40 (uses 21d benchmark vol as proxy)
+
+### Feature Toggles (added 2026-03-15)
+
+Added to `src/config/config.py`, `src/features/engineering.py`, `src/pipeline.py`:
+- `include_rsi: false` - RSI disabled (hurts cross-sectional model, -0.28 Sharpe)
+- `include_obv: false` - OBV disabled (-0.18 Sharpe)
+- `include_momentum: false` - Momentum disabled (-0.24 Sharpe)
+- `include_mean_reversion: false` - Mean reversion disabled (adds noise)
+- Optimal production set: baseline + macd + bollinger + adx → Sharpe=1.34
 
 ### Cross-Asset Features (added 2026-03)
 
