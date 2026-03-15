@@ -219,44 +219,49 @@ def inject_custom_css():
         color: {sidebar_text_color} !important;
     }}
 
-    /* Sidebar buttons — high specificity to override Streamlit defaults */
-    section[data-testid="stSidebar"] button,
-    section[data-testid="stSidebar"] .stButton > button,
-    section[data-testid="stSidebar"] .stButton > button[kind="secondary"],
+    /* Sidebar buttons — aggressive overrides for all Streamlit button variants */
     [data-testid="stSidebar"] button,
-    [data-testid="stSidebar"] .stButton > button {{
+    [data-testid="stSidebar"] .stButton button,
+    [data-testid="stSidebar"] .stButton > button,
+    [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
+    [data-testid="stSidebar"] [data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] [data-testid*="BaseButton"],
+    [data-testid="stSidebar"] [class*="BaseButton"],
+    [data-testid="stSidebar"] [class*="stButton"] button {{
         color: white !important;
         background-color: #1e293b !important;
+        background: #1e293b !important;
         border: 1px solid rgba(255, 255, 255, 0.15) !important;
         font-weight: 500 !important;
     }}
 
-    section[data-testid="stSidebar"] button:hover,
-    section[data-testid="stSidebar"] .stButton > button:hover,
     [data-testid="stSidebar"] button:hover,
-    [data-testid="stSidebar"] .stButton > button:hover {{
+    [data-testid="stSidebar"] .stButton button:hover,
+    [data-testid="stSidebar"] [data-testid*="BaseButton"]:hover,
+    [data-testid="stSidebar"] [class*="BaseButton"]:hover {{
         background-color: #334155 !important;
+        background: #334155 !important;
         border-color: rgba(232, 115, 90, 0.5) !important;
         color: white !important;
     }}
 
-    section[data-testid="stSidebar"] .stButton > button[kind="primary"],
-    [data-testid="stSidebar"] .stButton > button[kind="primary"] {{
-        background: {COLORS['primary']} !important;
-        color: white !important;
-        border: 1px solid {COLORS['primary']} !important;
-    }}
-
-    section[data-testid="stSidebar"] .stButton > button[kind="primary"]:hover,
-    [data-testid="stSidebar"] .stButton > button[kind="primary"]:hover {{
-        background: {COLORS['secondary']} !important;
-    }}
-
-    /* Ensure sidebar button text (including p tags inside) is white */
-    section[data-testid="stSidebar"] button p,
+    /* Ensure ALL text inside sidebar buttons is white */
+    [data-testid="stSidebar"] button *,
     [data-testid="stSidebar"] button p,
-    [data-testid="stSidebar"] .stButton > button p {{
+    [data-testid="stSidebar"] button span,
+    [data-testid="stSidebar"] button div,
+    [data-testid="stSidebar"] .stButton button *,
+    [data-testid="stSidebar"] [data-testid*="BaseButton"] *,
+    [data-testid="stSidebar"] [class*="BaseButton"] * {{
         color: white !important;
+    }}
+
+    /* Primary variant */
+    [data-testid="stSidebar"] [data-testid="stBaseButton-primary"],
+    [data-testid="stSidebar"] button[kind="primary"] {{
+        background: {COLORS['primary']} !important;
+        background-color: {COLORS['primary']} !important;
+        border: 1px solid {COLORS['primary']} !important;
     }}
 
     [data-testid="stSidebar"] [data-testid="stAlert"],
