@@ -42,7 +42,7 @@
 - `docs/turnover-churn-analysis-guide.md` - Portfolio turnover analysis
 - `docs/risk-analysis-guide.md` - Risk analysis walkthrough
 
-**Feature Documentation (19)**:
+**Feature Documentation (20)**:
 - `docs/quantaalpha-feature-proposal.md` - QuantaAlpha-inspired features (gap factors, transfer testing, roadmap)
 - `docs/backtesting.md` - Walk-forward backtesting system
 - `docs/risk-management.md` - Risk management framework
@@ -62,6 +62,7 @@
 - `docs/ai-insights.md` - AI-powered insights (Gemini)
 - `docs/visualization-analytics.md` - Visualization and analytics
 - `docs/comprehensive-analysis-system.md` - Comprehensive analysis overview
+- `docs/feature-importance-methods.md` - Multi-method feature importance (LightGBM gain, marginal IC, TreeSHAP)
 
 **API & Configuration (3)**:
 - `docs/api-configuration.md` - API configuration reference
@@ -151,10 +152,10 @@
 |----------|-------|
 | **Core Guides** | 5 |
 | **Knowledge Base** | 4 |
-| **Project Documentation** | 64 |
+| **Project Documentation** | 65 |
 | **Skills** | 19 |
 | **Prompt Templates** | 4 |
-| **Total** | **96 files** |
+| **Total** | **97 files** |
 
 ---
 
@@ -181,7 +182,7 @@
 
 ---
 
-**Last Updated**: 2026-02-21
+**Last Updated**: 2026-03-15
 **Version**: 3.11.2
 
 **Recent additions (QuantaAlpha)**: evolutionary_backtest.py, diversified_backtest.py, lineage_report.py, config/strategy_templates/. See docs/backtesting.md Related Scripts, docs/quantaalpha-feature-proposal.md.

@@ -120,8 +120,9 @@ An interpretable stock ranking and backtesting system for mid-term investors (3-
 - **Systematic Feature Evaluation**: Add features one-by-one to a baseline, measure marginal contribution with statistical significance tests
 - **14 Feature Specs**: Returns, volatility, volume, valuation, RSI, MACD, Bollinger, ATR, ADX, OBV, gap, momentum, mean reversion, sentiment
 - **Metrics Framework**: PRIMARY (mean_rank_ic, sharpe, excess_return), SECONDARY (IC stability, sortino, calmar), GUARD (max_drawdown, overfitting detection)
+- **Multi-Method Feature Importance**: Per-window LightGBM gain, marginal IC (Spearman), optional TreeSHAP — convergence across methods identifies reliable features (Lopez de Prado approach)
 - **Bayesian Parameter Tuning**: Per-feature and model hyperparameter tuning via skopt
-- **Statistical Tests**: Paired t-tests, bootstrap CIs for Sharpe differences
+- **Statistical Tests**: Paired t-tests, bootstrap CIs for Sharpe differences, Diebold-Mariano forecast accuracy test
 - **Reporting**: JSON/Markdown/CSV reports with feature leaderboard (`scripts/run_regression_test.py`)
 - **Database Tracking**: All results stored in SQLite for historical comparison
 

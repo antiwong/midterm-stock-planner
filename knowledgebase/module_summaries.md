@@ -2,14 +2,14 @@
 
 **Purpose**: Quick reference for module responsibilities and capabilities
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-03-15
 **Version**: 3.11.2
 
 ---
 
 ## Overview
 
-midterm_stock_planner is a stock ranking and portfolio optimization system organised into 17 main modules:
+midterm_stock_planner is a stock ranking and portfolio optimization system organised into 19 main modules:
 
 ```
 midterm-stock-planner/
@@ -20,9 +20,10 @@ midterm-stock-planner/
 │   ├── sentiment/                 # Multi-source sentiment analysis (2,517 LOC)
 │   ├── risk/                      # Risk metrics, parity, sizing (1,977 LOC)
 │   ├── fundamental/               # Fundamental data fetching (1,487 LOC)
-│   ├── backtest/                  # Walk-forward backtesting (903 LOC)
+│   ├── regression/                # Feature regression testing (~2,000 LOC)
+│   ├── backtest/                  # Walk-forward backtesting (~1,200 LOC)
+│   ├── features/                  # Feature engineering (~1,100 LOC)
 │   ├── visualization/             # Chart generation (684 LOC)
-│   ├── features/                  # Feature engineering (652 LOC)
 │   ├── validation/                # Data and portfolio safeguards (605 LOC)
 │   ├── exceptions/                # Custom exception hierarchy (605 LOC)
 │   ├── data/                      # Data loading and watchlists (545 LOC)
@@ -274,39 +275,85 @@ SEC EDGAR filing download and parsing for quarterly/annual reports.
 ### Backtesting Engine
 
 **Path**: `src/backtest/`
-**Files**: 3 files (~903 lines)
-**Purpose**: Walk-forward backtesting with realistic transaction costs, monthly rebalancing, and comprehensive performance tracking.
+**Files**: 3 files (~1,200 lines)
+**Purpose**: Walk-forward backtesting with realistic transaction costs, 4h rebalancing, multiprocessing, and comprehensive performance tracking including per-window feature importance.
 
 **Key Components**:
 
 #### RollingWalkForwardBacktest (rolling.py)
 Core backtest implementation:
-- Rolling train/test window management
-- Model training per window (LightGBM)
-- Stock ranking and selection (top_n)
-- Position sizing and rebalancing
+- Rolling train/test window management (265 windows, 7d step, 3yr train, 6mo test)
+- 11-core multiprocessing with copy-on-write data sharing (`_MP_SHARED`)
+- Model training per window (LightGBM with silent logger)
+- Stock ranking and selection (top_n / top_pct)
+- Position sizing and rebalancing (4h frequency)
 - Transaction cost modelling
-- SHAP explanation per window
-- Detailed diagnostics on failure
+- Per-window IC and Rank IC computation
+- **Tier 1 Multi-Method Feature Importance** (per-window):
+  1. LightGBM gain-based importance (free)
+  2. Marginal IC per feature via Spearman correlation (free, model-free)
+  3. Optional TreeSHAP on test sets (`compute_shap=True`, ~15 min)
+- Aggregated importance mean/std in BacktestResults.metrics
+- Overfitting detection (train/test Sharpe ratio)
+- Portfolio return normalization for overlapping windows
 
 #### BacktestResults
-Result bundle containing returns, positions, trades, metrics, and SHAP values.
+Result bundle containing returns, positions, trades, metrics, window results, and feature importance.
 
 **Dependencies**:
 - Internal: features, models, data, risk
-- External: pandas, numpy, lightgbm
+- External: pandas, numpy, lightgbm, shap (optional)
+
+---
+
+### Feature Regression Testing
+
+**Path**: `src/regression/`
+**Files**: 7 files (~2,000 lines)
+**Purpose**: Systematic feature evaluation framework — adds features one-by-one to a baseline, measures marginal contribution with statistical significance, and tunes parameters via Bayesian optimization.
+
+**Key Components**:
+
+#### RegressionOrchestrator (orchestrator.py)
+Runs sequential feature addition tests:
+- Baseline → +feature1 → +feature2 → ... → model tuning
+- Per-step: tune params → run walk-forward backtest → compute metrics → significance test → log
+- Reads feature importance directly from BacktestResults (multi-method)
+
+#### FeatureRegistry (feature_registry.py)
+Registry of 14 feature specs (returns, volatility, volume, valuation, RSI, MACD, Bollinger, ATR, ADX, OBV, gap, momentum, mean_reversion, sentiment) with column resolution.
+
+#### Metrics (metrics.py)
+- METRICS_REGISTRY with PRIMARY/SECONDARY/GUARD classification
+- `compute_extended_metrics()` — full metric computation
+- `compute_marginal_significance()` — paired t-tests, bootstrap CIs, Diebold-Mariano test
+- `compute_feature_contribution()` — marginal Sharpe, IC, importance pct
+
+#### FeatureParamTuner / ModelParamTuner (tuning.py)
+Bayesian optimization via skopt (gp_minimize with Expected Improvement). Per-feature param search + model hyperparameter tuning.
+
+#### RegressionReporter (reporting.py)
+JSON/Markdown/CSV report generation with feature leaderboard and guard metric status.
+
+#### Database (database.py)
+SQLite storage: `regression_tests`, `regression_steps`, `feature_contributions` tables.
+
+**Dependencies**:
+- Internal: backtest, features, config, models
+- External: pandas, numpy, scipy, scikit-optimize
 
 ---
 
 ### Feature Engineering
 
 **Path**: `src/features/`
-**Files**: 3 files (~850 lines)
-**Purpose**: Compute features for ML model training from price, fundamental, and sentiment data.
+**Files**: 4 files (~1,100 lines)
+**Purpose**: Compute features for ML model training from price, fundamental, sentiment, and cross-asset data.
 
 **Key Components**:
-- `engineering.py` — Core features (returns, volatility, volume, valuation), sentiment merge
+- `engineering.py` — Core features (returns, volatility, volume, valuation), sentiment merge, `compute_features_selective()` for regression testing
 - `gap_features.py` — Overnight/gap features (QuantaAlpha-inspired): overnight_gap_pct, gap_vs_true_range, gap_acceptance_score, gap_acceptance_vol_weighted
+- `cross_asset.py` — Cross-asset/macro features: gold/silver ratio z-score, DXY momentum, real yield proxy, NVDA peer momentum, sector breadth, QQQ relative strength
 
 **Key Functions**:
 - `compute_all_features()` — Technical and fundamental features
@@ -460,8 +507,9 @@ graph LR
 | sentiment | Sentiment scoring | SentimentModel, LLMAnalyzer | MEDIUM |
 | risk | Risk metrics, allocation | RiskMetrics, RiskParityAllocator | MEDIUM |
 | fundamental | Data fetching | MultiSourceFundamentalsFetcher | MEDIUM |
-| backtest | Walk-forward backtest | RollingWalkForwardBacktest | MEDIUM |
-| features | Feature computation | compute_all_features() | MEDIUM |
+| backtest | Walk-forward backtest | run_walk_forward_backtest() | HIGH |
+| regression | Feature regression testing | RegressionOrchestrator, FeatureRegistry | HIGH |
+| features | Feature computation | compute_all_features(), cross_asset | MEDIUM |
 | indicators | Technical indicators | RSI, MACD, ADX, ATR, Bollinger | LOW |
 | models | ML training/prediction | train_lgbm_regressor(), Predictor | MEDIUM |
 | visualization | Charts | ChartGenerator, PerformanceVisualizer | LOW |
@@ -479,5 +527,5 @@ graph LR
 
 ---
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-03-15
 **Version**: 3.11.2
