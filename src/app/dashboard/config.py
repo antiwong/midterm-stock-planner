@@ -58,8 +58,6 @@ def inject_custom_css():
     sidebar_text_color = ui_settings.get("sidebar_text_color", COLORS["light"])
     sidebar_label_color = ui_settings.get("sidebar_label_color", "#e2e8f0")
     sidebar_hover_bg = ui_settings.get("sidebar_hover_bg", "rgba(99, 102, 241, 0.2)")
-    sidebar_button_bg = ui_settings.get("sidebar_button_bg", "rgba(30, 41, 59, 0.8)")
-    sidebar_button_border = ui_settings.get("sidebar_button_border", "rgba(255, 255, 255, 0.2)")
     primary_color = ui_settings.get("primary_color", COLORS["primary"])
     secondary_color = ui_settings.get("secondary_color", COLORS["secondary"])
     accent_color = ui_settings.get("accent_color", COLORS["accent"])
@@ -217,51 +215,6 @@ def inject_custom_css():
     [data-testid="stSidebar"] [data-testid="metric-container"],
     [data-testid="stSidebar"] [data-testid="metric-container"] [data-testid="stMetricValue"] {{
         color: {sidebar_text_color} !important;
-    }}
-
-    /* Sidebar buttons — aggressive overrides for all Streamlit button variants */
-    [data-testid="stSidebar"] button,
-    [data-testid="stSidebar"] .stButton button,
-    [data-testid="stSidebar"] .stButton > button,
-    [data-testid="stSidebar"] [data-testid="stBaseButton-secondary"],
-    [data-testid="stSidebar"] [data-testid="stBaseButton-primary"],
-    [data-testid="stSidebar"] [data-testid*="BaseButton"],
-    [data-testid="stSidebar"] [class*="BaseButton"],
-    [data-testid="stSidebar"] [class*="stButton"] button {{
-        color: white !important;
-        background-color: #1e293b !important;
-        background: #1e293b !important;
-        border: 1px solid rgba(255, 255, 255, 0.15) !important;
-        font-weight: 500 !important;
-    }}
-
-    [data-testid="stSidebar"] button:hover,
-    [data-testid="stSidebar"] .stButton button:hover,
-    [data-testid="stSidebar"] [data-testid*="BaseButton"]:hover,
-    [data-testid="stSidebar"] [class*="BaseButton"]:hover {{
-        background-color: #334155 !important;
-        background: #334155 !important;
-        border-color: rgba(232, 115, 90, 0.5) !important;
-        color: white !important;
-    }}
-
-    /* Ensure ALL text inside sidebar buttons is white */
-    [data-testid="stSidebar"] button *,
-    [data-testid="stSidebar"] button p,
-    [data-testid="stSidebar"] button span,
-    [data-testid="stSidebar"] button div,
-    [data-testid="stSidebar"] .stButton button *,
-    [data-testid="stSidebar"] [data-testid*="BaseButton"] *,
-    [data-testid="stSidebar"] [class*="BaseButton"] * {{
-        color: white !important;
-    }}
-
-    /* Primary variant */
-    [data-testid="stSidebar"] [data-testid="stBaseButton-primary"],
-    [data-testid="stSidebar"] button[kind="primary"] {{
-        background: {COLORS['primary']} !important;
-        background-color: {COLORS['primary']} !important;
-        border: 1px solid {COLORS['primary']} !important;
     }}
 
     [data-testid="stSidebar"] [data-testid="stAlert"],

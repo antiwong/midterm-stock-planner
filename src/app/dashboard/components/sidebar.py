@@ -2,6 +2,7 @@
 Sidebar Component
 =================
 Navigation sidebar with process-flow phases and quick stats.
+Uses HTML links with query-param navigation to avoid Streamlit button styling issues.
 """
 
 import streamlit as st
@@ -16,11 +17,124 @@ from .search import render_global_search
 from .notifications import render_notification_bell, NotificationManager
 
 
+def _nav_js(page_label: str) -> str:
+    """Return JS snippet that navigates to a page via query params."""
+    escaped = page_label.replace("'", "\\'")
+    return (
+        f"const u=new URL(window.location);"
+        f"u.searchParams.set('page','{escaped}');"
+        f"window.location=u;"
+    )
+
+
 def _inject_sidebar_css():
-    """Inject CSS for sidebar visual hierarchy."""
+    """Inject CSS for sidebar nav links and breadcrumbs."""
     st.markdown(f"""
 <style>
-    /* Breadcrumb on main content */
+    /* ---- Sidebar nav links (HTML, not st.button) ---- */
+    .nav-phase {{
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        padding: 0.55rem 0.8rem;
+        margin: 0.2rem 0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        text-decoration: none;
+    }}
+    .nav-phase:hover {{
+        background: rgba(255, 255, 255, 0.08);
+    }}
+    .nav-phase .phase-icon {{
+        font-size: 1.05rem;
+        flex-shrink: 0;
+    }}
+    .nav-phase .phase-label {{
+        font-family: 'Instrument Sans', sans-serif;
+        font-size: 0.88rem;
+        font-weight: 500;
+        color: rgba(255, 255, 255, 0.75);
+        letter-spacing: -0.01em;
+    }}
+
+    /* Active phase */
+    .nav-phase.active {{
+        background: rgba(232, 115, 90, 0.18);
+        border-left: 3px solid {COLORS['primary']};
+        border-radius: 0 6px 6px 0;
+    }}
+    .nav-phase.active .phase-label {{
+        color: white;
+        font-weight: 600;
+    }}
+
+    /* Child page links */
+    .nav-child {{
+        display: block;
+        padding: 0.35rem 0.8rem 0.35rem 2.4rem;
+        margin: 0.05rem 0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.55);
+        border-left: 1px solid rgba(255, 255, 255, 0.08);
+        margin-left: 1rem;
+    }}
+    .nav-child:hover {{
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.85);
+        border-left-color: rgba(255, 255, 255, 0.2);
+    }}
+    .nav-child.active {{
+        color: {COLORS['primary']};
+        font-weight: 600;
+        border-left: 2px solid {COLORS['primary']};
+        background: rgba(232, 115, 90, 0.08);
+    }}
+
+    /* Back-to-hub link */
+    .nav-back {{
+        display: block;
+        padding: 0.3rem 0.8rem 0.3rem 2.4rem;
+        margin: 0.05rem 0 0.15rem 1rem;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.4);
+        cursor: pointer;
+        text-decoration: none;
+        transition: color 0.2s ease;
+    }}
+    .nav-back:hover {{
+        color: rgba(255, 255, 255, 0.7);
+    }}
+
+    /* Separator */
+    .nav-separator {{
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        margin: 0.75rem 0.5rem;
+    }}
+
+    /* Footer link (docs) */
+    .nav-footer-link {{
+        display: block;
+        padding: 0.4rem 0.8rem;
+        margin: 0.2rem 0;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        text-decoration: none;
+        font-size: 0.82rem;
+        color: rgba(255, 255, 255, 0.55);
+    }}
+    .nav-footer-link:hover {{
+        background: rgba(255, 255, 255, 0.06);
+        color: rgba(255, 255, 255, 0.85);
+    }}
+
+    /* ---- Breadcrumb on main content ---- */
     .breadcrumb {{
         font-size: 0.78rem;
         color: {COLORS['muted']};
@@ -70,14 +184,14 @@ def render_sidebar() -> str:
 
     st.sidebar.markdown('<div style="height: 0.5rem;"></div>', unsafe_allow_html=True)
 
-    # Navigation state — query params are the source of truth (survive reload/hot-reload)
+    # Navigation state — query params are the source of truth
     qp = st.query_params.get("page", "Overview")
     if 'selected_nav_item' not in st.session_state or st.session_state.selected_nav_item != qp:
         st.session_state.selected_nav_item = qp
 
     current = st.session_state.selected_nav_item
 
-    # Render phase buttons
+    # Build the entire nav as one HTML block per phase
     for phase in PROCESS_PHASES:
         phase_id = phase["id"]
         icon = phase["icon"]
@@ -91,83 +205,39 @@ def render_sidebar() -> str:
             child_labels = [c[0] for c in children]
             is_active_phase = is_active_phase or current in child_labels
 
-        # Active phase gets a styled indicator
-        if is_active_phase:
-            st.sidebar.markdown(f"""
-            <div style="
-                background: rgba(232, 115, 90, 0.15);
-                border-left: 3px solid {COLORS['primary']};
-                border-radius: 0 6px 6px 0;
-                padding: 0.45rem 0.7rem;
-                margin: 0.15rem 0;
-                display: flex;
-                align-items: center;
-                gap: 0.5rem;
-            ">
-                <span style="font-size: 1.1rem;">{icon}</span>
-                <span style="font-size: 0.85rem; font-weight: 600; color: white; font-family: 'Instrument Sans', sans-serif;">{label}</span>
-            </div>
-            """, unsafe_allow_html=True)
-            # Still need a button for hub page navigation (hidden-ish, but functional)
-            if current != page and children:
-                if st.sidebar.button(
-                    f"  ← Back to {label} Hub",
-                    key=f"phase_{phase_id}",
-                    use_container_width=True,
-                    type="secondary",
-                ):
-                    st.session_state.selected_nav_item = page
-                    st.query_params["page"] = page
-                    st.rerun()
-        else:
-            # Inactive phase — standard button
-            btn_label = f"{icon}  {label}"
-            if st.sidebar.button(
-                btn_label,
-                key=f"phase_{phase_id}",
-                use_container_width=True,
-                type="secondary",
-            ):
-                st.session_state.selected_nav_item = page
-                st.query_params["page"] = page
-                st.rerun()
+        active_cls = " active" if is_active_phase else ""
 
-        # Show children if this phase is active
+        # Phase button (HTML link)
+        html = f"""
+        <div class="nav-phase{active_cls}" onclick="{_nav_js(page)}">
+            <span class="phase-icon">{icon}</span>
+            <span class="phase-label">{label}</span>
+        </div>
+        """
+
+        # Children (only if active phase)
         if is_active_phase and children:
+            # Back to hub link (if on a child page)
+            if current != page:
+                html += f"""
+                <div class="nav-back" onclick="{_nav_js(page)}">← {label} Hub</div>
+                """
+
             for child_label, child_id, child_desc in children:
                 is_child_active = (current == child_label)
-                if is_child_active:
-                    # Active child — styled indicator
-                    st.sidebar.markdown(f"""
-                    <div style="
-                        margin-left: 0.9rem;
-                        border-left: 2px solid {COLORS['primary']};
-                        padding: 0.3rem 0 0.3rem 0.75rem;
-                        margin-bottom: 0.1rem;
-                    ">
-                        <span style="font-size: 0.82rem; color: {COLORS['primary']}; font-weight: 600;">
-                            {child_label}
-                        </span>
-                    </div>
-                    """, unsafe_allow_html=True)
-                else:
-                    # Inactive child — small button
-                    if st.sidebar.button(
-                        f"    {child_label}",
-                        key=f"nav_{child_id}",
-                        use_container_width=True,
-                        type="secondary",
-                    ):
-                        st.session_state.selected_nav_item = child_label
-                        st.query_params["page"] = child_label
-                        st.rerun()
+                child_cls = " active" if is_child_active else ""
+                html += f"""
+                <div class="nav-child{child_cls}" onclick="{_nav_js(child_label)}">{child_label}</div>
+                """
 
-            # Small spacer after children
-            st.sidebar.markdown('<div style="height: 0.3rem;"></div>', unsafe_allow_html=True)
+            html += '<div style="height: 0.3rem;"></div>'
 
-    st.sidebar.markdown("---")
+        st.sidebar.markdown(html, unsafe_allow_html=True)
 
-    # Compact quick stats
+    # Separator
+    st.sidebar.markdown('<div class="nav-separator"></div>', unsafe_allow_html=True)
+
+    # Quick stats
     runs = load_runs()
     if runs:
         completed = sum(1 for r in runs if r['status'] == 'completed')
@@ -181,10 +251,9 @@ def render_sidebar() -> str:
         """, unsafe_allow_html=True)
 
     # Documentation link
-    if st.sidebar.button("📖  Documentation", key="nav_docs", use_container_width=True, type="secondary"):
-        st.session_state.selected_nav_item = "Documentation"
-        st.query_params["page"] = "Documentation"
-        st.rerun()
+    st.sidebar.markdown(f"""
+    <div class="nav-footer-link" onclick="{_nav_js('Documentation')}">📖  Documentation</div>
+    """, unsafe_allow_html=True)
 
     # Version
     version = get_version()
@@ -198,12 +267,7 @@ def render_sidebar() -> str:
 
 
 def render_breadcrumb(current_page: str):
-    """Render a breadcrumb showing Phase > Page for child pages.
-
-    Call this at the top of child pages (before render_page_header) to show
-    navigation context. Clicking the phase name navigates to the hub page.
-    """
-    # Find which phase this page belongs to
+    """Render a breadcrumb showing Phase > Page for child pages."""
     for phase in PROCESS_PHASES:
         children = phase.get("children", [])
         child_labels = [c[0] for c in children]
@@ -212,11 +276,7 @@ def render_breadcrumb(current_page: str):
             phase_page = phase["page"]
             st.markdown(f"""
             <div class="breadcrumb">
-                <span class="bc-phase" onclick="
-                    const url = new URL(window.location);
-                    url.searchParams.set('page', '{phase_page}');
-                    window.location = url;
-                ">{phase_label}</span>
+                <span class="bc-phase" onclick="{_nav_js(phase_page)}">{phase_label}</span>
                 <span class="bc-sep">›</span>
                 <span class="bc-page">{current_page}</span>
             </div>
@@ -278,16 +338,9 @@ def _encode_image(image_path: str) -> str:
 
 
 def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh: bool = True):
-    """Render a page header with optional refresh button.
-
-    Args:
-        title: Page title
-        subtitle: Optional subtitle
-        show_refresh: Whether to show refresh button
-    """
+    """Render a page header with optional refresh button."""
     header_image = _get_header_image(title)
 
-    # Build header HTML
     image_html = ""
     if header_image:
         try:
@@ -309,11 +362,6 @@ def render_page_header(title: str, subtitle: Optional[str] = None, show_refresh:
 
 
 def render_section_header(title: str, icon: str = ""):
-    """Render a section header.
-
-    Args:
-        title: Section title
-        icon: Optional emoji icon
-    """
+    """Render a section header."""
     icon_html = f"{icon} " if icon else ""
     st.markdown(f'<h2 class="sub-header">{icon_html}{title}</h2>', unsafe_allow_html=True)
