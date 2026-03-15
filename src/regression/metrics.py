@@ -228,7 +228,8 @@ def compute_marginal_significance(
     Tests:
     1. Paired t-test on per-window Rank ICs
     2. Paired t-test on per-window test Sharpes
-    3. Bootstrap CI for Sharpe difference
+    3. Diebold-Mariano test on forecast accuracy
+    4. Bootstrap CI for Sharpe difference
 
     Args:
         baseline_window_rank_ics: Per-window Rank IC from baseline step.
@@ -277,7 +278,29 @@ def compute_marginal_significance(
             "n_windows": n,
         }
 
-    # 3. Bootstrap CI for Sharpe difference
+    # 3. Diebold-Mariano test on forecast accuracy (Rank IC as proxy)
+    if n >= 3:
+        # Use squared forecast error proxy: (1 - rank_ic)^2
+        e_base = (1.0 - b_ics[:n]) ** 2
+        e_var = (1.0 - v_ics[:n]) ** 2
+        d = e_base - e_var  # positive = variant is more accurate
+        d_mean = np.mean(d)
+        d_var = np.var(d, ddof=1)
+        if d_var > 0:
+            dm_stat = float(d_mean / np.sqrt(d_var / n))
+            dm_p_val = float(2 * (1 - stats.t.cdf(abs(dm_stat), df=n - 1)))
+        else:
+            dm_stat = 0.0
+            dm_p_val = 1.0
+        results["diebold_mariano"] = {
+            "dm_stat": dm_stat,
+            "p_value": dm_p_val,
+            "significant": bool(dm_p_val < (1 - confidence)),
+            "mean_loss_diff": float(d_mean),
+            "n_windows": n,
+        }
+
+    # 4. Bootstrap CI for Sharpe difference
     sharpe_diff = variant_sharpe - baseline_sharpe
     if n >= 3:
         # Bootstrap the per-window Sharpe differences

@@ -154,6 +154,30 @@ class CLIConfig:
 
 
 @dataclass
+class RegressionConfig:
+    """Configuration for feature regression testing."""
+    baseline_features: List[str] = field(
+        default_factory=lambda: ["returns", "volatility", "volume"]
+    )
+    default_feature_order: List[str] = field(default_factory=lambda: [
+        "valuation", "rsi", "macd", "bollinger", "atr", "adx",
+        "obv", "gap", "momentum", "mean_reversion", "sentiment",
+    ])
+    tune_on_add: bool = False
+    tune_model_params: bool = False
+    tuning_trials: int = 30
+    model_tuning_trials: int = 50
+    objective_metric: str = "mean_rank_ic"
+    significance_alpha: float = 0.05
+    n_bootstrap: int = 1000
+    # Guard metric thresholds
+    max_drawdown_threshold: float = -0.30
+    turnover_threshold: float = 0.80
+    overfit_sharpe_ratio_threshold: float = 2.5
+    ic_pct_positive_threshold: float = 0.50
+
+
+@dataclass
 class AppConfig:
     """Main application configuration combining all configs."""
     model: ModelConfig = field(default_factory=ModelConfig)
@@ -163,6 +187,7 @@ class AppConfig:
     features: FeatureConfig = field(default_factory=FeatureConfig)
     sentiment: SentimentConfig = field(default_factory=SentimentConfig)
     cli: CLIConfig = field(default_factory=CLIConfig)
+    regression: RegressionConfig = field(default_factory=RegressionConfig)
 
 
 def _deep_merge(base: Dict, override: Dict) -> Dict:
@@ -241,7 +266,8 @@ def load_config(
     features_cfg = FeatureConfig(**config_dict.get('features', {})) if 'features' in config_dict else FeatureConfig()
     sentiment_cfg = SentimentConfig(**config_dict.get('sentiment', {})) if 'sentiment' in config_dict else SentimentConfig()
     cli_cfg = CLIConfig(**config_dict.get('cli', {})) if 'cli' in config_dict else CLIConfig()
-    
+    regression_cfg = RegressionConfig(**config_dict.get('regression', {})) if 'regression' in config_dict else RegressionConfig()
+
     # Apply environment variable overrides
     if use_env:
         # Model config
@@ -270,7 +296,8 @@ def load_config(
         data=data_cfg,
         features=features_cfg,
         sentiment=sentiment_cfg,
-        cli=cli_cfg
+        cli=cli_cfg,
+        regression=regression_cfg,
     )
     # Override trigger params from Bayesian-optimized JSON if present
     _apply_optimized_trigger_params(config)
@@ -461,6 +488,21 @@ def save_config(config: AppConfig, path: Union[str, Path]) -> None:
             'save_results': config.cli.save_results,
             'results_path': config.cli.results_path,
             'save_backtest_csv': config.cli.save_backtest_csv,
+        },
+        'regression': {
+            'baseline_features': config.regression.baseline_features,
+            'default_feature_order': config.regression.default_feature_order,
+            'tune_on_add': config.regression.tune_on_add,
+            'tune_model_params': config.regression.tune_model_params,
+            'tuning_trials': config.regression.tuning_trials,
+            'model_tuning_trials': config.regression.model_tuning_trials,
+            'objective_metric': config.regression.objective_metric,
+            'significance_alpha': config.regression.significance_alpha,
+            'n_bootstrap': config.regression.n_bootstrap,
+            'max_drawdown_threshold': config.regression.max_drawdown_threshold,
+            'turnover_threshold': config.regression.turnover_threshold,
+            'overfit_sharpe_ratio_threshold': config.regression.overfit_sharpe_ratio_threshold,
+            'ic_pct_positive_threshold': config.regression.ic_pct_positive_threshold,
         },
     }
     
