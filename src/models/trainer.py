@@ -15,6 +15,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
+import lightgbm as lgb
 from lightgbm import LGBMRegressor
 
 
@@ -25,10 +26,15 @@ class ModelConfig:
     test_size: float = 0.2
     random_state: int = 42
     params: Dict[str, Any] = field(default_factory=lambda: {
-        "n_estimators": 300,
-        "learning_rate": 0.05,
-        "max_depth": -1,
-        "num_leaves": 31,
+        "n_estimators": 200,
+        "learning_rate": 0.03,
+        "max_depth": 6,
+        "num_leaves": 15,
+        "min_child_samples": 50,
+        "reg_alpha": 0.3,
+        "reg_lambda": 0.5,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
         "n_jobs": -1,          # Use all available cores for training
         "verbose": -1,         # Suppress sklearn wrapper output
         "verbosity": -1,       # Suppress native LightGBM C++ output
@@ -73,11 +79,18 @@ def train_lgbm_regressor(
         X, y, test_size=config.test_size, random_state=config.random_state
     )
 
-    model = LGBMRegressor(**config.params)
+    # Separate early_stopping_rounds from model params (it's a fit-time param)
+    fit_params = dict(config.params)
+    early_stopping = fit_params.pop("early_stopping_rounds", None)
+
+    model = LGBMRegressor(**fit_params)
+    callbacks = [lgb.log_evaluation(period=-1)]  # Suppress verbose output
+    if early_stopping:
+        callbacks.append(lgb.early_stopping(stopping_rounds=early_stopping, verbose=False))
     model.fit(
         X_train, y_train,
         eval_set=[(X_valid, y_valid)],
-        callbacks=[lambda env: None]  # Suppress verbose output
+        callbacks=callbacks,
     )
     
     # Compute validation metrics

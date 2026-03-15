@@ -64,14 +64,14 @@ class FeatureSet:
 
 # Default feature addition order for regression testing
 DEFAULT_FEATURE_ORDER = [
-    "valuation",
-    "rsi",
     "macd",
     "bollinger",
-    "atr",
     "adx",
-    "obv",
+    "valuation",
     "gap",
+    "atr",
+    "obv",
+    "rsi",
     "momentum",
     "mean_reversion",
     "sentiment",

@@ -22,6 +22,8 @@ from .metrics import (
     compute_marginal_significance,
     compute_feature_contribution,
     check_guard_metrics,
+    check_feature_redundancy,
+    detect_ic_regime_shift,
 )
 from .database import RegressionDatabase
 from .tuning import FeatureParamTuner, ModelParamTuner
@@ -63,6 +65,7 @@ class RegressionStepResult:
     marginal_metrics: Optional[Dict[str, float]] = None
     significance_tests: Optional[Dict[str, Dict[str, Any]]] = None
     guard_violations: Optional[List[Dict]] = None
+    redundancy_info: Optional[Dict[str, Any]] = None
     tuned_params: Optional[Dict[str, Any]] = None
     model_config_used: Optional[Dict[str, Any]] = None
     run_id: Optional[str] = None
@@ -264,6 +267,21 @@ class RegressionOrchestrator:
         if verbose:
             print(f"  Features: {len(available_cols)} columns")
 
+        # Redundancy check for non-baseline steps
+        redundancy_info = None
+        if previous_result is not None and feature_added not in ("BASELINE", "MODEL_TUNING"):
+            added_cols = self.registry.resolve_columns([feature_added])
+            added_cols_available = [c for c in added_cols if c in self.training_data.columns]
+            prev_cols = previous_result.feature_columns
+            if added_cols_available and prev_cols:
+                redundancy_info = check_feature_redundancy(
+                    self.training_data, prev_cols, added_cols_available,
+                )
+                if verbose and redundancy_info.get("is_redundant"):
+                    print(f"  REDUNDANCY: {feature_added} correlates with existing features (max |r|={redundancy_info['max_correlation']:.3f})")
+                    for pair in redundancy_info.get("redundant_pairs", [])[:3]:
+                        print(f"    {pair['new_col']} <-> {pair['existing_col']}: r={pair['correlation']:.3f}")
+
         # Run backtest
         model_config = model_config_override or self.model_config
         try:
@@ -330,6 +348,20 @@ class RegressionOrchestrator:
             for v in guard_violations:
                 print(f"  GUARD VIOLATION: {v['message']}")
 
+        # Store redundancy info in metrics for DB persistence
+        if redundancy_info is not None:
+            metrics["redundancy"] = redundancy_info
+
+        # IC regime detection
+        regime_info = detect_ic_regime_shift(window_data["rank_ics"])
+        metrics["ic_regime"] = regime_info
+        if regime_info.get("is_degraded") and verbose:
+            print(
+                f"  IC REGIME WARNING: z={regime_info['z_score']:.2f},"
+                f" recent IC={regime_info['recent_mean']:.4f}"
+                f" vs historical={regime_info['historical_mean']:.4f}"
+            )
+
         duration = time.time() - step_start
 
         if verbose:
@@ -360,6 +392,7 @@ class RegressionOrchestrator:
             marginal_metrics=marginal,
             significance_tests=significance,
             guard_violations=guard_violations,
+            redundancy_info=redundancy_info,
             tuned_params=tuned_params,
             model_config_used=asdict(model_config) if model_config_override else None,
             duration_seconds=duration,

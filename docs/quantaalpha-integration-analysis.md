@@ -209,3 +209,16 @@ These can be adopted independently, without installing QuantaAlpha as a dependen
 | Share backtest? | **No** -- QuantaAlpha uses Qlib; midterm-stock-planner uses custom walk-forward |
 | Worth integrating? | **Yes** -- specific components (quality gates, LLM-guided selection, IC regime detection) add significant value without full framework dependency |
 | Priority integrations? | 1. Factor quality gates (redundancy), 2. IC regime detection, 3. LLM feature suggestions |
+
+---
+
+## Implementation Status (2026-03-15)
+
+| Integration | Status | Location |
+|-------------|--------|----------|
+| Factor redundancy gates (IC correlation) | **DONE** | `src/regression/metrics.py::check_feature_redundancy()` |
+| IC regime detection (Z-score alert) | **DONE** | `src/regression/metrics.py::detect_ic_regime_shift()` |
+| Overfitting mitigation (regularization) | **DONE** | `config/config.yaml` model params, `src/models/trainer.py` early stopping |
+| Optimal feature set from regression | **DONE** | `config/config.yaml` regression.recommended_features |
+| LLM-guided feature selection | Planned | Phase 3 |
+| Custom factor expression engine | Planned | Phase 4 |

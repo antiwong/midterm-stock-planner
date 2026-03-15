@@ -4,10 +4,16 @@ model:
   random_state: 42
   model_type: lightgbm
   params:
-    n_estimators: 300
-    learning_rate: 0.05
-    max_depth: -1
-    num_leaves: 31
+    n_estimators: 200
+    learning_rate: 0.03
+    max_depth: 6
+    num_leaves: 15
+    min_child_samples: 50
+    reg_alpha: 0.3
+    reg_lambda: 0.5
+    subsample: 0.7
+    colsample_bytree: 0.7
+    early_stopping_rounds: 30
 # MACD/RSI params for trigger backtest and feature engineering.
 # Run scripts/optimize_macd_rsi_bayesian.py and use --save to overwrite with optimized values.
 trigger:
@@ -108,18 +114,27 @@ regression:
   - returns
   - volatility
   - volume
+  # Optimal feature order based on regression test reg_20260315_152332 (tech_giants).
+  # Validated: macd (+0.15 Sharpe), bollinger (+0.64), adx (+0.08).
+  # Features that hurt performance: rsi (-0.28), momentum (-0.24), obv (-0.18).
   default_feature_order:
-  - valuation
-  - rsi
   - macd
   - bollinger
-  - atr
   - adx
-  - obv
+  - valuation
   - gap
+  - atr
+  - obv
+  - rsi
   - momentum
   - mean_reversion
   - sentiment
+  # Recommended production feature set (validated optimal):
+  # baseline + macd + bollinger + adx → Sharpe=1.34, RankIC=0.48
+  recommended_features:
+  - macd
+  - bollinger
+  - adx
   tune_on_add: false          # Bayesian-optimize feature params when adding
   tune_model_params: false    # Tune LightGBM hyperparams at end
   tuning_trials: 30           # Trials per feature (8 random + 22 Bayesian)

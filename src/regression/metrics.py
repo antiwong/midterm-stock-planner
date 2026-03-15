@@ -164,18 +164,19 @@ def compute_extended_metrics(
         max_dd = abs(metrics.get("max_drawdown", -0.01))
         metrics["calmar_ratio"] = float(ann_ret / max_dd) if max_dd > 0 else 0.0
 
-    # Overfitting detection
+    # Overfitting detection — use median ratio (robust to outlier windows)
     train_sharpes = [w.get("train_sharpe") for w in window_results
                      if w.get("train_sharpe") is not None]
     test_sharpes = [w.get("test_sharpe") for w in window_results
                     if w.get("test_sharpe") is not None]
     if train_sharpes and test_sharpes:
         ratios = [
-            t / s for t, s in zip(train_sharpes, test_sharpes)
-            if s is not None and s > 0
+            abs(t / s) for t, s in zip(train_sharpes, test_sharpes)
+            if s is not None and abs(s) > 0.01  # avoid division by near-zero
         ]
         if ratios:
-            metrics["train_test_sharpe_ratio"] = float(np.max(ratios))
+            metrics["train_test_sharpe_ratio"] = float(np.median(ratios))
+            metrics["max_train_test_sharpe_ratio"] = float(np.max(ratios))
             metrics["mean_train_test_sharpe_ratio"] = float(np.mean(ratios))
 
     return metrics
@@ -407,3 +408,195 @@ def compute_feature_contribution(
         contribution["feature_importance_rank"] = 0
 
     return contribution
+
+
+def check_feature_redundancy(
+    training_data: pd.DataFrame,
+    existing_columns: List[str],
+    new_columns: List[str],
+    target_col: str = "target",
+    correlation_threshold: float = 0.8,
+) -> Dict[str, Any]:
+    """Check if new feature columns are redundant with existing ones.
+
+    Computes pairwise Spearman rank correlation between each new column and
+    each existing column. If any pair has |correlation| > threshold, the new
+    feature is flagged as potentially redundant.
+
+    Also checks if the new columns have significant Rank IC with the target
+    (if target column exists), to distinguish "redundant but useful" from
+    "redundant and useless".
+
+    Args:
+        training_data: Full dataset with all feature columns.
+        existing_columns: Currently active feature columns.
+        new_columns: Columns being added.
+        target_col: Target column name.
+        correlation_threshold: Max allowed |correlation| before flagging.
+
+    Returns:
+        Dict with:
+          - is_redundant: bool (any new col has |corr| > threshold with existing)
+          - redundant_pairs: list of {new_col, existing_col, correlation}
+          - max_correlation: float
+          - new_column_ics: dict mapping new column to its Rank IC with target
+          - recommendation: "add", "add_with_warning", or "skip"
+    """
+    redundant_pairs: List[Dict[str, Any]] = []
+    max_correlation = 0.0
+
+    # Compute cross-correlation block: new cols vs existing cols
+    all_cols = existing_columns + new_columns
+    available = [c for c in all_cols if c in training_data.columns]
+    if not available:
+        return {
+            "is_redundant": False,
+            "redundant_pairs": [],
+            "max_correlation": 0.0,
+            "new_column_ics": {},
+            "recommendation": "add",
+        }
+
+    # Compute Spearman correlation matrix for the union of columns
+    subset = training_data[available].dropna()
+    if len(subset) < 10:
+        return {
+            "is_redundant": False,
+            "redundant_pairs": [],
+            "max_correlation": 0.0,
+            "new_column_ics": {},
+            "recommendation": "add",
+        }
+
+    corr_matrix = subset.corr(method="spearman")
+
+    # Extract cross-correlation pairs (new vs existing only)
+    for new_col in new_columns:
+        if new_col not in corr_matrix.columns:
+            continue
+        for exist_col in existing_columns:
+            if exist_col not in corr_matrix.columns:
+                continue
+            corr_val = corr_matrix.loc[new_col, exist_col]
+            if pd.isna(corr_val):
+                continue
+            abs_corr = abs(float(corr_val))
+            if abs_corr > max_correlation:
+                max_correlation = abs_corr
+            if abs_corr > correlation_threshold:
+                redundant_pairs.append({
+                    "new_col": new_col,
+                    "existing_col": exist_col,
+                    "correlation": float(corr_val),
+                })
+
+    # Sort redundant pairs by absolute correlation descending
+    redundant_pairs.sort(key=lambda p: abs(p["correlation"]), reverse=True)
+
+    is_redundant = len(redundant_pairs) > 0
+
+    # Compute IC of each new column with target
+    new_column_ics: Dict[str, float] = {}
+    has_target = target_col in training_data.columns
+    for new_col in new_columns:
+        if new_col not in training_data.columns:
+            continue
+        if has_target:
+            pair = training_data[[new_col, target_col]].dropna()
+            if len(pair) >= 10:
+                ic = pair.corr(method="spearman").iloc[0, 1]
+                new_column_ics[new_col] = float(ic) if not pd.isna(ic) else 0.0
+            else:
+                new_column_ics[new_col] = 0.0
+        else:
+            new_column_ics[new_col] = 0.0
+
+    # Recommendation logic
+    if is_redundant:
+        any_useful = any(abs(v) >= 0.02 for v in new_column_ics.values())
+        recommendation = "add_with_warning" if any_useful else "skip"
+    else:
+        recommendation = "add"
+
+    return {
+        "is_redundant": is_redundant,
+        "redundant_pairs": redundant_pairs,
+        "max_correlation": max_correlation,
+        "new_column_ics": new_column_ics,
+        "recommendation": recommendation,
+    }
+
+
+def detect_ic_regime_shift(
+    window_rank_ics: List[float],
+    lookback_windows: int = 20,
+    z_threshold: float = 2.0,
+) -> Dict[str, Any]:
+    """Detect IC regime shifts by comparing recent IC to historical.
+
+    Computes rolling IC mean over the last `lookback_windows` windows and compares
+    to the full historical mean. Alerts when recent IC is >z_threshold sigma below.
+
+    Args:
+        window_rank_ics: Per-window Rank IC values (ordered chronologically).
+        lookback_windows: Number of recent windows to consider.
+        z_threshold: Z-score threshold for alert.
+
+    Returns:
+        Dict with regime detection results.
+    """
+    ics = [x for x in window_rank_ics if x is not None]
+    if len(ics) < lookback_windows + 10:
+        return {"regime_status": "insufficient_data"}
+
+    all_ics = np.array(ics, dtype=float)
+    recent_ics = all_ics[-lookback_windows:]
+
+    historical_mean = float(np.mean(all_ics))
+    historical_std = float(np.std(all_ics))
+    recent_mean = float(np.mean(recent_ics))
+    recent_std = float(np.std(recent_ics))
+
+    # Z-score: how far recent mean is from historical mean in standard-error units
+    if historical_std > 0:
+        z_score = float(
+            (recent_mean - historical_mean)
+            / (historical_std / np.sqrt(lookback_windows))
+        )
+    else:
+        z_score = 0.0
+
+    is_degraded = z_score < -z_threshold
+
+    if z_score < -z_threshold:
+        regime_status = "degraded"
+    elif z_score < -1.5:
+        regime_status = "warning"
+    else:
+        regime_status = "stable"
+
+    # Trend slope via linear regression over recent windows
+    x = np.arange(lookback_windows, dtype=float)
+    if len(recent_ics) > 1:
+        coeffs = np.polyfit(x, recent_ics, 1)
+        trend_slope = float(coeffs[0])
+    else:
+        trend_slope = 0.0
+
+    pct_positive_recent = float(np.mean(recent_ics > 0))
+    pct_positive_overall = float(np.mean(all_ics > 0))
+
+    return {
+        "historical_mean": historical_mean,
+        "historical_std": historical_std,
+        "recent_mean": recent_mean,
+        "recent_std": recent_std,
+        "z_score": z_score,
+        "is_degraded": is_degraded,
+        "regime_status": regime_status,
+        "trend_slope": trend_slope,
+        "pct_positive_recent": pct_positive_recent,
+        "pct_positive_overall": pct_positive_overall,
+        "lookback_windows": lookback_windows,
+        "total_windows": len(ics),
+    }

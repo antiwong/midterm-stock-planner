@@ -181,6 +181,70 @@ class RegressionReporter:
                     f"{v['value']:.4f} | {v['threshold']} |"
                 )
 
+        # Feature Redundancy
+        redundancy_rows = []
+        for s in steps:
+            if s.get("metrics_json"):
+                try:
+                    metrics = json.loads(s["metrics_json"])
+                    red = metrics.get("redundancy")
+                    if red and red.get("is_redundant"):
+                        # Find the most correlated existing column
+                        top_pair = red["redundant_pairs"][0] if red.get("redundant_pairs") else {}
+                        correlated_with = top_pair.get("existing_col", "-")
+                        # Compute max IC across new columns
+                        ics = red.get("new_column_ics", {})
+                        max_ic = max((abs(v) for v in ics.values()), default=0.0)
+                        redundancy_rows.append({
+                            "feature": s["feature_added"],
+                            "max_corr": red.get("max_correlation", 0),
+                            "correlated_with": correlated_with,
+                            "ic": max_ic,
+                            "recommendation": red.get("recommendation", "-"),
+                        })
+                except Exception:
+                    pass
+
+        if redundancy_rows:
+            lines.append("\n## Feature Redundancy\n")
+            lines.append("| Feature | Max Correlation | Correlated With | IC | Recommendation |")
+            lines.append("|---------|-----------------|-----------------|-----|----------------|")
+            for r in redundancy_rows:
+                lines.append(
+                    f"| {r['feature']} | {r['max_corr']:.3f} | {r['correlated_with']} | "
+                    f"{r['ic']:.4f} | {r['recommendation']} |"
+                )
+
+        # IC Regime Analysis
+        regime_rows = []
+        for s in steps:
+            if s.get("metrics_json"):
+                try:
+                    metrics = json.loads(s["metrics_json"])
+                    regime = metrics.get("ic_regime")
+                    if regime and regime.get("regime_status") != "insufficient_data":
+                        regime_rows.append({
+                            "step": s["step_number"],
+                            "feature": s["feature_added"],
+                            "recent_ic": regime.get("recent_mean", 0),
+                            "historical_ic": regime.get("historical_mean", 0),
+                            "z_score": regime.get("z_score", 0),
+                            "status": regime.get("regime_status", "unknown"),
+                        })
+                except Exception:
+                    pass
+
+        if regime_rows:
+            lines.append("\n## IC Regime Analysis\n")
+            lines.append("| Step | Feature | Recent IC | Historical IC | Z-Score | Status |")
+            lines.append("|------|---------|-----------|---------------|---------|--------|")
+            for r in regime_rows:
+                status_display = r["status"].upper() if r["status"] == "degraded" else r["status"]
+                lines.append(
+                    f"| {r['step']} | {r['feature']} | {r['recent_ic']:.4f} | "
+                    f"{r['historical_ic']:.4f} | {r['z_score']:.2f} | {status_display} |"
+                )
+
         # Tuned Parameters
         has_tuned = any(s.get("tuned_params_json") for s in steps)
         if has_tuned:

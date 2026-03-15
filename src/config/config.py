@@ -20,10 +20,16 @@ class ModelConfig:
     random_state: int = 42
     model_type: str = "lightgbm"  # lightgbm, xgboost, catboost
     params: Dict[str, Any] = field(default_factory=lambda: {
-        "n_estimators": 300,
-        "learning_rate": 0.05,
-        "max_depth": -1,
-        "num_leaves": 31,
+        "n_estimators": 200,
+        "learning_rate": 0.03,
+        "max_depth": 6,
+        "num_leaves": 15,
+        "min_child_samples": 50,
+        "reg_alpha": 0.3,
+        "reg_lambda": 0.5,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "early_stopping_rounds": 30,
     })
 
 
@@ -160,8 +166,11 @@ class RegressionConfig:
         default_factory=lambda: ["returns", "volatility", "volume"]
     )
     default_feature_order: List[str] = field(default_factory=lambda: [
-        "valuation", "rsi", "macd", "bollinger", "atr", "adx",
-        "obv", "gap", "momentum", "mean_reversion", "sentiment",
+        "macd", "bollinger", "adx", "valuation", "gap", "atr",
+        "obv", "rsi", "momentum", "mean_reversion", "sentiment",
+    ])
+    recommended_features: List[str] = field(default_factory=lambda: [
+        "macd", "bollinger", "adx",
     ])
     tune_on_add: bool = False
     tune_model_params: bool = False

@@ -168,15 +168,15 @@ class ModelParamTuner:
     """Bayesian optimization for LightGBM hyperparameters."""
 
     SEARCH_SPACE = {
-        "n_estimators": TunableParam("int", 100, 500, 300),
-        "learning_rate": TunableParam("float", 0.01, 0.1, 0.05, prior="log-uniform"),
-        "num_leaves": TunableParam("int", 15, 63, 31),
-        "max_depth": TunableParam("int", 3, 10, 6),
-        "min_child_samples": TunableParam("int", 10, 50, 20),
-        "reg_alpha": TunableParam("float", 0.0, 1.0, 0.0),
-        "reg_lambda": TunableParam("float", 0.0, 1.0, 0.0),
-        "subsample": TunableParam("float", 0.6, 1.0, 1.0),
-        "colsample_bytree": TunableParam("float", 0.6, 1.0, 1.0),
+        "n_estimators": TunableParam("int", 50, 300, 200),
+        "learning_rate": TunableParam("float", 0.01, 0.1, 0.03, prior="log-uniform"),
+        "num_leaves": TunableParam("int", 7, 31, 15),
+        "max_depth": TunableParam("int", 3, 8, 6),
+        "min_child_samples": TunableParam("int", 30, 100, 50),
+        "reg_alpha": TunableParam("float", 0.1, 1.0, 0.3),
+        "reg_lambda": TunableParam("float", 0.1, 1.0, 0.5),
+        "subsample": TunableParam("float", 0.5, 0.9, 0.7),
+        "colsample_bytree": TunableParam("float", 0.5, 0.9, 0.7),
     }
 
     def tune(
