@@ -1,0 +1,819 @@
+#!/usr/bin/env python3
+"""Paper trading pipeline for midterm-stock-planner.
+
+Runs daily after market close to:
+1. Refresh price data (append latest day)
+2. Retrain model on updated data
+3. Generate buy/sell signals for the next period
+4. Simulate execution with transaction costs
+5. Track cumulative P&L
+6. Log everything to database + JSON
+
+Usage:
+    # Run daily signal generation (after market close)
+    python scripts/paper_trading.py run
+
+    # Run with specific watchlist
+    python scripts/paper_trading.py run --watchlist tech_giants
+
+    # View current positions and P&L
+    python scripts/paper_trading.py status
+
+    # View trade history
+    python scripts/paper_trading.py history --last 30
+
+    # Refresh data only (no signal generation)
+    python scripts/paper_trading.py refresh
+
+    # Setup cron job (runs daily at 5:30 PM ET)
+    python scripts/paper_trading.py setup-cron
+
+    # Backfill from a date (simulate paper trading from a past date)
+    python scripts/paper_trading.py backfill --start 2026-01-01
+"""
+
+import argparse
+import json
+import os
+import sqlite3
+import sys
+import time
+from dataclasses import asdict, dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
+
+# Add project root to path
+PROJECT_ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.config.config import load_config, BacktestConfig, ModelConfig, bars_per_day_from_interval
+from src.features.engineering import (
+    compute_all_features_extended,
+    make_training_dataset,
+    get_feature_columns,
+)
+from src.data.loader import load_price_data, load_benchmark_data, load_fundamental_data
+from src.backtest.rolling import run_walk_forward_backtest, _construct_portfolio
+
+
+# ---------------------------------------------------------------------------
+# Data classes
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PaperPosition:
+    """A single stock position in the paper portfolio."""
+    ticker: str
+    weight: float       # Target weight (0-1)
+    shares: float       # Simulated shares (fractional OK)
+    entry_price: float  # Price at entry
+    entry_date: str
+    current_price: float = 0.0
+    unrealized_pnl: float = 0.0
+    unrealized_pnl_pct: float = 0.0
+
+
+@dataclass
+class PaperTrade:
+    """A simulated trade execution."""
+    date: str
+    ticker: str
+    action: str         # "BUY", "SELL", "REBALANCE"
+    shares: float
+    price: float
+    value: float        # shares * price
+    cost: float         # transaction cost
+    weight_before: float
+    weight_after: float
+
+
+@dataclass
+class DailySnapshot:
+    """End-of-day portfolio snapshot."""
+    date: str
+    portfolio_value: float
+    cash: float
+    invested: float
+    daily_return: float
+    cumulative_return: float
+    benchmark_return: float
+    benchmark_cumulative: float
+    positions: List[Dict[str, Any]]
+    signals: List[Dict[str, Any]]  # Top-ranked stocks with scores
+    trades: List[Dict[str, Any]]
+    metrics: Dict[str, Any]
+
+
+# ---------------------------------------------------------------------------
+# Paper Trading Database
+# ---------------------------------------------------------------------------
+
+class PaperTradingDB:
+    """SQLite persistence for paper trading state."""
+
+    def __init__(self, db_path: str = "data/paper_trading.db"):
+        self.db_path = db_path
+        self.conn = sqlite3.connect(db_path)
+        self.conn.row_factory = sqlite3.Row
+        self._create_tables()
+
+    def _create_tables(self):
+        cursor = self.conn.cursor()
+        cursor.executescript("""
+            CREATE TABLE IF NOT EXISTS portfolio_state (
+                id INTEGER PRIMARY KEY CHECK (id = 1),
+                cash REAL NOT NULL DEFAULT 100000.0,
+                initial_value REAL NOT NULL DEFAULT 100000.0,
+                last_updated TEXT,
+                config_json TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS positions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ticker TEXT NOT NULL,
+                shares REAL NOT NULL,
+                entry_price REAL NOT NULL,
+                entry_date TEXT NOT NULL,
+                weight REAL NOT NULL DEFAULT 0.0,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                exit_date TEXT,
+                exit_price REAL,
+                realized_pnl REAL,
+                UNIQUE(ticker, entry_date, is_active)
+            );
+
+            CREATE TABLE IF NOT EXISTS trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                action TEXT NOT NULL,
+                shares REAL NOT NULL,
+                price REAL NOT NULL,
+                value REAL NOT NULL,
+                cost REAL NOT NULL DEFAULT 0.0,
+                weight_before REAL DEFAULT 0.0,
+                weight_after REAL DEFAULT 0.0
+            );
+
+            CREATE TABLE IF NOT EXISTS daily_snapshots (
+                date TEXT PRIMARY KEY,
+                portfolio_value REAL NOT NULL,
+                cash REAL NOT NULL,
+                invested REAL NOT NULL,
+                daily_return REAL,
+                cumulative_return REAL,
+                benchmark_return REAL,
+                benchmark_cumulative REAL,
+                positions_json TEXT,
+                signals_json TEXT,
+                trades_json TEXT,
+                metrics_json TEXT
+            );
+
+            CREATE TABLE IF NOT EXISTS signals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                prediction REAL NOT NULL,
+                rank INTEGER NOT NULL,
+                percentile REAL,
+                action TEXT,
+                features_json TEXT
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_signals_date ON signals(date);
+            CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(date);
+            CREATE INDEX IF NOT EXISTS idx_positions_active ON positions(is_active);
+        """)
+
+        # Initialize portfolio state if not exists
+        cursor.execute("INSERT OR IGNORE INTO portfolio_state (id, cash, initial_value) VALUES (1, 100000.0, 100000.0)")
+        self.conn.commit()
+
+    def get_state(self) -> Dict[str, Any]:
+        row = self.conn.execute("SELECT * FROM portfolio_state WHERE id = 1").fetchone()
+        return dict(row) if row else {"cash": 100000.0, "initial_value": 100000.0}
+
+    def update_cash(self, cash: float):
+        self.conn.execute("UPDATE portfolio_state SET cash = ?, last_updated = ? WHERE id = 1",
+                          (cash, datetime.now().isoformat()))
+        self.conn.commit()
+
+    def get_active_positions(self) -> List[Dict[str, Any]]:
+        rows = self.conn.execute("SELECT * FROM positions WHERE is_active = 1").fetchall()
+        return [dict(r) for r in rows]
+
+    def upsert_position(self, ticker: str, shares: float, entry_price: float,
+                        entry_date: str, weight: float):
+        """Insert or update an active position."""
+        existing = self.conn.execute(
+            "SELECT id FROM positions WHERE ticker = ? AND is_active = 1", (ticker,)
+        ).fetchone()
+
+        if existing:
+            self.conn.execute(
+                "UPDATE positions SET shares = ?, weight = ? WHERE id = ?",
+                (shares, weight, existing["id"])
+            )
+        else:
+            self.conn.execute(
+                "INSERT INTO positions (ticker, shares, entry_price, entry_date, weight) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (ticker, shares, entry_price, entry_date, weight)
+            )
+        self.conn.commit()
+
+    def close_position(self, ticker: str, exit_date: str, exit_price: float, realized_pnl: float):
+        self.conn.execute(
+            "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? "
+            "WHERE ticker = ? AND is_active = 1",
+            (exit_date, exit_price, realized_pnl, ticker)
+        )
+        self.conn.commit()
+
+    def record_trade(self, trade: PaperTrade):
+        self.conn.execute(
+            "INSERT INTO trades (date, ticker, action, shares, price, value, cost, weight_before, weight_after) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (trade.date, trade.ticker, trade.action, trade.shares, trade.price,
+             trade.value, trade.cost, trade.weight_before, trade.weight_after)
+        )
+        self.conn.commit()
+
+    def record_signals(self, date: str, signals_df: pd.DataFrame):
+        for _, row in signals_df.iterrows():
+            self.conn.execute(
+                "INSERT INTO signals (date, ticker, prediction, rank, percentile, action) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (date, row["ticker"], row["prediction"], row.get("rank", 0),
+                 row.get("percentile", 0), row.get("action", "HOLD"))
+            )
+        self.conn.commit()
+
+    def record_snapshot(self, snap: DailySnapshot):
+        self.conn.execute(
+            "INSERT OR REPLACE INTO daily_snapshots "
+            "(date, portfolio_value, cash, invested, daily_return, cumulative_return, "
+            "benchmark_return, benchmark_cumulative, positions_json, signals_json, trades_json, metrics_json) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (snap.date, snap.portfolio_value, snap.cash, snap.invested,
+             snap.daily_return, snap.cumulative_return,
+             snap.benchmark_return, snap.benchmark_cumulative,
+             json.dumps(snap.positions), json.dumps(snap.signals),
+             json.dumps(snap.trades), json.dumps(snap.metrics))
+        )
+        self.conn.commit()
+
+    def get_snapshots(self, last_n: int = 30) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM daily_snapshots ORDER BY date DESC LIMIT ?", (last_n,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_trades(self, last_n: int = 50) -> List[Dict[str, Any]]:
+        rows = self.conn.execute(
+            "SELECT * FROM trades ORDER BY date DESC, id DESC LIMIT ?", (last_n,)
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+    def get_latest_snapshot_date(self) -> Optional[str]:
+        row = self.conn.execute(
+            "SELECT date FROM daily_snapshots ORDER BY date DESC LIMIT 1"
+        ).fetchone()
+        return row["date"] if row else None
+
+
+# ---------------------------------------------------------------------------
+# Paper Trading Engine
+# ---------------------------------------------------------------------------
+
+class PaperTradingEngine:
+    """Core engine for paper trading simulation."""
+
+    def __init__(self, config_path: str = "config/config.yaml",
+                 watchlist: Optional[str] = None,
+                 initial_capital: float = 100000.0):
+        self.config = load_config(config_path)
+        self.watchlist = watchlist
+        self.initial_capital = initial_capital
+        self.db = PaperTradingDB()
+        self.transaction_cost = self.config.backtest.transaction_cost
+
+        # Initialize state if first run
+        state = self.db.get_state()
+        if state.get("last_updated") is None:
+            self.db.update_cash(initial_capital)
+            self.db.conn.execute(
+                "UPDATE portfolio_state SET initial_value = ? WHERE id = 1",
+                (initial_capital,)
+            )
+            self.db.conn.commit()
+
+    def refresh_data(self) -> bool:
+        """Download latest price data."""
+        print("Refreshing price data...")
+        try:
+            from scripts.download_prices import PriceDownloader
+        except ImportError:
+            # Try running as subprocess
+            import subprocess
+            cmd = [sys.executable, str(PROJECT_ROOT / "scripts" / "download_prices.py")]
+            if self.watchlist:
+                cmd += ["--watchlist", self.watchlist]
+            cmd += ["--interval", "1d", "--start",
+                    (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")]
+            result = subprocess.run(cmd, capture_output=True, text=True, cwd=str(PROJECT_ROOT))
+            if result.returncode != 0:
+                print(f"Warning: Data refresh failed: {result.stderr[:200]}")
+                return False
+            print("Data refreshed successfully.")
+            return True
+
+        downloader = PriceDownloader(
+            output_path=str(PROJECT_ROOT / self.config.data.price_data_path_daily)
+        )
+        # Get tickers
+        tickers = self._get_universe()
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=10)).strftime("%Y-%m-%d")
+        df = downloader.download(
+            tickers=tickers, start_date=start_date, end_date=end_date,
+            interval="1d", merge_existing=True
+        )
+        if df is not None and len(df) > 0:
+            downloader.save(df)
+            print(f"Data refreshed: {len(df)} rows appended.")
+            return True
+        print("Warning: No new data downloaded.")
+        return False
+
+    def _get_universe(self) -> List[str]:
+        """Get ticker universe from watchlist or config."""
+        if self.watchlist:
+            import yaml
+            wl_path = PROJECT_ROOT / "config" / "watchlists.yaml"
+            with open(wl_path) as f:
+                watchlists = yaml.safe_load(f)
+            if self.watchlist in watchlists:
+                return watchlists[self.watchlist].get("tickers", [])
+        # Fall back to all tickers in price data
+        price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+        if price_path.exists():
+            df = pd.read_csv(price_path, usecols=["ticker"])
+            return sorted(df["ticker"].unique().tolist())
+        return []
+
+    def _load_data(self) -> Tuple[pd.DataFrame, List[str], pd.DataFrame, pd.DataFrame]:
+        """Load and prepare data for model training."""
+        daily_price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+        daily_bench_path = PROJECT_ROOT / getattr(self.config.data, "benchmark_data_path_daily",
+                                                   "data/benchmark_daily.csv")
+
+        price_df = pd.read_csv(daily_price_path, parse_dates=["date"])
+        benchmark_df = pd.read_csv(daily_bench_path, parse_dates=["date"])
+
+        # Filter by watchlist
+        universe = self._get_universe()
+        if universe:
+            price_df = price_df[price_df["ticker"].isin(universe)]
+
+        # Load fundamentals if available
+        fundamental_df = None
+        if self.config.data.fundamental_data_path:
+            fund_path = PROJECT_ROOT / self.config.data.fundamental_data_path
+            if fund_path.exists():
+                fundamental_df = pd.read_csv(fund_path, parse_dates=["date"])
+
+        bpd = bars_per_day_from_interval("1d")
+        feature_cfg = self.config.features
+
+        print(f"Computing features for {price_df['ticker'].nunique()} tickers...")
+        feature_df = compute_all_features_extended(
+            price_df=price_df,
+            fundamental_df=fundamental_df,
+            benchmark_df=benchmark_df,
+            include_technical=getattr(feature_cfg, 'include_technical', True),
+            include_rsi=getattr(feature_cfg, 'include_rsi', False),
+            include_obv=getattr(feature_cfg, 'include_obv', False),
+            include_momentum=getattr(feature_cfg, 'include_momentum', False),
+            include_mean_reversion=getattr(feature_cfg, 'include_mean_reversion', False),
+            bars_per_day=bpd,
+            rsi_period=feature_cfg.rsi_period,
+            macd_fast=feature_cfg.macd_fast,
+            macd_slow=feature_cfg.macd_slow,
+            macd_signal=feature_cfg.macd_signal,
+        )
+
+        training_data = make_training_dataset(
+            feature_df=feature_df,
+            benchmark_df=benchmark_df,
+            horizon_days=feature_cfg.horizon_days,
+            target_col=self.config.model.target_col,
+            bars_per_day=bpd,
+        )
+
+        feature_cols = get_feature_columns(training_data)
+        return training_data, feature_cols, price_df, benchmark_df
+
+    def generate_signals(self) -> pd.DataFrame:
+        """Run walk-forward backtest and extract latest signals."""
+        training_data, feature_cols, price_df, benchmark_df = self._load_data()
+
+        print(f"Running walk-forward backtest ({len(feature_cols)} features)...")
+        t0 = time.time()
+        results = run_walk_forward_backtest(
+            training_data=training_data,
+            benchmark_data=benchmark_df,
+            price_data=price_df,
+            feature_cols=feature_cols,
+            config=self.config.backtest,
+            model_config=ModelConfig(**self.config.model.params)
+            if hasattr(self.config.model, "params") and isinstance(self.config.model.params, dict)
+            else self.config.model,
+            verbose=False,
+        )
+        elapsed = time.time() - t0
+        print(f"Backtest complete in {elapsed:.0f}s. Sharpe={results.metrics.get('sharpe_ratio', 0):.3f}")
+
+        # Extract final signals
+        if results.final_scores is not None and len(results.final_scores) > 0:
+            signals = results.final_scores[["ticker", "prediction", "rank", "percentile"]].copy()
+            signals = signals.sort_values("prediction", ascending=False)
+
+            # Tag actions
+            top_n = self.config.backtest.top_n or 5
+            signals["action"] = "HOLD"
+            signals.iloc[:top_n, signals.columns.get_loc("action")] = "BUY"
+            signals.iloc[top_n:, signals.columns.get_loc("action")] = "SELL"
+            return signals
+        else:
+            print("Warning: No signals generated (empty final_scores).")
+            return pd.DataFrame(columns=["ticker", "prediction", "rank", "percentile", "action"])
+
+    def execute_signals(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
+        """Simulate execution of signals — rebalance portfolio to match target weights."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        state = self.db.get_state()
+        cash = state["cash"]
+        initial_value = state["initial_value"]
+
+        # Get current prices
+        if price_df is None:
+            price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+            price_df = pd.read_csv(price_path, parse_dates=["date"])
+
+        latest_prices = (
+            price_df.sort_values("date")
+            .groupby("ticker")
+            .last()["close"]
+            .to_dict()
+        )
+
+        # Current positions
+        current_positions = self.db.get_active_positions()
+        current_tickers = {p["ticker"]: p for p in current_positions}
+
+        # Calculate current portfolio value
+        invested = sum(
+            p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
+            for p in current_positions
+        )
+        portfolio_value = cash + invested
+
+        # Target portfolio from signals
+        buy_signals = signals[signals["action"] == "BUY"].copy()
+        if len(buy_signals) == 0:
+            print("No BUY signals. Holding current positions.")
+            return
+
+        # Construct target weights using the model's predictions
+        top_n = self.config.backtest.top_n or 5
+        max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
+
+        target_tickers = buy_signals.head(top_n)["ticker"].tolist()
+        scores = buy_signals.head(top_n)["prediction"].values.astype(float)
+        scores_shifted = scores - scores.min() + 1e-8
+        raw_weights = scores_shifted / scores_shifted.sum()
+
+        # Cap weights
+        capped = np.clip(raw_weights, 0, max_weight)
+        target_weights = dict(zip(target_tickers, capped / capped.sum()))
+
+        trades = []
+
+        # SELL positions not in target
+        for ticker, pos in current_tickers.items():
+            if ticker not in target_weights:
+                price = latest_prices.get(ticker, pos["entry_price"])
+                value = pos["shares"] * price
+                cost = value * self.transaction_cost
+                realized_pnl = (price - pos["entry_price"]) * pos["shares"] - cost
+
+                trade = PaperTrade(
+                    date=today, ticker=ticker, action="SELL",
+                    shares=pos["shares"], price=price, value=value, cost=cost,
+                    weight_before=pos["weight"], weight_after=0.0
+                )
+                trades.append(trade)
+                self.db.record_trade(trade)
+                self.db.close_position(ticker, today, price, realized_pnl)
+                cash += value - cost
+                print(f"  SELL {ticker}: {pos['shares']:.1f} shares @ ${price:.2f} "
+                      f"(PnL: ${realized_pnl:+.2f})")
+
+        # BUY / REBALANCE target positions
+        for ticker, weight in target_weights.items():
+            price = latest_prices.get(ticker)
+            if price is None or price <= 0:
+                continue
+
+            target_value = portfolio_value * weight
+            current_value = 0
+            current_shares = 0
+            if ticker in current_tickers:
+                pos = current_tickers[ticker]
+                current_shares = pos["shares"]
+                current_value = current_shares * price
+
+            delta_value = target_value - current_value
+            if abs(delta_value) < 50:  # Skip tiny rebalances
+                continue
+
+            delta_shares = delta_value / price
+            cost = abs(delta_value) * self.transaction_cost
+
+            if delta_shares > 0:
+                action = "BUY"
+            else:
+                action = "REBALANCE"
+
+            new_shares = current_shares + delta_shares
+            trade = PaperTrade(
+                date=today, ticker=ticker, action=action,
+                shares=abs(delta_shares), price=price, value=abs(delta_value),
+                cost=cost,
+                weight_before=current_tickers.get(ticker, {}).get("weight", 0),
+                weight_after=weight
+            )
+            trades.append(trade)
+            self.db.record_trade(trade)
+
+            if new_shares > 0:
+                entry_price = price if ticker not in current_tickers else current_tickers[ticker]["entry_price"]
+                self.db.upsert_position(ticker, new_shares, entry_price, today, weight)
+            cash -= delta_value + cost
+            print(f"  {action} {ticker}: {abs(delta_shares):.1f} shares @ ${price:.2f} "
+                  f"(weight: {weight:.1%})")
+
+        self.db.update_cash(cash)
+
+        # Record signals
+        self.db.record_signals(today, signals)
+
+        # Record daily snapshot
+        # Recalculate portfolio value after trades
+        positions = self.db.get_active_positions()
+        invested = sum(
+            p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
+            for p in positions
+        )
+        portfolio_value = cash + invested
+        daily_return = (portfolio_value / initial_value) - 1
+
+        # Benchmark return (SPY)
+        bench_path = PROJECT_ROOT / getattr(self.config.data, "benchmark_data_path_daily",
+                                             "data/benchmark_daily.csv")
+        bench_df = pd.read_csv(bench_path, parse_dates=["date"])
+        bench_prices = bench_df.sort_values("date")
+        if len(bench_prices) >= 2:
+            bench_start = bench_prices.iloc[0]["close"]
+            bench_end = bench_prices.iloc[-1]["close"]
+            benchmark_cumulative = (bench_end / bench_start) - 1
+        else:
+            benchmark_cumulative = 0.0
+
+        # Previous snapshot for daily return
+        prev = self.db.get_snapshots(last_n=1)
+        if prev:
+            prev_value = prev[0]["portfolio_value"]
+            daily_pct = (portfolio_value / prev_value) - 1 if prev_value > 0 else 0
+            prev_bench = prev[0].get("benchmark_cumulative", 0)
+            bench_daily = benchmark_cumulative - prev_bench
+        else:
+            daily_pct = 0
+            bench_daily = 0
+
+        snapshot = DailySnapshot(
+            date=today,
+            portfolio_value=portfolio_value,
+            cash=cash,
+            invested=invested,
+            daily_return=daily_pct,
+            cumulative_return=(portfolio_value / initial_value) - 1,
+            benchmark_return=bench_daily,
+            benchmark_cumulative=benchmark_cumulative,
+            positions=[{
+                "ticker": p["ticker"],
+                "shares": p["shares"],
+                "weight": p["weight"],
+                "entry_price": p["entry_price"],
+                "current_price": latest_prices.get(p["ticker"], 0),
+                "pnl": (latest_prices.get(p["ticker"], 0) - p["entry_price"]) * p["shares"]
+            } for p in positions],
+            signals=signals.head(10).to_dict("records"),
+            trades=[asdict(t) for t in trades],
+            metrics={
+                "sharpe_ratio": None,  # Computed after enough data points
+                "total_trades": len(trades),
+                "total_cost": sum(t.cost for t in trades),
+            }
+        )
+        self.db.record_snapshot(snapshot)
+
+        print(f"\nPortfolio: ${portfolio_value:,.2f} (return: {daily_return:+.2%})")
+        print(f"Cash: ${cash:,.2f} | Invested: ${invested:,.2f}")
+        print(f"Positions: {len(positions)} | Trades today: {len(trades)}")
+
+    def run_daily(self, skip_refresh: bool = False):
+        """Full daily paper trading cycle."""
+        print(f"{'='*60}")
+        print(f"Paper Trading - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        print(f"{'='*60}")
+
+        # 1. Refresh data
+        if not skip_refresh:
+            self.refresh_data()
+
+        # 2. Generate signals
+        print("\nGenerating signals...")
+        signals = self.generate_signals()
+
+        if len(signals) == 0:
+            print("No signals generated. Skipping execution.")
+            return
+
+        print(f"\nTop signals:")
+        for _, row in signals.head(10).iterrows():
+            print(f"  {row['action']:4s} {row['ticker']:6s}  "
+                  f"score={row['prediction']:.4f}  rank={row['rank']}")
+
+        # 3. Execute
+        print("\nExecuting trades...")
+        self.execute_signals(signals)
+
+        print(f"\nDone.")
+
+    def show_status(self):
+        """Display current portfolio status."""
+        state = self.db.get_state()
+        positions = self.db.get_active_positions()
+
+        # Load latest prices
+        price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+        price_df = pd.read_csv(price_path, parse_dates=["date"])
+        latest_prices = (
+            price_df.sort_values("date")
+            .groupby("ticker")
+            .last()["close"]
+            .to_dict()
+        )
+
+        cash = state["cash"]
+        initial = state["initial_value"]
+        invested = sum(
+            p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
+            for p in positions
+        )
+        total = cash + invested
+
+        print(f"\n{'='*60}")
+        print(f"Paper Trading Portfolio Status")
+        print(f"{'='*60}")
+        print(f"Portfolio Value: ${total:,.2f}")
+        print(f"Cash:           ${cash:,.2f}")
+        print(f"Invested:       ${invested:,.2f}")
+        print(f"Total Return:   {(total/initial - 1):+.2%}")
+        print(f"Initial Value:  ${initial:,.2f}")
+        print(f"Last Updated:   {state.get('last_updated', 'Never')}")
+
+        if positions:
+            print(f"\nPositions ({len(positions)}):")
+            print(f"{'Ticker':8s} {'Shares':>8s} {'Entry':>8s} {'Current':>8s} {'PnL':>10s} {'Weight':>8s}")
+            print("-" * 60)
+            for p in sorted(positions, key=lambda x: -x["weight"]):
+                current = latest_prices.get(p["ticker"], p["entry_price"])
+                pnl = (current - p["entry_price"]) * p["shares"]
+                print(f"{p['ticker']:8s} {p['shares']:8.1f} ${p['entry_price']:7.2f} "
+                      f"${current:7.2f} ${pnl:+9.2f} {p['weight']:7.1%}")
+        else:
+            print("\nNo active positions.")
+
+        # Recent performance
+        snapshots = self.db.get_snapshots(last_n=10)
+        if snapshots:
+            print(f"\nRecent Performance:")
+            print(f"{'Date':12s} {'Value':>12s} {'Daily':>8s} {'Cumulative':>12s}")
+            print("-" * 50)
+            for s in reversed(snapshots):
+                print(f"{s['date']:12s} ${s['portfolio_value']:11,.2f} "
+                      f"{s['daily_return']:+7.2%} {s['cumulative_return']:+11.2%}")
+
+    def show_history(self, last_n: int = 30):
+        """Display trade history."""
+        trades = self.db.get_trades(last_n=last_n)
+        if not trades:
+            print("No trade history.")
+            return
+
+        print(f"\nTrade History (last {last_n}):")
+        print(f"{'Date':12s} {'Action':10s} {'Ticker':8s} {'Shares':>8s} {'Price':>8s} {'Value':>10s} {'Cost':>7s}")
+        print("-" * 70)
+        for t in reversed(trades):
+            print(f"{t['date']:12s} {t['action']:10s} {t['ticker']:8s} "
+                  f"{t['shares']:8.1f} ${t['price']:7.2f} ${t['value']:9.2f} ${t['cost']:6.2f}")
+
+
+# ---------------------------------------------------------------------------
+# CLI
+# ---------------------------------------------------------------------------
+
+def main():
+    parser = argparse.ArgumentParser(description="Paper trading pipeline")
+    subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # run
+    run_parser = subparsers.add_parser("run", help="Run daily paper trading cycle")
+    run_parser.add_argument("--watchlist", type=str, default="tech_giants",
+                            help="Watchlist name (default: tech_giants)")
+    run_parser.add_argument("--skip-refresh", action="store_true",
+                            help="Skip data refresh")
+    run_parser.add_argument("--capital", type=float, default=100000,
+                            help="Initial capital (default: 100000)")
+
+    # status
+    status_parser = subparsers.add_parser("status", help="Show portfolio status")
+    status_parser.add_argument("--watchlist", type=str, default="tech_giants")
+
+    # history
+    hist_parser = subparsers.add_parser("history", help="Show trade history")
+    hist_parser.add_argument("--last", type=int, default=30, help="Number of trades to show")
+    hist_parser.add_argument("--watchlist", type=str, default="tech_giants")
+
+    # refresh
+    refresh_parser = subparsers.add_parser("refresh", help="Refresh price data only")
+    refresh_parser.add_argument("--watchlist", type=str, default="tech_giants")
+
+    # setup-cron
+    subparsers.add_parser("setup-cron", help="Setup daily cron job")
+
+    args = parser.parse_args()
+
+    if args.command is None:
+        parser.print_help()
+        return
+
+    if args.command == "run":
+        engine = PaperTradingEngine(
+            watchlist=args.watchlist,
+            initial_capital=args.capital,
+        )
+        engine.run_daily(skip_refresh=args.skip_refresh)
+
+    elif args.command == "status":
+        engine = PaperTradingEngine(watchlist=args.watchlist)
+        engine.show_status()
+
+    elif args.command == "history":
+        engine = PaperTradingEngine(watchlist=args.watchlist)
+        engine.show_history(last_n=args.last)
+
+    elif args.command == "refresh":
+        engine = PaperTradingEngine(watchlist=args.watchlist)
+        engine.refresh_data()
+
+    elif args.command == "setup-cron":
+        script_path = Path(__file__).resolve()
+        python_path = Path(sys.executable).resolve()
+        project_dir = PROJECT_ROOT.resolve()
+
+        cron_line = (
+            f"30 17 * * 1-5 cd {project_dir} && "
+            f"{python_path} {script_path} run --watchlist tech_giants "
+            f">> {project_dir}/logs/paper_trading.log 2>&1"
+        )
+        print("Add this line to your crontab (crontab -e):\n")
+        print(cron_line)
+        print("\nThis runs at 5:30 PM ET every weekday (M-F).")
+
+        # Create logs directory
+        logs_dir = project_dir / "logs"
+        logs_dir.mkdir(exist_ok=True)
+        print(f"\nLogs directory: {logs_dir}")
+
+
+if __name__ == "__main__":
+    main()
