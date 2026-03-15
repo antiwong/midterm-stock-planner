@@ -9,6 +9,7 @@ import streamlit as st
 from typing import Optional
 import base64
 from pathlib import Path
+from urllib.parse import quote
 
 from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS, PROCESS_PHASES
 from ..data import load_runs, get_available_run_folders
@@ -17,22 +18,19 @@ from .search import render_global_search
 from .notifications import render_notification_bell, NotificationManager
 
 
-def _nav_js(page_label: str) -> str:
-    """Return JS snippet that navigates to a page via query params."""
-    escaped = page_label.replace("'", "\\'")
-    return (
-        f"const u=new URL(window.location);"
-        f"u.searchParams.set('page','{escaped}');"
-        f"window.location=u;"
-    )
+def _nav_href(page_label: str) -> str:
+    """Return a query-param URL for navigating to a page."""
+    return f"?page={quote(page_label)}"
 
 
 def _inject_sidebar_css():
     """Inject CSS for sidebar nav links and breadcrumbs."""
     st.markdown(f"""
 <style>
-    /* ---- Sidebar nav links (HTML, not st.button) ---- */
-    .nav-phase {{
+    /* ---- Sidebar nav links (<a> tags, not st.button) ---- */
+    a.nav-phase,
+    a.nav-phase:link,
+    a.nav-phase:visited {{
         display: flex;
         align-items: center;
         gap: 0.55rem;
@@ -41,73 +39,78 @@ def _inject_sidebar_css():
         border-radius: 6px;
         cursor: pointer;
         transition: background 0.2s ease;
-        text-decoration: none;
-    }}
-    .nav-phase:hover {{
-        background: rgba(255, 255, 255, 0.08);
-    }}
-    .nav-phase .phase-icon {{
-        font-size: 1.05rem;
-        flex-shrink: 0;
-    }}
-    .nav-phase .phase-label {{
+        text-decoration: none !important;
+        color: rgba(255, 255, 255, 0.75) !important;
         font-family: 'Instrument Sans', sans-serif;
         font-size: 0.88rem;
         font-weight: 500;
-        color: rgba(255, 255, 255, 0.75);
         letter-spacing: -0.01em;
+    }}
+    a.nav-phase:hover {{
+        background: rgba(255, 255, 255, 0.08);
+        color: rgba(255, 255, 255, 0.95) !important;
+    }}
+    a.nav-phase .phase-icon {{
+        font-size: 1.05rem;
+        flex-shrink: 0;
     }}
 
     /* Active phase */
-    .nav-phase.active {{
+    a.nav-phase.active,
+    a.nav-phase.active:link,
+    a.nav-phase.active:visited {{
         background: rgba(232, 115, 90, 0.18);
         border-left: 3px solid {COLORS['primary']};
         border-radius: 0 6px 6px 0;
-    }}
-    .nav-phase.active .phase-label {{
-        color: white;
+        color: white !important;
         font-weight: 600;
     }}
 
     /* Child page links */
-    .nav-child {{
+    a.nav-child,
+    a.nav-child:link,
+    a.nav-child:visited {{
         display: block;
         padding: 0.35rem 0.8rem 0.35rem 2.4rem;
         margin: 0.05rem 0;
         border-radius: 4px;
         cursor: pointer;
         transition: background 0.2s ease;
-        text-decoration: none;
+        text-decoration: none !important;
         font-size: 0.82rem;
-        color: rgba(255, 255, 255, 0.55);
+        color: rgba(255, 255, 255, 0.55) !important;
         border-left: 1px solid rgba(255, 255, 255, 0.08);
         margin-left: 1rem;
     }}
-    .nav-child:hover {{
+    a.nav-child:hover {{
         background: rgba(255, 255, 255, 0.06);
-        color: rgba(255, 255, 255, 0.85);
+        color: rgba(255, 255, 255, 0.85) !important;
         border-left-color: rgba(255, 255, 255, 0.2);
     }}
-    .nav-child.active {{
-        color: {COLORS['primary']};
+    a.nav-child.active,
+    a.nav-child.active:link,
+    a.nav-child.active:visited {{
+        color: {COLORS['primary']} !important;
         font-weight: 600;
         border-left: 2px solid {COLORS['primary']};
         background: rgba(232, 115, 90, 0.08);
     }}
 
     /* Back-to-hub link */
-    .nav-back {{
+    a.nav-back,
+    a.nav-back:link,
+    a.nav-back:visited {{
         display: block;
         padding: 0.3rem 0.8rem 0.3rem 2.4rem;
         margin: 0.05rem 0 0.15rem 1rem;
         font-size: 0.75rem;
-        color: rgba(255, 255, 255, 0.4);
+        color: rgba(255, 255, 255, 0.4) !important;
         cursor: pointer;
-        text-decoration: none;
+        text-decoration: none !important;
         transition: color 0.2s ease;
     }}
-    .nav-back:hover {{
-        color: rgba(255, 255, 255, 0.7);
+    a.nav-back:hover {{
+        color: rgba(255, 255, 255, 0.7) !important;
     }}
 
     /* Separator */
@@ -118,20 +121,22 @@ def _inject_sidebar_css():
     }}
 
     /* Footer link (docs) */
-    .nav-footer-link {{
+    a.nav-footer-link,
+    a.nav-footer-link:link,
+    a.nav-footer-link:visited {{
         display: block;
         padding: 0.4rem 0.8rem;
         margin: 0.2rem 0;
         border-radius: 6px;
         cursor: pointer;
         transition: background 0.2s ease;
-        text-decoration: none;
+        text-decoration: none !important;
         font-size: 0.82rem;
-        color: rgba(255, 255, 255, 0.55);
+        color: rgba(255, 255, 255, 0.55) !important;
     }}
-    .nav-footer-link:hover {{
+    a.nav-footer-link:hover {{
         background: rgba(255, 255, 255, 0.06);
-        color: rgba(255, 255, 255, 0.85);
+        color: rgba(255, 255, 255, 0.85) !important;
     }}
 
     /* ---- Breadcrumb on main content ---- */
@@ -207,12 +212,12 @@ def render_sidebar() -> str:
 
         active_cls = " active" if is_active_phase else ""
 
-        # Phase button (HTML link)
+        # Phase link (<a href>)
         html = f"""
-        <div class="nav-phase{active_cls}" onclick="{_nav_js(page)}">
+        <a class="nav-phase{active_cls}" href="{_nav_href(page)}">
             <span class="phase-icon">{icon}</span>
-            <span class="phase-label">{label}</span>
-        </div>
+            {label}
+        </a>
         """
 
         # Children (only if active phase)
@@ -220,14 +225,14 @@ def render_sidebar() -> str:
             # Back to hub link (if on a child page)
             if current != page:
                 html += f"""
-                <div class="nav-back" onclick="{_nav_js(page)}">← {label} Hub</div>
+                <a class="nav-back" href="{_nav_href(page)}">← {label} Hub</a>
                 """
 
             for child_label, child_id, child_desc in children:
                 is_child_active = (current == child_label)
                 child_cls = " active" if is_child_active else ""
                 html += f"""
-                <div class="nav-child{child_cls}" onclick="{_nav_js(child_label)}">{child_label}</div>
+                <a class="nav-child{child_cls}" href="{_nav_href(child_label)}">{child_label}</a>
                 """
 
             html += '<div style="height: 0.3rem;"></div>'
@@ -252,7 +257,7 @@ def render_sidebar() -> str:
 
     # Documentation link
     st.sidebar.markdown(f"""
-    <div class="nav-footer-link" onclick="{_nav_js('Documentation')}">📖  Documentation</div>
+    <a class="nav-footer-link" href="{_nav_href('Documentation')}">📖  Documentation</a>
     """, unsafe_allow_html=True)
 
     # Version
@@ -276,7 +281,7 @@ def render_breadcrumb(current_page: str):
             phase_page = phase["page"]
             st.markdown(f"""
             <div class="breadcrumb">
-                <span class="bc-phase" onclick="{_nav_js(phase_page)}">{phase_label}</span>
+                <a class="bc-phase" href="{_nav_href(phase_page)}" style="text-decoration:none;">{phase_label}</a>
                 <span class="bc-sep">›</span>
                 <span class="bc-page">{current_page}</span>
             </div>
