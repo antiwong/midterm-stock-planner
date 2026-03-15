@@ -6,25 +6,34 @@ and generates reports with statistical significance tests.
 
 Usage:
     # Test all features sequentially (default order)
-    python scripts/run_regression_test.py --watchlist tech_giants
+    python scripts/run_regression_test.py run --watchlist tech_giants
 
     # Test specific features in order
-    python scripts/run_regression_test.py --features rsi macd bollinger gap momentum
+    python scripts/run_regression_test.py run --features rsi macd bollinger gap momentum
 
     # With parameter tuning
-    python scripts/run_regression_test.py --watchlist tech_giants --tune --tuning-trials 50
+    python scripts/run_regression_test.py run --watchlist tech_giants --tune --tuning-trials 50
 
     # With model tuning at the end
-    python scripts/run_regression_test.py --tune --tune-model --tuning-trials 30
+    python scripts/run_regression_test.py run --tune --tune-model --tuning-trials 30
 
     # Custom baseline
-    python scripts/run_regression_test.py --baseline returns volatility volume valuation
+    python scripts/run_regression_test.py run --baseline returns volatility volume valuation
 
     # List previous regression tests
-    python scripts/run_regression_test.py --list
+    python scripts/run_regression_test.py list
+
+    # Filter listed tests by status
+    python scripts/run_regression_test.py list --status completed
 
     # Generate report for a previous test
-    python scripts/run_regression_test.py --report <regression_id>
+    python scripts/run_regression_test.py report <regression_id>
+
+    # Show feature leaderboard across all tests
+    python scripts/run_regression_test.py leaderboard
+
+    # Show leaderboard for a specific regression test
+    python scripts/run_regression_test.py leaderboard --regression-id <regression_id>
 """
 
 import argparse

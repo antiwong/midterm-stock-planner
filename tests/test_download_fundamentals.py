@@ -22,6 +22,15 @@ from scripts.download_fundamentals import (
 class TestLoadWatchlistTickers:
     """Test watchlist loading functionality."""
     
+    def _patch_watchlist_yaml(self, watchlist_file):
+        """Context manager to force YAML fallback and use a temp watchlist file."""
+        import importlib
+        original_path = Path
+        # Force ImportError on WatchlistManager by temporarily removing the module
+        return patch.dict('sys.modules', {'src.data.watchlists': None}), \
+               patch('scripts.download_fundamentals.Path',
+                     side_effect=lambda *a, **kw: watchlist_file if a == ("config/watchlists.yaml",) else original_path(*a, **kw))
+
     def test_load_watchlist_with_name(self, tmp_path):
         """Test loading a specific watchlist by name."""
         # Create test YAML file
@@ -36,15 +45,13 @@ watchlists:
 """
         watchlist_file = tmp_path / "watchlists.yaml"
         watchlist_file.write_text(yaml_content)
-        
-        with patch('scripts.download_fundamentals.Path') as mock_path:
-            mock_path.return_value = watchlist_file
-            from scripts.download_fundamentals import Path as ScriptPath
-            with patch.object(ScriptPath, 'exists', return_value=True):
-                tickers = load_watchlist_tickers('test_watchlist')
-                assert 'AAPL' in tickers
-                assert 'MSFT' in tickers
-                assert 'GOOGL' in tickers
+
+        patch_modules, patch_path = self._patch_watchlist_yaml(watchlist_file)
+        with patch_modules, patch_path:
+            tickers = load_watchlist_tickers('test_watchlist')
+            assert 'AAPL' in tickers
+            assert 'MSFT' in tickers
+            assert 'GOOGL' in tickers
     
     def test_load_watchlist_not_found(self, tmp_path):
         """Test handling of non-existent watchlist."""
@@ -55,13 +62,11 @@ watchlists:
 """
         watchlist_file = tmp_path / "watchlists.yaml"
         watchlist_file.write_text(yaml_content)
-        
-        with patch('scripts.download_fundamentals.Path') as mock_path:
-            mock_path.return_value = watchlist_file
-            from scripts.download_fundamentals import Path as ScriptPath
-            with patch.object(ScriptPath, 'exists', return_value=True):
-                tickers = load_watchlist_tickers('nonexistent')
-                assert tickers == []
+
+        patch_modules, patch_path = self._patch_watchlist_yaml(watchlist_file)
+        with patch_modules, patch_path:
+            tickers = load_watchlist_tickers('nonexistent')
+            assert tickers == []
     
     def test_load_watchlist_default(self, tmp_path):
         """Test loading default watchlist when no name provided."""
@@ -74,13 +79,11 @@ watchlists:
 """
         watchlist_file = tmp_path / "watchlists.yaml"
         watchlist_file.write_text(yaml_content)
-        
-        with patch('scripts.download_fundamentals.Path') as mock_path:
-            mock_path.return_value = watchlist_file
-            from scripts.download_fundamentals import Path as ScriptPath
-            with patch.object(ScriptPath, 'exists', return_value=True):
-                tickers = load_watchlist_tickers()
-                assert len(tickers) > 0
+
+        patch_modules, patch_path = self._patch_watchlist_yaml(watchlist_file)
+        with patch_modules, patch_path:
+            tickers = load_watchlist_tickers()
+            assert len(tickers) > 0
     
     def test_load_watchlist_direct_list(self, tmp_path):
         """Test loading watchlist with direct list format."""
@@ -92,14 +95,12 @@ watchlists:
 """
         watchlist_file = tmp_path / "watchlists.yaml"
         watchlist_file.write_text(yaml_content)
-        
-        with patch('scripts.download_fundamentals.Path') as mock_path:
-            mock_path.return_value = watchlist_file
-            from scripts.download_fundamentals import Path as ScriptPath
-            with patch.object(ScriptPath, 'exists', return_value=True):
-                tickers = load_watchlist_tickers('test_list')
-                assert 'AAPL' in tickers
-                assert 'MSFT' in tickers
+
+        patch_modules, patch_path = self._patch_watchlist_yaml(watchlist_file)
+        with patch_modules, patch_path:
+            tickers = load_watchlist_tickers('test_list')
+            assert 'AAPL' in tickers
+            assert 'MSFT' in tickers
     
     def test_load_watchlist_with_tickers_key(self, tmp_path):
         """Test loading watchlist with 'tickers' key instead of 'symbols'."""
@@ -113,14 +114,12 @@ watchlists:
 """
         watchlist_file = tmp_path / "watchlists.yaml"
         watchlist_file.write_text(yaml_content)
-        
-        with patch('scripts.download_fundamentals.Path') as mock_path:
-            mock_path.return_value = watchlist_file
-            from scripts.download_fundamentals import Path as ScriptPath
-            with patch.object(ScriptPath, 'exists', return_value=True):
-                tickers = load_watchlist_tickers('test_tickers')
-                assert 'AAPL' in tickers
-                assert 'MSFT' in tickers
+
+        patch_modules, patch_path = self._patch_watchlist_yaml(watchlist_file)
+        with patch_modules, patch_path:
+            tickers = load_watchlist_tickers('test_tickers')
+            assert 'AAPL' in tickers
+            assert 'MSFT' in tickers
 
 
 class TestFetchFundamentals:

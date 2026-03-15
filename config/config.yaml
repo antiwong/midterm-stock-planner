@@ -34,8 +34,10 @@ backtest:
   end_date: null
 data:
   interval: 1h  # 1h for 4h rebalancing. Features computed from daily data.
-  price_data_path: data/prices.csv  # Hourly data for execution/rebalancing
-  price_data_path_daily: data/prices_daily.csv  # 10yr daily for features (114 tickers)
+  price_data_path: data/prices.csv  # Hourly data for execution/rebalancing (127 tickers, 752d, has NaN gaps)
+  # NOTE: prices_daily.csv is preferred for regression testing — it has 10yr coverage,
+  # zero NaN, and all 13 tech_giants. prices.csv is missing AAPL/AMD/GOOGL/TSLA/ADBE/NFLX.
+  price_data_path_daily: data/prices_daily.csv  # 10yr daily for features (114 tickers, zero NaN)
   price_data_path_15m: data/prices_15m.csv  # 15m intraday (when available)
   fundamental_data_path: data/fundamentals.csv
   benchmark_data_path: data/benchmark.csv  # Hourly SPY for backtest alignment

@@ -212,8 +212,19 @@
 - `scripts/download_macro.py` - FRED macro data downloader (yields, inflation, employment, etc.)
 
 **Data Files**:
-- `data/prices_daily.csv` - 10-year daily OHLCV data (114 tickers, 2016-2026)
-- `data/benchmark_daily.csv` - 10-year daily SPY benchmark
+
+*Price Data (two files, both produced by `scripts/download_prices.py` with different flags):*
+
+- `data/prices.csv` (~11MB) - Hourly OHLCV data for execution/rebalancing (127 tickers, 752 days, 2023-2026). Downloaded with `--interval 1h`. Missing 6 of 13 tech_giants (AAPL, AMD, GOOGL, TSLA, ADBE, NFLX) due to yfinance hourly 730-day limit; contains ~1860 NaN values. Used for 4h rebalancing signals.
+- `data/prices_daily.csv` (~25MB) - **Preferred for regression testing.** 10-year daily OHLCV data (114 tickers, 2563 days, 2016-2026). Downloaded with `--interval 1d --start 2016-01-01`. Zero NaN, all 13 tech_giants present. Used for feature engineering and walk-forward backtests.
+
+*Benchmark Data (matching pair):*
+
+- `data/benchmark.csv` (48KB) - Hourly SPY benchmark (752 days, 2023-2026). Aligns with `prices.csv`.
+- `data/benchmark_daily.csv` (243KB) - **Preferred for regression testing.** 10-year daily SPY benchmark (2563 days, 2016-2026). Aligns with `prices_daily.csv`.
+
+*Other Data:*
+
 - `data/macro_fred.csv` - FRED economic indicators (yields, inflation, spreads, etc.)
 - `data/sentiment/` - Finnhub sentiment data directory (news, insider transactions, analyst ratings, earnings surprises)
 

@@ -52,7 +52,7 @@ class TestBacktestConfiguration:
         backtest = config.get('backtest', {})
         rebal_freq = backtest.get('rebalance_freq', 'MS')
         
-        valid_freqs = ['D', 'W', 'MS', 'M', 'Q', 'QS', 'Y', 'YS']
+        valid_freqs = ['D', 'W', 'MS', 'M', 'ME', 'Q', 'QS', 'Y', 'YS', '4h', '2W']
         assert rebal_freq in valid_freqs, \
             f"Invalid rebalance_freq: {rebal_freq}. Valid: {valid_freqs}"
 

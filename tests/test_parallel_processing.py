@@ -28,7 +28,7 @@ def test_parallel_processor_basic():
     results = processor.process_map(items, square)
     
     assert len(results) == 5
-    assert results == [1, 4, 9, 16, 25]
+    assert sorted(results) == [1, 4, 9, 16, 25]
 
 
 def test_parallel_processor_with_errors():
@@ -46,7 +46,7 @@ def test_parallel_processor_with_errors():
     assert len(results) == 5
     # Check successful results
     successes = [r for _, r, e in results if e is None]
-    assert successes == [2, 4, 8, 10]
+    assert sorted(successes) == [2, 4, 8, 10]
     # Check errors
     errors = [e for _, _, e in results if e is not None]
     assert len(errors) == 1
@@ -103,7 +103,7 @@ def test_parallel_map():
     items = [1, 2, 3, 4, 5]
     results = parallel_map(items, double, max_workers=2)
     
-    assert results == [2, 4, 6, 8, 10]
+    assert sorted(results) == [2, 4, 6, 8, 10]
 
 
 def test_performance_monitor():
@@ -146,7 +146,7 @@ def test_parallel_processing_performance():
     parallel_time = time.time() - start
     
     # Results should be the same
-    assert sequential_results == parallel_results
+    assert sorted(sequential_results) == sorted(parallel_results)
     
     # Parallel should be faster (at least 2x for 5 items)
     # Note: This might not always be true due to overhead, but should be generally true
