@@ -51,6 +51,14 @@ class BacktestConfig:
     # IC (Information Coefficient) gating: require |IC| above threshold per window
     ic_min_threshold: Optional[float] = None  # e.g. 0.01 or 0.02; None = disabled
     ic_action: str = "warn"  # "warn" | "off" when |IC| < ic_min_threshold
+    # Position sizing controls
+    max_position_weight: float = 0.20   # Max weight per stock (20%)
+    stop_loss_pct: float = -0.15        # Cut position if stock drops > 15% from entry
+    vix_scale_enabled: bool = True      # Scale down exposure when VIX is high
+    vix_high_threshold: float = 30.0    # VIX above this = reduce exposure
+    vix_extreme_threshold: float = 40.0 # VIX above this = max reduction
+    vix_high_scale: float = 0.6         # Scale factor when VIX > high threshold
+    vix_extreme_scale: float = 0.3      # Scale factor when VIX > extreme threshold
 
 
 def bars_per_day_from_interval(interval: str) -> float:
@@ -110,6 +118,12 @@ class FeatureConfig:
     sentiment_lookbacks: List[int] = field(default_factory=lambda: [1, 7, 14])
     sentiment_min_count: int = 1  # Minimum articles to compute sentiment
     sentiment_fillna: float = 0.0  # Value for missing sentiment (use 0 for neutral)
+    # Feature toggles (validated by regression test reg_20260315_152332)
+    include_technical: bool = True   # MACD, Bollinger, ATR, ADX (always on)
+    include_rsi: bool = False        # RSI hurts cross-sectional model (-0.28 Sharpe)
+    include_obv: bool = False        # OBV hurts cross-sectional model (-0.18 Sharpe)
+    include_momentum: bool = False   # Momentum hurts cross-sectional model (-0.24 Sharpe)
+    include_mean_reversion: bool = False  # Mean reversion adds noise
     # Cross-asset features
     use_cross_asset: bool = False
     cross_asset: Dict[str, Any] = field(default_factory=lambda: {

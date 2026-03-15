@@ -32,12 +32,20 @@ backtest:
   step_value: 7
   step_unit: days   # Walk-forward step: weekly (7d ≈ 264 windows vs 1849)
   rebalance_freq: 4h  # Mid-term trading: rebalance every 4 hours
-  top_n: 10
+  top_n: 5
   top_pct: 0.1
   min_stocks: 5
   transaction_cost: 0.001
   start_date: null
   end_date: null
+  # Position sizing controls (addresses guard violations: -55% to -72% drawdowns)
+  max_position_weight: 0.20   # Max 20% in any single stock
+  stop_loss_pct: -0.15        # Cut position if stock drops > 15% from entry
+  vix_scale_enabled: true     # Reduce exposure during high-VIX periods
+  vix_high_threshold: 30.0    # VIX > 30 = reduce to 60% exposure
+  vix_extreme_threshold: 40.0 # VIX > 40 = reduce to 30% exposure
+  vix_high_scale: 0.6
+  vix_extreme_scale: 0.3
 data:
   interval: 1h  # 1h for 4h rebalancing. Features computed from daily data.
   price_data_path: data/prices.csv  # Hourly data for execution/rebalancing (127 tickers, 752d, has NaN gaps)
@@ -69,6 +77,13 @@ features:
   - 60
   volume_window: 20
   include_fundamentals: true
+  # Feature toggles (validated by regression test reg_20260315_152332 on tech_giants)
+  # Optimal set: baseline + macd + bollinger + adx → Sharpe=1.34
+  include_technical: true     # MACD, Bollinger, ATR, ADX
+  include_rsi: false          # RSI hurts cross-sectional model (-0.28 Sharpe)
+  include_obv: false          # OBV hurts cross-sectional model (-0.18 Sharpe)
+  include_momentum: false     # Momentum hurts cross-sectional model (-0.24 Sharpe)
+  include_mean_reversion: false  # Mean reversion adds noise
   horizon_days: 63
   use_sentiment: false
   sentiment_source: news

@@ -77,13 +77,14 @@ def _mp_process_window(args):
     for rebal_date in train_rebalance_dates:
         if rebal_date >= w_test_start:
             break
-        portfolio = _construct_portfolio(train_predictions_df, rebal_date, config.top_n, config.top_pct, config.min_stocks)
+        train_exposure = _compute_exposure_scale(benchmark_data, rebal_date, benchmark_price_col, config)
+        portfolio = _construct_portfolio(train_predictions_df, rebal_date, config.top_n, config.top_pct, config.min_stocks, max_position_weight=getattr(config, 'max_position_weight', 1.0), exposure_scale=train_exposure)
         if len(portfolio) > 0:
             portfolio['date'] = rebal_date
             train_positions_list.append(portfolio[['date', 'ticker', 'weight']])
     if train_positions_list:
         train_positions_df = pd.concat(train_positions_list, ignore_index=True)
-        train_port_ret, train_bench_ret = _calculate_portfolio_returns(train_positions_df, price_data, benchmark_data, benchmark_price_col)
+        train_port_ret, train_bench_ret = _calculate_portfolio_returns(train_positions_df, price_data, benchmark_data, benchmark_price_col, stop_loss_pct=getattr(config, 'stop_loss_pct', -1.0))
         if len(train_port_ret) > 0:
             train_metrics = _calculate_metrics(train_port_ret, train_bench_ret, train_positions_df)
             train_sharpe = train_metrics['sharpe_ratio']
@@ -94,7 +95,8 @@ def _mp_process_window(args):
     for rebal_date in rebalance_dates:
         if rebal_date >= w_test_end:
             break
-        portfolio = _construct_portfolio(test_predictions, rebal_date, config.top_n, config.top_pct, config.min_stocks)
+        exposure = _compute_exposure_scale(benchmark_data, rebal_date, benchmark_price_col, config)
+        portfolio = _construct_portfolio(test_predictions, rebal_date, config.top_n, config.top_pct, config.min_stocks, max_position_weight=getattr(config, 'max_position_weight', 1.0), exposure_scale=exposure)
         if len(portfolio) > 0:
             portfolio['date'] = rebal_date
             window_positions_list.append(portfolio[['date', 'ticker', 'weight']])
@@ -102,7 +104,7 @@ def _mp_process_window(args):
     test_sharpe = None
     if window_positions_list:
         window_positions_df = pd.concat(window_positions_list, ignore_index=True)
-        window_port_ret, window_bench_ret = _calculate_portfolio_returns(window_positions_df, price_data, benchmark_data, benchmark_price_col)
+        window_port_ret, window_bench_ret = _calculate_portfolio_returns(window_positions_df, price_data, benchmark_data, benchmark_price_col, stop_loss_pct=getattr(config, 'stop_loss_pct', -1.0))
         if len(window_port_ret) > 0:
             window_metrics = _calculate_metrics(window_port_ret, window_bench_ret, window_positions_df)
             test_sharpe = window_metrics['sharpe_ratio']
@@ -222,13 +224,56 @@ def _get_rebalance_dates(
     return dates.tolist()
 
 
+def _compute_exposure_scale(
+    benchmark_data: pd.DataFrame,
+    date: pd.Timestamp,
+    benchmark_price_col: str,
+    config,
+) -> float:
+    """Compute exposure scale factor based on realized benchmark volatility.
+
+    Uses 21-day annualized SPY volatility as a VIX proxy:
+    - vol < high_threshold (annualized ~30%) → full exposure (1.0)
+    - vol > high_threshold → reduced exposure (vix_high_scale)
+    - vol > extreme_threshold → minimal exposure (vix_extreme_scale)
+    """
+    if not getattr(config, 'vix_scale_enabled', False):
+        return 1.0
+
+    # Get benchmark returns up to this date
+    bench = benchmark_data[benchmark_data['date'] <= date].tail(22)
+    if len(bench) < 10:
+        return 1.0
+
+    returns = bench[benchmark_price_col].pct_change().dropna()
+    if len(returns) < 5:
+        return 1.0
+
+    # Annualized volatility (21-day) as VIX proxy
+    # VIX ≈ annualized volatility * 100
+    realized_vol = returns.std() * np.sqrt(252) * 100
+
+    high_thresh = getattr(config, 'vix_high_threshold', 30.0)
+    extreme_thresh = getattr(config, 'vix_extreme_threshold', 40.0)
+    high_scale = getattr(config, 'vix_high_scale', 0.6)
+    extreme_scale = getattr(config, 'vix_extreme_scale', 0.3)
+
+    if realized_vol >= extreme_thresh:
+        return extreme_scale
+    elif realized_vol >= high_thresh:
+        return high_scale
+    return 1.0
+
+
 def _construct_portfolio(
     predictions: pd.DataFrame,
     date: pd.Timestamp,
     top_n: Optional[int],
     top_pct: float,
     min_stocks: int,
-    weighting: str = "score"
+    weighting: str = "score",
+    max_position_weight: float = 1.0,
+    exposure_scale: float = 1.0,
 ) -> pd.DataFrame:
     """
     Construct portfolio from predictions at a given date.
@@ -281,6 +326,17 @@ def _construct_portfolio(
         'ticker': selected['ticker'].values,
         'weight': weights
     })
+
+    # Cap max position weight and redistribute excess
+    if max_position_weight < 1.0:
+        capped = portfolio['weight'].clip(upper=max_position_weight)
+        if capped.sum() > 0:
+            portfolio['weight'] = capped / capped.sum()
+
+    # Apply exposure scaling (e.g. VIX-based reduction)
+    # Scale < 1.0 means hold cash (weights sum to < 1.0)
+    if exposure_scale < 1.0:
+        portfolio['weight'] = portfolio['weight'] * exposure_scale
 
     return portfolio
 
@@ -622,7 +678,8 @@ def run_walk_forward_backtest(
         all_positions_df,
         price_data,
         benchmark_data,
-        benchmark_price_col
+        benchmark_price_col,
+        stop_loss_pct=getattr(config, 'stop_loss_pct', -1.0),
     )
     
     # Calculate metrics
@@ -722,7 +779,8 @@ def _calculate_portfolio_returns(
     positions: pd.DataFrame,
     price_data: pd.DataFrame,
     benchmark_data: pd.DataFrame,
-    benchmark_price_col: str
+    benchmark_price_col: str,
+    stop_loss_pct: float = -1.0,
 ) -> Tuple[pd.Series, pd.Series]:
     """
     Calculate daily portfolio and benchmark returns.
@@ -776,12 +834,25 @@ def _calculate_portfolio_returns(
     benchmark_returns_list = []
     dates_list = []
 
+    # Stop-loss tracking: cumulative return per ticker since last rebalance
+    cum_returns = {}  # ticker -> cumulative return since rebalance
+    stopped_out = set()  # tickers that hit stop-loss (reset on rebalance)
+    prev_rebal = None
+    use_stop_loss = stop_loss_pct > -1.0  # -1.0 = disabled
+
     for trade_date in all_trading_dates:
         # Advance rebalance pointer
         while rebal_idx < len(rebalance_dates) - 1 and rebalance_dates[rebal_idx + 1] <= trade_date:
             rebal_idx += 1
 
         active_rebal = rebalance_dates[rebal_idx]
+
+        # Reset stop-loss tracking on rebalance
+        if active_rebal != prev_rebal:
+            cum_returns = {}
+            stopped_out = set()
+            prev_rebal = active_rebal
+
         active_positions = positions[positions['date'] == active_rebal]
 
         if len(active_positions) == 0:
@@ -800,8 +871,19 @@ def _calculate_portfolio_returns(
             ticker = pos['ticker']
             weight = pos['weight']
             if ticker in day_returns.index and not np.isnan(day_returns[ticker]):
-                port_ret += weight * day_returns[ticker]
+                # Stop-loss: skip stopped-out positions
+                if use_stop_loss and ticker in stopped_out:
+                    continue
+
+                daily_ret = day_returns[ticker]
+                port_ret += weight * daily_ret
                 total_weight += weight
+
+                # Track cumulative return for stop-loss
+                if use_stop_loss:
+                    cum_returns[ticker] = (1 + cum_returns.get(ticker, 0)) * (1 + daily_ret) - 1
+                    if cum_returns[ticker] <= stop_loss_pct:
+                        stopped_out.add(ticker)
 
         if total_weight == 0:
             continue

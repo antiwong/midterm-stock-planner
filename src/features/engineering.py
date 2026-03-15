@@ -582,6 +582,8 @@ def compute_all_features_extended(
     fundamental_df: Optional[pd.DataFrame] = None,
     benchmark_df: Optional[pd.DataFrame] = None,
     include_technical: bool = True,
+    include_rsi: bool = True,
+    include_obv: bool = True,
     include_momentum: bool = True,
     include_mean_reversion: bool = True,
     include_cross_asset: bool = False,
@@ -647,18 +649,22 @@ def compute_all_features_extended(
                 calculate_adx,
                 calculate_obv,
             )
-            
-            df = calculate_rsi(df, period=rsi_period)
+
+            # RSI: toggled independently (hurts cross-sectional model, -0.28 Sharpe)
+            if include_rsi:
+                df = calculate_rsi(df, period=rsi_period)
+
+            # MACD + Bollinger: always on when technical is enabled (validated +0.15, +0.64 Sharpe)
             df = calculate_macd(df, fast_period=macd_fast, slow_period=macd_slow, signal_period=macd_signal)
             df = calculate_bollinger_bands(df)
-            
-            # ATR and ADX require high/low/close
+
+            # ATR and ADX require high/low/close (validated +0.08 Sharpe)
             if all(col in df.columns for col in ['high', 'low', 'close']):
                 df = calculate_atr(df, period=14)
                 df = calculate_adx(df, period=14)
-            
-            # OBV and OBV slope (institutional accumulation signal)
-            if "volume" in df.columns:
+
+            # OBV: toggled independently (hurts cross-sectional model, -0.18 Sharpe)
+            if include_obv and "volume" in df.columns:
                 df = calculate_obv(df)
                 w20 = max(2, int(20 * bars_per_day))
                 df["obv_slope_20d"] = df.groupby("ticker")["obv"].transform(

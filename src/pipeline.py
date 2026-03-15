@@ -42,6 +42,10 @@ def prepare_training_data(
     macd_fast: int = 12,
     macd_slow: int = 26,
     macd_signal: int = 9,
+    include_rsi: bool = True,
+    include_obv: bool = True,
+    include_momentum: bool = True,
+    include_mean_reversion: bool = True,
 ) -> Tuple[pd.DataFrame, List[str]]:
     """
     Prepare training data by loading, computing features, and creating labels.
@@ -79,8 +83,10 @@ def prepare_training_data(
         fundamental_df,
         benchmark_df=benchmark_df,
         include_technical=True,
-        include_momentum=True,
-        include_mean_reversion=True,
+        include_rsi=include_rsi,
+        include_obv=include_obv,
+        include_momentum=include_momentum,
+        include_mean_reversion=include_mean_reversion,
         bars_per_day=bars_per_day,
         rsi_period=rsi_period,
         macd_fast=macd_fast,
@@ -208,6 +214,10 @@ def prepare_data_from_config(
             macd_fast=trigger.macd_fast,
             macd_slow=trigger.macd_slow,
             macd_signal=trigger.macd_signal,
+            include_rsi=getattr(feature_cfg, 'include_rsi', True),
+            include_obv=getattr(feature_cfg, 'include_obv', True),
+            include_momentum=getattr(feature_cfg, 'include_momentum', True),
+            include_mean_reversion=getattr(feature_cfg, 'include_mean_reversion', True),
         )
         
         # Also load raw data for backtest

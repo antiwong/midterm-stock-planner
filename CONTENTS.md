@@ -168,7 +168,7 @@
 - **Modules**: 19 (app, analytics, analysis, backtest, models, features, indicators, sentiment, risk, fundamental, data, config, validation, explain, visualization, strategies, regression, exceptions, pipeline)
 - **Branch**: main
 - **Version**: 3.11.2
-- **Tests**: 208+ tests (19 test files)
+- **Tests**: 278+ tests (19 test files)
 
 ---
 
@@ -195,7 +195,21 @@
 - `src/regression/metrics.py` - Metrics framework (PRIMARY, SECONDARY, GUARD)
 - `src/regression/tuning.py` - Bayesian parameter tuning via skopt
 - `src/regression/database.py` - SQLite result storage and tracking
-- `src/regression/reporting.py` - JSON/Markdown/CSV report generation
+- `src/regression/reporting.py` - JSON/Markdown/CSV/HTML report generation
+
+**Key Features** (added 2026-03-15):
+- IC regime detection (`metrics.py::detect_ic_regime_shift()`) - Rolling z-score alert when signal quality degrades
+- Factor redundancy gates (`metrics.py::check_feature_redundancy()`) - Spearman cross-correlation check (|r| > 0.8 threshold)
+- Overfitting mitigation - Median train/test Sharpe ratio guard, regularized LightGBM defaults
+- Optimal feature set: `macd`, `bollinger`, `adx` (validated via regression test on tech_giants)
+
+**Scripts**:
+- `scripts/run_regression_test.py` - CLI entry point for running regression tests
+- `scripts/generate_regression_report.py` - Generate single-page HTML report with embedded Plotly charts per regression run. Usage: `python scripts/generate_regression_report.py <regression_id> [--open] [--list]`
+
+**Output Structure**:
+- `output/regression/<regression_id>/` - Raw regression output (JSON, MD, CSV, HTML report)
+- `output/results/<regression_id>/` - Consolidated results folder (report.html, summary.json, metrics CSV, leaderboard CSV, markdown report)
 
 ### Cross-Asset Features (added 2026-03)
 
