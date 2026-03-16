@@ -1,0 +1,20 @@
+# Per-ticker configuration for GOLD
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.207, Return=61.2%, MaxDD=-55.3%, Trades=204
+
+ticker: GOLD
+trigger:
+  rsi_period: 12
+  rsi_oversold: 20
+  rsi_overbought: 76
+  macd_fast: 8
+  macd_slow: 60
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

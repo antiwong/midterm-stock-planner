@@ -1,0 +1,20 @@
+# Per-ticker configuration for GDXJ
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.402, Return=206.1%, MaxDD=-17.9%, Trades=42
+
+ticker: GDXJ
+trigger:
+  rsi_period: 21
+  rsi_oversold: 25
+  rsi_overbought: 80
+  macd_fast: 20
+  macd_slow: 20
+  macd_signal: 5
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

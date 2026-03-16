@@ -1,22 +1,19 @@
 {
   "best_params": {
-    "macd_fast": 5,
-    "macd_slow": 51,
-    "macd_signal": 5,
-    "rsi_period": 14,
-    "rsi_overbought": 79,
-    "rsi_oversold": 40,
-    "macro_vix_enabled": true,
-    "vix_buy_max": 40,
-    "vix_sell_min": 20,
-    "macro_dxy_enabled": true,
-    "dxy_buy_max": 108,
-    "dxy_sell_min": 102
+    "macd_fast": 19,
+    "macd_slow": 28,
+    "macd_signal": 17,
+    "rsi_period": 19,
+    "rsi_overbought": 63,
+    "rsi_oversold": 20
   },
-  "best_score": 2.332,
-  "metric": "sharpe_dd",
-  "tickers": ["SLV"],
-  "optimize_vix": false,
-  "optimize_dxy": false,
-  "note": "RSI/MACD from no-macro optimization; macro params set permissive for validation"
+  "best_score": 0.2526618243943139,
+  "metric": "sharpe",
+  "tickers": [
+    "SLV"
+  ],
+  "sharpe_ratio": 0.2526618243943139,
+  "total_return": 0.5447136141184339,
+  "max_drawdown": -0.1622358229208303,
+  "num_trades": 239
 }

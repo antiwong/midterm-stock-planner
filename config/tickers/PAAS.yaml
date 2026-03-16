@@ -1,0 +1,20 @@
+# Per-ticker configuration for PAAS
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.323, Return=209.3%, MaxDD=-28.8%, Trades=263
+
+ticker: PAAS
+trigger:
+  rsi_period: 20
+  rsi_oversold: 40
+  rsi_overbought: 60
+  macd_fast: 12
+  macd_slow: 57
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h
