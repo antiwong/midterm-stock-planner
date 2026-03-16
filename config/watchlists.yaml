@@ -445,6 +445,8 @@ watchlists:
       - MRVL    # Marvell Technology
       - "ON"    # ON Semiconductor
       - SMCI    # Super Micro Computer
+      - TXN     # Texas Instruments
+      - SMH     # VanEck Semiconductor ETF
 
   # Financials - Banks and financial services
   financials:

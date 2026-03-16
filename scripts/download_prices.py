@@ -117,7 +117,7 @@ class DataValidator:
         if self.price_df.empty:
             return
         
-        self.price_df['date'] = pd.to_datetime(self.price_df['date'])
+        self.price_df['date'] = pd.to_datetime(self.price_df['date'], format="mixed")
         data_start = self.price_df['date'].min()
         data_end = self.price_df['date'].max()
         
@@ -594,8 +594,8 @@ class PriceDownloader:
             if merge_existing and self.output_path.exists():
                 print(f"\n   Merging with existing data...")
                 existing_df = pd.read_csv(self.output_path, parse_dates=['date'])
-                existing_df['date'] = pd.to_datetime(existing_df['date'])
-                
+                existing_df['date'] = pd.to_datetime(existing_df['date'], format="mixed")
+
                 # Remove duplicates (keep new data)
                 combined = pd.concat([existing_df, result_df], ignore_index=True)
                 combined = combined.drop_duplicates(subset=['date', 'ticker'], keep='last')
@@ -632,9 +632,9 @@ class PriceDownloader:
             return result_df
         try:
             existing_df = pd.read_csv(self.output_path, parse_dates=['date'])
-            existing_df['date'] = pd.to_datetime(existing_df['date'])
+            existing_df['date'] = pd.to_datetime(existing_df['date'], format="mixed")
             if 'date' in result_df.columns:
-                result_df['date'] = pd.to_datetime(result_df['date'])
+                result_df['date'] = pd.to_datetime(result_df['date'], format="mixed")
             combined = pd.concat([existing_df, result_df], ignore_index=True)
             combined = combined.drop_duplicates(subset=['date', 'ticker'], keep='last')
             combined = combined.sort_values(['ticker', 'date'])
@@ -887,7 +887,7 @@ Examples:
                     if not args.no_merge and output_path.exists():
                         print("  Merging with existing data...")
                         existing = pd.read_csv(output_path, parse_dates=["date"])
-                        existing["date"] = pd.to_datetime(existing["date"])
+                        existing["date"] = pd.to_datetime(existing["date"], format="mixed")
                         df = pd.concat([existing, df], ignore_index=True)
                         df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
                         df = df.sort_values(["ticker", "date"])
