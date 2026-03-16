@@ -369,6 +369,9 @@ Available watchlists (defined in `config/watchlists.yaml`):
 | Watchlist | Stocks | Description |
 |-----------|--------|-------------|
 | `tech_giants` | 13 | AAPL, MSFT, GOOGL, AMZN, META, NVDA, TSLA, AMD, INTC, ORCL, CRM, ADBE, NFLX |
+| `semiconductors` | 18 | NVDA, AMD, INTC, TSM, ASML, AVGO, QCOM, MU, LRCX, AMAT, KLAC, MRVL, ON, SMCI, TXN, SMH, ARM, TEL + 7 more |
+| `precious_metals` | 31 | GLD, SLV, GDX, NEM, GOLD, FNV, WPM, AEM, KGC + miners/ETFs |
+| `moby_picks` | 56 | Moby analytics platinum/gold/silver tiers (cross-sector) |
 | `sp500` | ~500 | S&P 500 constituents |
 | `nasdaq_100` | ~100 | NASDAQ-100 constituents |
 
@@ -436,6 +439,63 @@ Based on the regression test (tech_giants, 2016-2026, reg_20260315_152332):
 
 - Markets are closed (weekends, holidays)
 - Run on the next trading day
+
+---
+
+## When to Re-run Regression Tests
+
+Regression tests (`scripts/run_regression_test.py`) validate which features help or hurt the model's Sharpe ratio. They are expensive (~40-120 min per watchlist) and only needed when something structural changes.
+
+### Re-run when
+
+- **Feature set changes** — Adding or removing indicators (RSI, OBV, momentum, etc.)
+- **Model hyperparameter changes** — LightGBM depth, learning rate, regularization, etc.
+- **New watchlist/universe** — First time testing a watchlist you haven't validated before
+- **Walk-forward parameter changes** — Train/test window size, step size, top_n
+- **Regime shift suspected** — If paper trading accuracy drops for 2+ consecutive weeks
+
+### Don't need to re-run when
+
+- Adding new tickers to an already-tested watchlist
+- Changing position sizing, risk rules, or execution logic (paper trading layer)
+- Running Bayesian optimization (that tunes the trigger backtest, not the ML model)
+- Daily paper trading (walk-forward already retrains the model each run)
+- Changing Alpaca settings or switching between local/Alpaca execution
+
+### Recommended cadence
+
+- **Quarterly** as a routine health check
+- **On-demand** when making model or feature changes
+- **After major market events** (regime shifts) if live accuracy degrades
+
+### How to run
+
+```bash
+# Run for a specific watchlist
+python scripts/run_regression_test.py run --watchlist tech_giants
+
+# Run with feature parameter tuning
+python scripts/run_regression_test.py run --watchlist semiconductors --tune
+
+# View previous results
+python scripts/run_regression_test.py list
+python scripts/run_regression_test.py leaderboard
+```
+
+### What regression tests validate vs daily paper trading
+
+| Aspect | Regression Test | Daily Paper Trading |
+|--------|----------------|---------------------|
+| Purpose | Validate feature selection | Generate live signals |
+| Frequency | Quarterly / on-demand | Daily after market close |
+| Duration | 40-120 min | ~2 min (signal generation) |
+| Output | Feature leaderboard, Sharpe per step | Trades, portfolio P&L |
+| Model retraining | No (fixed walk-forward) | Yes (walk-forward retrains daily) |
+| Live accuracy tracking | No | Yes (accuracy calibration loop) |
+
+The **accuracy calibration loop** (built into the daily pipeline) is the live equivalent of regression testing — it tracks whether BUY signals actually produce positive returns over 5-day windows and adjusts position sizing accordingly.
+
+---
 
 ### Resetting the Paper Portfolio
 
