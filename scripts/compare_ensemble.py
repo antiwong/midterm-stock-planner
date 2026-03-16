@@ -112,47 +112,44 @@ def simulate_portfolio(rankings_df: pd.DataFrame, price_df: pd.DataFrame,
     daily_returns = []
     trades = []
     holdings_by_window = []
-
-    latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
+    hold_days = 7  # hold for 7 days after each rebalance
 
     for _, window in windows.iterrows():
         test_start = window["test_start"]
-        test_end = window["test_end"]
 
         # Get top_n for this window
         window_rankings = rankings_df[
-            (rankings_df["test_start"] == test_start) &
-            (rankings_df["test_end"] == test_end)
+            rankings_df["test_start"] == test_start
         ].sort_values(method_col).head(top_n)
 
         selected = window_rankings["ticker"].tolist()
         holdings_by_window.append({
             "test_start": test_start,
-            "test_end": test_end,
             "holdings": selected,
         })
 
-        # Calculate return for this window using daily price data
-        window_prices = price_df[
-            (price_df["date"] >= pd.to_datetime(test_start)) &
-            (price_df["date"] <= pd.to_datetime(test_end)) &
-            (price_df["ticker"].isin(selected))
-        ]
-
-        if len(window_prices) == 0:
-            continue
-
-        # Equal weight portfolio return
+        # Calculate 7-day forward return from rebalance date
+        start_dt = pd.to_datetime(test_start)
         for ticker in selected:
-            ticker_prices = window_prices[window_prices["ticker"] == ticker].sort_values("date")
-            if len(ticker_prices) >= 2:
-                ret = (ticker_prices.iloc[-1]["close"] / ticker_prices.iloc[0]["close"]) - 1
-                daily_returns.append({
-                    "test_start": test_start,
-                    "test_end": test_end,
-                    "ticker": ticker,
-                    "return": ret,
-                })
+            ticker_prices = price_df[
+                (price_df["ticker"] == ticker) &
+                (price_df["date"] >= start_dt)
+            ].sort_values("date")
+
+            if len(ticker_prices) < 2:
+                continue
+
+            entry_price = ticker_prices.iloc[0]["close"]
+            # Exit after hold_days or at last available
+            exit_idx = min(hold_days, len(ticker_prices) - 1)
+            exit_price = ticker_prices.iloc[exit_idx]["close"]
+            ret = (exit_price / entry_price) - 1
+
+            daily_returns.append({
+                "test_start": test_start,
+                "ticker": ticker,
+                "return": ret,
+            })
 
     if not daily_returns:
         return {"sharpe": 0, "total_return": 0, "max_drawdown": 0, "n_windows": 0}
@@ -160,7 +157,7 @@ def simulate_portfolio(rankings_df: pd.DataFrame, price_df: pd.DataFrame,
     returns_df = pd.DataFrame(daily_returns)
 
     # Per-window portfolio return (equal weight)
-    window_returns = returns_df.groupby(["test_start", "test_end"])["return"].mean()
+    window_returns = returns_df.groupby("test_start")["return"].mean()
 
     # Metrics
     avg_ret = window_returns.mean()
@@ -231,7 +228,7 @@ def main():
     # Compute features
     print("Computing features...")
     feature_cfg = config.features
-    from src.features.engineering import bars_per_day_from_interval
+    from src.config.config import bars_per_day_from_interval
     bpd = bars_per_day_from_interval("1d")
 
     feature_df = compute_all_features_extended(
@@ -269,24 +266,31 @@ def main():
     elapsed = time.time() - t0
     print(f"Backtest complete in {elapsed:.0f}s. Overall Sharpe={results.metrics.get('sharpe_ratio', 0):.3f}")
 
-    # Extract per-window rankings
-    print("Extracting per-window ML rankings...")
-    ml_rankings = get_ml_rankings(results)
-    if ml_rankings.empty:
-        print("No per-window rankings available. Using final scores only.")
-        # Fall back to final scores repeated
-        if results.final_scores is not None:
-            ml_rankings = results.final_scores[["ticker", "prediction"]].copy()
-            ml_rankings["test_start"] = "final"
-            ml_rankings["test_end"] = "final"
-            ml_rankings = ml_rankings.sort_values("prediction", ascending=False)
-            ml_rankings["ml_rank"] = range(1, len(ml_rankings) + 1)
-
-    if ml_rankings.empty:
-        print("ERROR: No rankings data. Cannot compare.")
+    # Extract per-date predictions from walk-forward
+    print("Extracting per-date ML predictions...")
+    all_preds = results.predictions
+    if all_preds is None or all_preds.empty:
+        print("ERROR: No predictions data. Cannot compare.")
         return 1
 
-    print(f"  {len(ml_rankings)} ticker-window combinations across {ml_rankings['test_start'].nunique()} windows")
+    all_preds["date"] = pd.to_datetime(all_preds["date"], format="mixed")
+
+    # Sample to weekly rebalance dates (every 7th unique date)
+    unique_dates = sorted(all_preds["date"].unique())
+    rebalance_dates = unique_dates[::7]  # weekly rebalance
+    ml_rankings = all_preds[all_preds["date"].isin(rebalance_dates)].copy()
+
+    # Rank per date
+    ml_rankings["ml_rank"] = ml_rankings.groupby("date")["prediction"].rank(
+        ascending=False, method="first"
+    ).astype(int)
+
+    # Use date as window identifier
+    ml_rankings["test_start"] = ml_rankings["date"].dt.strftime("%Y-%m-%d")
+    ml_rankings["test_end"] = ml_rankings["date"].dt.strftime("%Y-%m-%d")
+
+    n_dates = ml_rankings["date"].nunique()
+    print(f"  {len(ml_rankings)} predictions across {n_dates} rebalance dates")
 
     # Get trigger scores
     print("Running trigger backtests for ensemble...")

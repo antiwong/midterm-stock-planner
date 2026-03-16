@@ -1,0 +1,30 @@
+{
+  "watchlist": "tech_giants",
+  "top_n": 5,
+  "ml_weight": 0.7,
+  "trigger_weight": 0.3,
+  "n_tickers": 13,
+  "n_with_trigger_config": 13,
+  "ml_metrics": {
+    "sharpe": 0.39861123558817785,
+    "total_return": 0.44402598421483663,
+    "max_drawdown": -0.6709778779167699,
+    "win_rate": 0.5060240963855421,
+    "avg_window_return": 0.003738744249787575,
+    "n_windows": 249,
+    "avg_turnover_per_rebalance": 0.47580645161290325,
+    "n_holdings_changes": 118
+  },
+  "ensemble_metrics": {
+    "sharpe": 0.6804811690231223,
+    "total_return": 1.998507989528275,
+    "max_drawdown": -0.6684696509214151,
+    "win_rate": 0.5180722891566265,
+    "avg_window_return": 0.007473809083371432,
+    "n_windows": 249,
+    "avg_turnover_per_rebalance": 0.3064516129032258,
+    "n_holdings_changes": 76
+  },
+  "verdict": "ENSEMBLE WINS \u2014 Sharpe improved by 70.7%",
+  "timestamp": "2026-03-17 01:06:10"
+}
