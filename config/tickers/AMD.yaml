@@ -1,36 +1,33 @@
 # Per-ticker configuration for AMD
-# Overrides global config when this ticker is used in trigger backtest or feature engineering.
-# Generate optimized params with: python scripts/optimize_macd_rsi_bayesian.py --tickers AMD --save output/best_params_AMD.json
-# Then copy values here, or use optimized_params_path to point at the JSON.
+# Optimized via Bayesian optimization on 2026-03-16
+# Sharpe=0.256, Return=139.2%, MaxDD=-31.1%, Trades=234
 
 ticker: AMD
-
-# RSI, MACD, Bollinger parameters
 trigger:
   rsi_period: 15
   rsi_oversold: 20
-  rsi_overbought: 69
-  macd_fast: 6
-  macd_slow: 57
-  macd_signal: 13
+  rsi_overbought: 60
+  macd_fast: 20
+  macd_slow: 60
+  macd_signal: 20
   bb_period: 20
   bb_std: 2.0
-  # Regime-aware VIX gating for AI name (QuantaAlpha §6)
   macro_factors:
     vix_enabled: true
     vix_buy_max: 25
     vix_sell_min: 30
-    # Institutional filter: volume surge + positive OBV slope
     volume_surge_min: 2.0
     obv_slope_positive: true
-
-# Time forward windows (used in feature engineering and walk-forward backtest)
 horizon_days: 63
-return_periods: [21, 63, 126, 252]
-volatility_windows: [20, 60]
+return_periods:
+- 21
+- 63
+- 126
+- 252
+volatility_windows:
+- 20
+- 60
 volume_window: 20
-
-# Walk-forward backtest (overrides global config.backtest when running for this ticker)
 backtest:
   train_years: 1.0
   test_years: 0.25

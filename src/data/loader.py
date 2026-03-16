@@ -59,7 +59,7 @@ def _validate_date_column(df: pd.DataFrame, date_col: str = 'date') -> pd.DataFr
     
     if not pd.api.types.is_datetime64_any_dtype(df[date_col]):
         try:
-            df[date_col] = pd.to_datetime(df[date_col])
+            df[date_col] = pd.to_datetime(df[date_col], format="mixed")
         except Exception as e:
             raise DataValidationError(
                 f"Could not parse date column '{date_col}': {e}"

@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 14,
+    "macd_slow": 42,
+    "macd_signal": 20,
+    "rsi_period": 14,
+    "rsi_overbought": 60,
+    "rsi_oversold": 34
+  },
+  "best_score": 0.08130563470490812,
+  "metric": "sharpe",
+  "tickers": [
+    "AAPL"
+  ],
+  "sharpe_ratio": 0.08130563470490812,
+  "total_return": 0.13857510947371357,
+  "max_drawdown": -0.2269149738633985,
+  "num_trades": 363
+}

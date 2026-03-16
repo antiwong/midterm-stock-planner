@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 20,
+    "macd_slow": 60,
+    "macd_signal": 20,
+    "rsi_period": 15,
+    "rsi_overbought": 60,
+    "rsi_oversold": 20
+  },
+  "best_score": 0.2563238172117083,
+  "metric": "sharpe",
+  "tickers": [
+    "AMD"
+  ],
+  "sharpe_ratio": 0.2563238172117083,
+  "total_return": 1.392138088116975,
+  "max_drawdown": -0.31136586193395294,
+  "num_trades": 234
+}

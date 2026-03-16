@@ -1,0 +1,20 @@
+# Per-ticker configuration for TSLA
+# Optimized via Bayesian optimization on 2026-03-16
+# Sharpe=0.190, Return=85.6%, MaxDD=-44.4%, Trades=257
+
+ticker: TSLA
+trigger:
+  rsi_period: 21
+  rsi_oversold: 30
+  rsi_overbought: 62
+  macd_fast: 20
+  macd_slow: 29
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h
