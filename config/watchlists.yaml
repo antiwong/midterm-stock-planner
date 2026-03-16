@@ -449,6 +449,13 @@ watchlists:
       - SMH     # VanEck Semiconductor ETF
       - ARM     # Arm Holdings (chip IP/design)
       - TEL     # TE Connectivity (electronic components)
+      - SWKS    # Skyworks Solutions (RF semiconductors)
+      - NXPI    # NXP Semiconductors (automotive/IoT)
+      - ADI     # Analog Devices
+      - MCHP    # Microchip Technology
+      - TER     # Teradyne (semiconductor equipment)
+      - STX     # Seagate Technology (storage)
+      - WDC     # Western Digital (storage)
 
   # Financials - Banks and financial services
   financials:
@@ -846,21 +853,72 @@ watchlists:
       - AMD     # Advanced Micro Devices
 
   # Moby Picks - Analyst recommendations (2026-03-16)
+  # Platinum ~6.8-8.2% weight, Gold ~0.9%, Silver ~0.3%
   moby_picks:
     name: "Moby Picks"
-    description: "Stocks recommended by Moby analytics — cross-sector picks"
+    description: "Stocks recommended by Moby analytics — platinum/gold/silver tiers"
     category: "custom"
     symbols:
-      - LUMN    # Lumen Technologies (telecom/fiber)
-      - CTSH    # Cognizant Technology Solutions (IT services)
-      - CCJ     # Cameco Corporation (uranium/nuclear)
+      # --- Platinum Tier (6.80-8.20% weight) ---
+      - NVDA    # NVIDIA Corp (8.20%)
+      - PODD    # Insulet Corporation
+      - GRMN    # Garmin Ltd
+      - DXC     # DXC Technology
+      - EMR     # Emerson Electric
+      - ROK     # Rockwell Automation
+      - ADP     # Automatic Data Processing
+      - WMT     # Walmart
+      - SWKS    # Skyworks Solutions (semiconductor)
+      - TPR     # Tapestry Inc
+      # --- Gold Tier (0.90% weight) ---
+      - ROKU    # Roku Inc
+      - VRSK    # Verisk Analytics
+      - SPGI    # S&P Global Inc
+      - TRI     # Thomson Reuters
+      - PH      # Parker-Hannifin
+      - ETN     # Eaton Corp
+      - TER     # Teradyne (semiconductor equipment)
+      - FTV     # Fortive Corp
+      - NXPI    # NXP Semiconductors
+      - "ON"    # ON Semiconductor
+      - FTNT    # Fortinet (cybersecurity)
+      - ADI     # Analog Devices (semiconductor)
+      - MCHP    # Microchip Technology
+      - KEYS    # Keysight Technologies
+      - APTV    # Aptiv PLC (auto tech)
+      - BWA     # BorgWarner Inc
+      - TEL     # TE Connectivity
+      - APH     # Amphenol Corp
+      - GLW     # Corning Inc
+      - EFX     # Equifax Inc
+      - TRU     # TransUnion
+      - PAYX    # Paychex Inc
+      - CDW     # CDW Corp
+      - CHKP    # Check Point Software
+      - AKAM    # Akamai Technologies
+      - HPE     # Hewlett Packard Enterprise
+      - CSCO    # Cisco Systems
+      - BKNG    # Booking Holdings
+      - EXPE    # Expedia Group
+      - STX     # Seagate Technology
+      - WDC     # Western Digital
+      # --- Silver Tier (0.30% weight) ---
+      - AN      # AutoNation Inc
+      - PHM     # PulteGroup Inc
+      - COST    # Costco
+      - TGT     # Target Corp
+      - KMX     # CarMax
+      - HD      # Home Depot
+      - TSCO    # Tractor Supply
+      - BBY     # Best Buy Co
+      - ORLY    # O'Reilly Automotive
+      # --- Earlier picks (not in tiers) ---
+      - LUMN    # Lumen Technologies
+      - CTSH    # Cognizant Technology Solutions
+      - CCJ     # Cameco Corporation (uranium)
       - CDE     # Coeur Mining (precious metals)
-      - PWR     # Quanta Services (infrastructure)
-      - ARM     # Arm Holdings (semiconductor/IP)
-      - EMR     # Emerson Electric (industrial)
-      - TEL     # TE Connectivity (electronic components)
-      - BKNG    # Booking Holdings (travel/tech)
-      - DXC     # DXC Technology (IT services)
+      - PWR     # Quanta Services
+      - ARM     # Arm Holdings (semiconductor)
 
   # Earnings Watch - Upcoming earnings to monitor
   earnings_watch:
