@@ -1,6 +1,6 @@
 # Daily Run Guide
 
-**Date**: 2026-03-15
+**Updated**: 2026-03-16
 **Script**: `scripts/paper_trading.py`
 **Database**: `data/paper_trading.db`
 
@@ -13,8 +13,71 @@ The daily run pipeline generates trading signals and tracks simulated portfolio 
 1. **Refresh data** — Download latest daily prices
 2. **Retrain model** — Walk-forward backtest on updated data
 3. **Generate signals** — Rank all stocks, identify top 5 to buy
-4. **Execute trades** — Simulate buying/selling with transaction costs
+4. **Execute trades** — Place orders via Alpaca paper trading (or simulate locally)
 5. **Track P&L** — Log portfolio value, positions, and returns to SQLite
+
+---
+
+## Pipeline Flowchart
+
+```mermaid
+flowchart TD
+    START(["⏰ 5:30 PM ET / Manual Trigger"]) --> RUN["python scripts/paper_trading.py run\n--watchlist tech_giants"]
+
+    RUN --> INIT["PaperTradingEngine.__init__()"]
+    INIT --> LOAD_CFG["Load config/config.yaml\n• Features: MACD, Bollinger, ATR, ADX\n• Portfolio: top_n=5, max_weight=20%\n• Model: LightGBM (regularized)"]
+    LOAD_CFG --> DETECT{Alpaca API\nkeys set?}
+    DETECT -->|Yes| ALPACA_CONN["Connect AlpacaBroker\npaper=true"]
+    DETECT -->|No| LOCAL["Local simulation\nSQLite + 0.1% cost"]
+
+    ALPACA_CONN --> REFRESH
+    LOCAL --> REFRESH
+
+    subgraph P1["Phase 1 — Data Refresh"]
+        REFRESH["refresh_data()"] --> DL["Download latest daily prices\n• Alpaca Historical API primary\n• yfinance fallback\n• Append to data/prices_daily.csv"]
+    end
+
+    DL --> FEAT
+
+    subgraph P2["Phase 2 — Feature Engineering"]
+        FEAT["_load_data()"] --> FILTER["Filter by watchlist\n13 tech_giants tickers"]
+        FILTER --> COMPUTE["compute_all_features_extended()\n• Returns, volatility, volume\n• MACD histogram + signal\n• Bollinger %B + bandwidth\n• ATR 14-period\n• ADX 14-period\n• 39 features total"]
+        COMPUTE --> DATASET["make_training_dataset()\n• 63-day forward excess return\n• Merge features + SPY benchmark"]
+    end
+
+    DATASET --> WF
+
+    subgraph P3["Phase 3 — Signal Generation"]
+        WF["run_walk_forward_backtest()"] --> WINDOWS["336 walk-forward windows\n• Train: 3yr, Test: 6mo, Step: 7d\n• 11 parallel processes"]
+        WINDOWS --> LGBM["LightGBM per window\nn_est=200, lr=0.03\nmax_depth=6, leaves=15"]
+        LGBM --> SCORES["Extract final predictions\nCross-sectional stock ranking"]
+        SCORES --> RANK["Top 5 → BUY\nRest → SELL / HOLD"]
+    end
+
+    RANK --> EXEC
+
+    subgraph P4["Phase 4 — Trade Execution"]
+        EXEC{Alpaca or\nLocal?}
+        EXEC -->|Alpaca| ALP["rebalance_portfolio()\n1. Liquidate removed positions\n2. Trim over-weight\n3. Buy under-weight\n• Market orders\n• Fractional shares"]
+        EXEC -->|Local| LOC["Simulate at close price\n• Apply transaction cost\n• Update cash + positions"]
+    end
+
+    ALP --> SYNC
+    LOC --> SYNC
+
+    subgraph P5["Phase 5 — Record & Sync"]
+        SYNC["Write to paper_trading.db"] --> T1["trades table"]
+        SYNC --> T2["positions table"]
+        SYNC --> T3["daily_snapshots table"]
+        SYNC --> T4["signals table"]
+    end
+
+    T1 --> DONE
+    T2 --> DONE
+    T3 --> DONE
+    T4 --> DONE
+    DONE(["✅ Done — review with 'status'"])
+```
 
 ---
 
@@ -216,20 +279,37 @@ model:
 
 ## How Signals Are Generated
 
-The pipeline uses a **cross-sectional ranking model**:
+The pipeline uses a **cross-sectional ranking model** (ML-based):
 
-1. **Walk-forward backtest**: Train on 3 years of daily data, test on 6 months, step forward 7 days. This creates ~265 overlapping windows.
+1. **Walk-forward backtest**: Train on 3 years of daily data, test on 6 months, step forward 7 days. This creates ~336 overlapping windows.
 
 2. **Per window**: LightGBM learns to predict which stocks will have the highest excess returns (vs SPY benchmark) over the next 63 trading days.
 
 3. **Final scores**: The latest window's predictions are extracted. Each stock gets a score — higher = more likely to outperform.
 
-4. **Portfolio**: Top 5 stocks by score are selected. Weights are proportional to scores, capped at 20%.
+4. **Portfolio**: Top 5 stocks by score are selected with equal weights, capped at 20%.
 
 5. **Risk controls**:
    - **Max position weight**: No stock exceeds 20% of portfolio
    - **Stop-loss**: If a stock drops 15% from entry, it's sold
    - **VIX scaling**: When market volatility is high (benchmark 21-day vol > 30 annualized), exposure is reduced to 60%. Above 40, reduced to 30%.
+
+### Two Signal Sources (Architecture Note)
+
+| Signal Source | Description | Per-ticker params? | Status |
+|---|---|---|---|
+| **ML walk-forward** (LightGBM) | Cross-sectional stock ranking model. Uses global MACD/Bollinger params for feature engineering — correct since the model needs consistent features across stocks. | No (global) | **Active** — used in daily pipeline |
+| **Trigger backtest** (RSI/MACD rules) | Rule-based buy/sell signals from per-ticker optimized MACD/RSI thresholds. Bayesian-optimized per ticker. | **Yes** — `config/tickers/*.yaml` | Available for ensemble/standalone use |
+
+**Per-ticker Bayesian optimization** (`scripts/optimize_all_tickers.py`) tunes MACD fast/slow/signal and RSI period/overbought/oversold for each ticker independently. Results are stored in:
+- `output/best_params_{TICKER}.json` — JSON with optimized params and performance
+- `config/tickers/{TICKER}.yaml` — YAML config loaded by `load_ticker_config()`
+
+To re-run optimization:
+```bash
+python scripts/optimize_all_tickers.py --n-calls 40 --metric sharpe
+python scripts/optimize_all_tickers.py --tickers AAPL MSFT --n-calls 50  # specific tickers
+```
 
 ---
 
@@ -277,11 +357,24 @@ Default: `tech_giants` (validated by regression testing).
 
 ### Expected Performance
 
-Based on the regression test (tech_giants, 2016-2026):
-- **Sharpe ratio**: ~1.34 (optimal feature set)
+Based on the regression test (tech_giants, 2016-2026, reg_20260315_152332):
+- **Sharpe ratio**: ~1.34 (optimal feature set: baseline + MACD + Bollinger + ADX)
 - **Total return**: ~959% over 10 years
 - **Max drawdown**: -55% to -72% (this is the main risk — position sizing helps but doesn't eliminate it)
 - **Turnover**: Moderate (monthly rebalancing)
+- **Walk-forward Sharpe** (336 windows, daily data): ~6.7
+
+**Per-ticker Bayesian optimization results** (2026-03-16, trigger backtest):
+
+| Ticker | Sharpe | Return | MaxDD | MACD | RSI |
+|--------|--------|--------|-------|------|-----|
+| META | 2.059 | 155% | -10% | 9/37/12 | 17/65/26 |
+| AMZN | 1.573 | 147% | -18% | 17/60/17 | 7/71/31 |
+| ORCL | 1.295 | 230% | -36% | 9/31/7 | 18/61/32 |
+| NVDA | 1.126 | 7350% | -61% | 15/20/7 | 14/80/40 |
+| MSFT | 1.004 | 55% | -13% | 5/60/6 | 7/76/20 |
+| INTC | 0.868 | 1103% | -59% | 16/56/5 | 15/63/32 |
+| CRM | 0.722 | 42% | -24% | 20/28/16 | 13/65/20 |
 
 **Important**: Paper trading results will differ from backtest because:
 1. Backtest has look-ahead bias in target construction
