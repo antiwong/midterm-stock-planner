@@ -3,7 +3,7 @@
 > [Back to Documentation Index](README.md) | [Sentiment Integration Plan](sentiment-integration.md)
 
 **Date**: 2026-03-17
-**Status**: Data quality insufficient for regression testing
+**Status**: Data quality insufficient for regression testing — daily accumulation started via cron
 
 ---
 
@@ -62,7 +62,7 @@
 
 4. **Source bias** — 66% of articles from Yahoo Finance. Single-source dominance means sentiment scores reflect Yahoo's editorial choices, not true market sentiment.
 
-5. **No sentiment scoring yet** — The raw news.csv has headlines and summaries but NO pre-computed sentiment scores (except Alpha Vantage's proprietary scores which are not stored in the CSV). The lexicon/FinBERT model needs to be run on the data before it becomes features.
+5. ~~No sentiment scoring~~ **RESOLVED** (2026-03-17) — All 2,026 articles scored with lexicon model. Columns added: `sentiment_score` (headline), `summary_sentiment`, `combined_sentiment` (60% headline + 40% summary). Distribution: 45% positive, 35% neutral, 20% negative.
 
 ### Medium
 
@@ -82,14 +82,14 @@
 | All tickers covered | 7 full, 6 partial | 13 full | Need paid tier or more sources |
 | Insider data | 7 tickers | 13 tickers | Finnhub free tier limitation |
 | Analyst data | 7 tickers | 13 tickers | Same |
-| Pre-scored | No | Yes | Run lexicon model on all articles |
+| Pre-scored | **Yes (done)** | Yes | Lexicon model scored 2,026 articles |
 | Deduplicated | No | Yes | Remove cross-source duplicates |
 
 ### Options to Build Historical Depth
 
 | Option | Cost | Coverage | Historical Depth | Effort |
 |--------|------|----------|-----------------|--------|
-| **Daily cron accumulation** | Free | Current sources | Builds over weeks/months | Low — add to existing cron |
+| **Daily cron accumulation** | Free | Current sources | Builds over weeks/months | **Active** — cron at 6:00 PM ET |
 | **Finnhub paid tier** | $50/mo | Full API access | Up to 1 year | Low — same code |
 | **NewsAPI paid tier** | $449/mo | 80,000+ sources | 5+ years | Low — same code |
 | **Reddit (PRAW)** | Free | Reddit only | Up to 1 year (pushshift) | Medium — new source |

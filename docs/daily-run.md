@@ -1,5 +1,7 @@
 # Daily Run Guide
 
+> [← Back to Documentation Index](README.md)
+
 **Updated**: 2026-03-16
 **Script**: `scripts/paper_trading.py`
 **Database**: `data/paper_trading.db`
@@ -555,7 +557,12 @@ crontab -e
 # Paste the line, save, and exit
 ```
 
-Runs at 5:30 PM ET (22:30 UTC) every weekday. Logs go to `logs/paper_trading.log`.
+**Active cron schedule** (weekdays):
+
+| Time (ET) | Job | Log |
+|-----------|-----|-----|
+| 5:30 PM | `paper_trading.py run` — signals + execution | `logs/paper_trading.log` |
+| 6:00 PM | `download_sentiment.py` + `score_sentiment.py` — sentiment accumulation | `logs/sentiment_download.log` |
 
 ### Manual Daily Routine
 
@@ -574,3 +581,29 @@ python scripts/paper_trading.py run --watchlist tech_giants --skip-refresh
 # 3. Review
 python scripts/paper_trading.py status
 ```
+
+---
+
+## See Also
+
+### Technical Deep-Dive
+
+For detailed documentation of every technique used in the pipeline, see the **[Daily Run Technical Reference](daily-run/README.md)** folder:
+
+- [Pipeline Overview](daily-run/pipeline-overview.md) — end-to-end execution flow
+- [Feature Engineering](daily-run/feature-engineering.md) — MACD, Bollinger, ATR, ADX formulas and rationale
+- [Walk-Forward Backtest](daily-run/walk-forward-backtest.md) — rolling window methodology, IC, overfitting detection
+- [LightGBM Model](daily-run/lightgbm-model.md) — hyperparameters, training process, SHAP
+- [Signal Generation](daily-run/signal-generation.md) — ML + trigger ensemble blending
+- [Position Sizing](daily-run/position-sizing.md) — confidence-based, inverse-vol, Kelly methods
+- [Risk Controls](daily-run/risk-controls.md) — drawdown close, stop-loss, VIX scaling
+- [Alpaca Execution](daily-run/alpaca-execution.md) — rebalancing algorithm, order types
+- [Accuracy Calibration](daily-run/accuracy-calibration.md) — adaptive exposure from hit rate
+
+### Related Pages
+
+- [Alpaca integration setup](alpaca-paper-trading.md)
+- [Full user workflows](user-guide.md)
+- [Configuration options](configuration-cli.md)
+- [Backtesting and model training](backtesting.md)
+- [Position sizing and risk](risk-management.md)

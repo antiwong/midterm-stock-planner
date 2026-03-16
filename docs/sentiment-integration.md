@@ -93,6 +93,55 @@ That's 4 features x 3 windows = **12 sentiment features** added to the existing 
 
 ---
 
+## Daily Automation (Active as of 2026-03-17)
+
+```
+# Cron schedule (weekdays):
+5:30 PM ET  →  paper_trading.py run (signals + execution)
+6:00 PM ET  →  download_sentiment.py (Finnhub news/insider/analyst/earnings)
+             →  score_sentiment.py (lexicon model scoring)
+```
+
+Logs: `logs/paper_trading.log`, `logs/sentiment_download.log`
+
+### Scoring Status
+- 2,026 articles scored with lexicon model (2026-03-17)
+- Combined sentiment: 60% headline weight + 40% summary weight
+- Distribution: 45% positive, 35% neutral, 20% negative
+- Per-ticker scores range from +0.030 (ADBE, neutral) to +0.365 (NVDA, bullish)
+
+### Data Accumulation Timeline
+- **Day 1** (2026-03-17): 2,026 articles, 1-8 days coverage
+- **Day 30** (~2026-04-16): Target 30 days of daily data → run regression test
+- **Day 90** (~2026-06-15): Sufficient depth for walk-forward sentiment features
+
+---
+
+## Moby Email Integration (Planned)
+
+**Source**: `antiwongmoby@gmail.com` — Moby analytics newsletter emails
+**Status**: Not yet connected. Gmail MCP is linked to main account only.
+
+**Integration options**:
+1. Connect antiwongmoby@gmail.com to Gmail MCP
+2. Forward Moby emails to the connected account
+3. Build direct Gmail API integration for the antiwongmoby account
+
+**What Moby emails contain**:
+- Portfolio tier changes (platinum/gold/silver allocations)
+- Stock recommendations with target prices and rationale
+- Sector rotation signals
+- Market commentary with directional sentiment
+
+**Parsing plan**:
+- Extract ticker mentions + recommendation type (buy/sell/hold)
+- Map to `sentiment_score` (-1 to +1) based on recommendation strength
+- Tier changes → weight adjustments in moby_picks watchlist
+
+See beads issue `midterm-stock-planner-81n` for tracking.
+
+---
+
 ## Future Phases
 
 ### Phase B: Reddit/Social Media
