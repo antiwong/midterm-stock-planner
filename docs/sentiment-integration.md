@@ -2,8 +2,8 @@
 
 > [Back to Documentation Index](README.md)
 
-**Date**: 2026-03-16
-**Status**: Phase A (wire existing infrastructure)
+**Date**: 2026-03-17 (updated)
+**Status**: Phase A complete — EODHD integrated as primary sentiment source
 
 ---
 
@@ -18,10 +18,10 @@ The sentiment analysis infrastructure is fully built but not wired into the dail
 | Component | Status | Details |
 |-----------|--------|---------|
 | Sentiment models | Ready | Lexicon (fast), FinBERT (accurate), LLM (OpenAI/Gemini) |
-| Data sources | Ready | Alpha Vantage (pre-scored), NewsAPI (headlines), Finnhub (news + insider + analyst + earnings), RSS feeds |
+| Data sources | Ready | **EODHD (primary)**, Alpha Vantage, NewsAPI, Finnhub (news + insider + analyst + earnings), RSS feeds |
 | Feature pipeline | Ready | `prepare_sentiment_from_news()` → rolling aggregation → merge via (date, ticker) |
 | Config support | Ready | `use_sentiment: false` — flip to enable |
-| API keys | Set | Alpha Vantage, NewsAPI, Finnhub, OpenAI |
+| API keys | Set | **EODHD**, Alpha Vantage, NewsAPI, Finnhub, OpenAI |
 | Reddit/X | Not built | Config stub exists (`sentiment_source: "social"`) |
 
 ### Coverage Problem (as of 2026-03-16)
@@ -114,6 +114,64 @@ Logs: `logs/paper_trading.log`, `logs/sentiment_download.log`
 - **Day 1** (2026-03-17): 2,026 articles, 1-8 days coverage
 - **Day 30** (~2026-04-16): Target 30 days of daily data → run regression test
 - **Day 90** (~2026-06-15): Sufficient depth for walk-forward sentiment features
+
+---
+
+## EODHD — Primary Sentiment Source (Added 2026-03-17)
+
+EODHD provides the best sentiment data quality of all sources on the free plan.
+
+### What It Provides
+
+| Endpoint | Data | Cost | Quality |
+|----------|------|------|---------|
+| `/sentiments` | Daily aggregated score (0-1) + article count per ticker | 1 call/ticker | Excellent — pre-computed, normalized |
+| `/news` | Articles with polarity + pos/neg/neu breakdown | 5 calls each | Good — pre-scored per article |
+| `/eod/{ticker}` | OHLCV prices | 1 call | Standard |
+| `/fundamentals` | PE, PB, EPS, balance sheets | **Blocked (403)** | Needs $59.99/mo |
+
+### Quality Comparison
+
+| Metric | Finnhub | Alpha Vantage | **EODHD** |
+|--------|---------|---------------|-----------|
+| Tickers with daily sentiment | 0 | 0 | **8/8 (100%)** |
+| Days per API call | 1-8 | 2-3 | **16+** |
+| Pre-scored articles | No | Yes (proprietary) | **Yes (polarity + breakdown)** |
+| Daily aggregated scores | No | No | **Yes (normalized 0-1)** |
+| Article count tracking | No | No | **Yes (32-182/day)** |
+| Free tier daily calls | 60 | 5 | 20 |
+
+### Initial Download Results (2026-03-17)
+
+8 tickers, 16 days of daily sentiment:
+
+| Ticker | Avg Score | Sentiment | Avg Articles/Day |
+|--------|-----------|-----------|-----------------|
+| AMD | 0.815 | Bullish | 32 |
+| MSFT | 0.815 | Bullish | 55 |
+| INTC | 0.795 | Bullish | 87 |
+| NVDA | 0.754 | Bullish | 182 |
+| META | 0.745 | Bullish | 46 |
+| AAPL | 0.714 | Bullish | 50 |
+| TSLA | 0.697 | Bullish | 45 |
+| ORCL | 0.693 | Bullish | 34 |
+
+### Pricing (if upgrading)
+
+| Plan | Price | What It Adds |
+|------|-------|-------------|
+| Free (current) | $0 | EOD prices, news (4 req/day), daily sentiment |
+| Calendar & News | $19.99/mo | Unlimited news, economic calendar |
+| Fundamentals | $59.99/mo | PE, PB, EPS — but regression shows zero Sharpe impact |
+| All-in-One | $79.99/mo | Everything above + real-time |
+
+**Recommendation**: Stay on free plan. Daily sentiment accumulation via cron is sufficient. Fundamentals not worth $59.99/mo since regression tests show valuation features have zero impact.
+
+### Files
+
+- Source: `src/sentiment/sources/eodhd.py`
+- Daily sentiment: `data/sentiment/eodhd_daily_sentiment.csv`
+- News articles: `data/sentiment/eodhd_news.csv`
 
 ---
 

@@ -133,6 +133,34 @@
 - **Scoring**: None (headlines only, need lexicon/FinBERT)
 - **Module**: `src/sentiment/sources/newsapi.py`
 
+### EODHD (Integrated 2026-03-17)
+- **Endpoint**: `/sentiments` — daily aggregated sentiment (normalized 0-1, article count)
+- **Endpoint**: `/news` — articles with pre-scored polarity + pos/neg/neu breakdown
+- **Free plan**: 20 calls/day; sentiment is 1 call/ticker, news costs 5 calls each
+- **Coverage**: All US tickers, 16+ days from a single request
+- **Quality**: Best of all sources — pre-aggregated daily scores, high article counts (32-182/day)
+- **Module**: `src/sentiment/sources/eodhd.py`
+- **Data files**: `data/sentiment/eodhd_daily_sentiment.csv`, `data/sentiment/eodhd_news.csv`
+
+**EODHD free plan limitations**:
+| Endpoint | Status | Paid Plan Needed |
+|----------|--------|-----------------|
+| EOD Prices | Works | — |
+| News + Sentiment | Works (4 req/day) | Calendar & News $19.99/mo for unlimited |
+| Daily Sentiment | Works (1 call/ticker) | — |
+| Fundamentals | Blocked (403) | Fundamentals $59.99/mo |
+
+**EODHD vs other sources** (as of 2026-03-17):
+
+| Metric | Finnhub | Alpha Vantage | EODHD |
+|--------|---------|---------------|-------|
+| Tickers with daily sentiment | 0 | 0 | **8/8 (100%)** |
+| Days of data per call | 1-8 | 2-3 | **16+** |
+| Pre-scored | No | Yes (proprietary) | **Yes (polarity + breakdown)** |
+| Daily aggregated scores | No | No | **Yes (normalized 0-1)** |
+| Article count tracking | No | No | **Yes (32-182/day)** |
+| Free tier daily calls | 60 | 5 | 20 |
+
 ### Not Yet Integrated
 - **Reddit** (PRAW): r/wallstreetbets, r/stocks — high volume, noisy
 - **Polygon.io**: Comprehensive news + reference data
