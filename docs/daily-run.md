@@ -250,13 +250,39 @@ These were validated by regression test `reg_20260315_152332` on tech_giants:
 ```yaml
 backtest:
   top_n: 5                     # Hold top 5 stocks
-  max_position_weight: 0.20    # Max 20% in any single stock
+  max_position_weight: 0.25    # Max 25% in any single stock (concentration cap)
   stop_loss_pct: -0.15         # Exit if stock drops 15% from entry
   transaction_cost: 0.001      # 0.1% per trade (bid-ask + commission)
   vix_scale_enabled: true      # Reduce exposure during high volatility
   vix_high_threshold: 30.0     # VIX > 30 → reduce to 60% exposure
   vix_extreme_threshold: 40.0  # VIX > 40 → reduce to 30% exposure
 ```
+
+### Risk Management (RiskManager)
+
+| Rule | Threshold | Action |
+|------|-----------|--------|
+| Drawdown-from-peak | 30% retracement (when profit > 5%) | Liquidate all positions |
+| Daily loss limit | -5% daily P&L | Halt trading for the day |
+| Concentration cap | 25% max per stock | Redistribute excess weight |
+
+### Accuracy Calibration
+
+The system tracks signal accuracy over time:
+- After each trading day, evaluates BUY signals from 5 days ago against actual returns
+- Computes hit rate (% of BUY signals with positive return)
+- Calibration factor = hit_rate / 0.5 (clamped to [0.5, 1.5])
+- Factor > 1.0 → model is accurate → increase exposure
+- Factor < 1.0 → model underperforming → reduce exposure
+- Requires 30+ samples before activating (returns 1.0 until then)
+
+### Confidence-Based Position Sizing
+
+Replaces equal-weight allocation:
+- Weights are proportional to LightGBM prediction scores
+- Higher-ranked stocks get larger positions
+- Calibration factor scales total exposure
+- Concentration cap enforced after sizing
 
 ### Model (LightGBM)
 
@@ -289,10 +315,17 @@ The pipeline uses a **cross-sectional ranking model** (ML-based):
 
 4. **Portfolio**: Top 5 stocks by score are selected with equal weights, capped at 20%.
 
-5. **Risk controls**:
-   - **Max position weight**: No stock exceeds 20% of portfolio
+5. **Position sizing** (confidence-based):
+   - Weights are proportional to prediction scores (higher score = larger position)
+   - Calibration factor adjusts total exposure based on historical accuracy (hit rate over 30+ samples)
+   - Max position weight: 25% (concentration cap)
+
+6. **Risk controls** (enforced before trading):
+   - **Drawdown-from-peak close**: If portfolio retraces 30% from peak equity (when profit > 5%), all positions liquidated
+   - **Daily loss limit**: If daily P&L < -5%, trading halted for the day
+   - **Concentration cap**: No stock exceeds 25% of portfolio
    - **Stop-loss**: If a stock drops 15% from entry, it's sold
-   - **VIX scaling**: When market volatility is high (benchmark 21-day vol > 30 annualized), exposure is reduced to 60%. Above 40, reduced to 30%.
+   - **VIX scaling**: When VIX > 30, exposure reduced to 60%. Above 40, reduced to 30%.
 
 ### Two Signal Sources (Architecture Note)
 
@@ -324,6 +357,8 @@ All paper trading state lives in `data/paper_trading.db`:
 | `trades` | Every simulated trade (date, action, shares, price, cost) |
 | `daily_snapshots` | End-of-day portfolio value, returns, positions, signals |
 | `signals` | Every signal generated (ticker, prediction score, rank, action) |
+| `accuracy_log` | Signal accuracy tracking (predicted rank/score vs actual 5-day return) |
+| `risk_events` | Risk rule triggers (drawdown close, daily loss halt, concentration cap) |
 
 ---
 

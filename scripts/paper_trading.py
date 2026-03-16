@@ -204,6 +204,32 @@ class PaperTradingDB:
             CREATE INDEX IF NOT EXISTS idx_signals_date ON signals(date);
             CREATE INDEX IF NOT EXISTS idx_trades_date ON trades(date);
             CREATE INDEX IF NOT EXISTS idx_positions_active ON positions(is_active);
+
+            -- Accuracy calibration: track signal accuracy over time
+            CREATE TABLE IF NOT EXISTS accuracy_log (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                signal_date TEXT NOT NULL,
+                eval_date TEXT NOT NULL,
+                ticker TEXT NOT NULL,
+                predicted_rank INTEGER,
+                predicted_score REAL,
+                actual_return REAL,
+                hit INTEGER,  -- 1 if BUY signal had positive return
+                UNIQUE(signal_date, ticker)
+            );
+
+            -- Risk events: log when risk rules triggered
+            CREATE TABLE IF NOT EXISTS risk_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                date TEXT NOT NULL,
+                event_type TEXT NOT NULL,  -- 'drawdown_close', 'daily_loss_halt', 'concentration_cap'
+                details TEXT,
+                portfolio_value REAL,
+                threshold REAL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_accuracy_signal_date ON accuracy_log(signal_date);
+            CREATE INDEX IF NOT EXISTS idx_risk_events_date ON risk_events(date);
         """)
 
         # Initialize portfolio state if not exists
@@ -302,6 +328,144 @@ class PaperTradingDB:
         ).fetchone()
         return row["date"] if row else None
 
+    # --- Accuracy Calibration ---
+
+    def record_accuracy(self, signal_date: str, eval_date: str, ticker: str,
+                        predicted_rank: int, predicted_score: float,
+                        actual_return: float):
+        hit = 1 if actual_return > 0 else 0
+        self.conn.execute(
+            "INSERT OR REPLACE INTO accuracy_log "
+            "(signal_date, eval_date, ticker, predicted_rank, predicted_score, actual_return, hit) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (signal_date, eval_date, ticker, predicted_rank, predicted_score, actual_return, hit)
+        )
+        self.conn.commit()
+
+    def get_calibration_factor(self, min_samples: int = 30) -> float:
+        """Return calibration factor: historical_hit_rate / baseline (0.5).
+
+        Factor > 1.0 means model is accurate → increase sizing.
+        Factor < 1.0 means model is inaccurate → decrease sizing.
+        Returns 1.0 if insufficient samples.
+        Clamped to [0.5, 1.5] to prevent extreme adjustments.
+        """
+        row = self.conn.execute(
+            "SELECT COUNT(*) as n, AVG(hit) as hit_rate FROM accuracy_log"
+        ).fetchone()
+        if not row or row["n"] < min_samples:
+            return 1.0
+        hit_rate = row["hit_rate"] or 0.5
+        factor = hit_rate / 0.5  # baseline: random = 50% hit rate
+        return max(0.5, min(1.5, factor))
+
+    def get_accuracy_stats(self) -> Dict[str, Any]:
+        """Get accuracy statistics for display."""
+        row = self.conn.execute(
+            "SELECT COUNT(*) as n, AVG(hit) as hit_rate, AVG(actual_return) as avg_return "
+            "FROM accuracy_log"
+        ).fetchone()
+        if not row or row["n"] == 0:
+            return {"samples": 0, "hit_rate": None, "avg_return": None, "calibration_factor": 1.0}
+        return {
+            "samples": row["n"],
+            "hit_rate": row["hit_rate"],
+            "avg_return": row["avg_return"],
+            "calibration_factor": self.get_calibration_factor(),
+        }
+
+    # --- Risk Events ---
+
+    def record_risk_event(self, date: str, event_type: str, details: str,
+                          portfolio_value: float, threshold: float):
+        self.conn.execute(
+            "INSERT INTO risk_events (date, event_type, details, portfolio_value, threshold) "
+            "VALUES (?, ?, ?, ?, ?)",
+            (date, event_type, details, portfolio_value, threshold)
+        )
+        self.conn.commit()
+
+    def get_peak_equity(self) -> float:
+        """Get highest portfolio value from snapshots."""
+        row = self.conn.execute(
+            "SELECT MAX(portfolio_value) as peak FROM daily_snapshots"
+        ).fetchone()
+        return row["peak"] if row and row["peak"] else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Risk Manager
+# ---------------------------------------------------------------------------
+
+class RiskManager:
+    """Enforces risk rules on the paper trading portfolio.
+
+    Rules:
+    1. Drawdown-from-peak close: if portfolio retraces >drawdown_pct from peak
+       (when profit > min_profit_pct), liquidate all positions.
+    2. Daily loss limit: if today's P&L < daily_loss_limit, halt trading.
+    3. Max position concentration: cap any single position at max_weight.
+    """
+
+    def __init__(self,
+                 drawdown_pct: float = 0.30,
+                 min_profit_pct: float = 0.05,
+                 daily_loss_limit: float = -0.05,
+                 max_position_weight: float = 0.25):
+        self.drawdown_pct = drawdown_pct
+        self.min_profit_pct = min_profit_pct
+        self.daily_loss_limit = daily_loss_limit
+        self.max_position_weight = max_position_weight
+
+    def check_drawdown(self, current_value: float, peak_value: float,
+                       initial_value: float) -> Optional[str]:
+        """Check if drawdown-from-peak exceeds threshold.
+
+        Returns risk event description or None if OK.
+        """
+        if peak_value <= 0 or initial_value <= 0:
+            return None
+        profit_pct = (peak_value / initial_value) - 1
+        if profit_pct < self.min_profit_pct:
+            return None  # Only enforce after minimum profit reached
+        drawdown = (peak_value - current_value) / peak_value
+        if drawdown >= self.drawdown_pct:
+            return (f"Drawdown {drawdown:.1%} from peak ${peak_value:,.0f} exceeds "
+                    f"{self.drawdown_pct:.0%} threshold (profit was {profit_pct:.1%})")
+        return None
+
+    def check_daily_loss(self, daily_return: float) -> Optional[str]:
+        """Check if daily loss exceeds limit.
+
+        Returns risk event description or None if OK.
+        """
+        if daily_return <= self.daily_loss_limit:
+            return (f"Daily loss {daily_return:.2%} exceeds "
+                    f"{self.daily_loss_limit:.0%} limit — halting trades")
+        return None
+
+    def apply_concentration_cap(self, target_weights: Dict[str, float]) -> Dict[str, float]:
+        """Cap any single position at max_weight, redistribute excess equally."""
+        capped = {}
+        excess = 0.0
+        uncapped_count = 0
+        for ticker, w in target_weights.items():
+            if w > self.max_position_weight:
+                excess += w - self.max_position_weight
+                capped[ticker] = self.max_position_weight
+            else:
+                capped[ticker] = w
+                uncapped_count += 1
+
+        # Redistribute excess to uncapped positions
+        if excess > 0 and uncapped_count > 0:
+            bonus = excess / uncapped_count
+            for ticker in capped:
+                if capped[ticker] < self.max_position_weight:
+                    capped[ticker] = min(capped[ticker] + bonus, self.max_position_weight)
+
+        return capped
+
 
 # ---------------------------------------------------------------------------
 # Paper Trading Engine
@@ -320,6 +484,12 @@ class PaperTradingEngine:
         self.db = PaperTradingDB()
         self.transaction_cost = self.config.backtest.transaction_cost
         self.force_local = force_local
+        self.risk_manager = RiskManager(
+            drawdown_pct=0.30,
+            min_profit_pct=0.05,
+            daily_loss_limit=-0.05,
+            max_position_weight=getattr(self.config.backtest, "max_position_weight", 0.25),
+        )
 
         # Try to connect to Alpaca paper trading
         self.broker: Optional[AlpacaBroker] = None  # type: ignore[assignment]
@@ -485,6 +655,41 @@ class PaperTradingEngine:
             print("Warning: No signals generated (empty final_scores).")
             return pd.DataFrame(columns=["ticker", "prediction", "rank", "percentile", "action"])
 
+    def _compute_target_weights(self, buy_signals: pd.DataFrame, top_n: int) -> Dict[str, float]:
+        """Compute target weights using confidence-based sizing + calibration + risk caps.
+
+        Instead of equal-weight, allocates proportionally to prediction scores.
+        Applies calibration factor from historical accuracy tracking.
+        Applies concentration cap from risk manager.
+        """
+        top = buy_signals.head(top_n).copy()
+        if len(top) == 0:
+            return {}
+
+        scores = top["prediction"].values.astype(float)
+
+        # Normalize scores to weights (proportional to prediction score)
+        # Shift scores so minimum is > 0 (scores can be negative)
+        score_min = scores.min()
+        shifted = scores - score_min + 0.01  # ensure all positive
+        raw_weights = shifted / shifted.sum()
+
+        # Apply calibration factor (scales total exposure, not individual ratios)
+        calibration = self.db.get_calibration_factor()
+        scaled_weights = raw_weights * calibration
+
+        # Re-normalize to sum to 1.0
+        total = scaled_weights.sum()
+        if total > 0:
+            scaled_weights = scaled_weights / total
+
+        target_weights = dict(zip(top["ticker"].tolist(), scaled_weights.tolist()))
+
+        # Apply concentration cap
+        target_weights = self.risk_manager.apply_concentration_cap(target_weights)
+
+        return target_weights
+
     def execute_signals(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
         """Execute signals — via Alpaca paper trading or local simulation."""
         if self.broker is not None:
@@ -504,12 +709,7 @@ class PaperTradingEngine:
             return
 
         top_n = self.config.backtest.top_n or 5
-        max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
-
-        target_tickers = buy_signals.head(top_n)["ticker"].tolist()
-        n = len(target_tickers)
-        weight_per_stock = min(1.0 / n, max_weight) if n > 0 else 0
-        target_weights = {t: weight_per_stock for t in target_tickers}
+        target_weights = self._compute_target_weights(buy_signals, top_n)
 
         print(f"\nTarget weights: {target_weights}")
 
@@ -666,12 +866,7 @@ class PaperTradingEngine:
             return
 
         top_n = self.config.backtest.top_n or 5
-        max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
-
-        target_tickers = buy_signals.head(top_n)["ticker"].tolist()
-        n = len(target_tickers)
-        weight_per_stock = min(1.0 / n, max_weight) if n > 0 else 0
-        target_weights = {t: weight_per_stock for t in target_tickers}
+        target_weights = self._compute_target_weights(buy_signals, top_n)
 
         trades = []
 
@@ -807,6 +1002,109 @@ class PaperTradingEngine:
         print(f"Cash: ${cash:,.2f} | Invested: ${invested:,.2f}")
         print(f"Positions: {len(positions)} | Trades today: {len(trades)}")
 
+    def _evaluate_past_signals(self):
+        """Evaluate accuracy of signals from ~5 trading days ago against actual returns."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        eval_window_days = 5  # Check signals from 5 days ago
+
+        # Find signals from ~5 days ago that haven't been evaluated
+        rows = self.db.conn.execute(
+            "SELECT DISTINCT date FROM signals "
+            "WHERE date NOT IN (SELECT DISTINCT signal_date FROM accuracy_log) "
+            "AND date <= date(?, '-' || ? || ' days') "
+            "ORDER BY date DESC LIMIT 5",
+            (today, eval_window_days)
+        ).fetchall()
+
+        if not rows:
+            return
+
+        # Load daily prices for evaluation
+        price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+        price_df = pd.read_csv(price_path, parse_dates=["date"])
+
+        for row in rows:
+            signal_date = row["date"]
+            signals = self.db.conn.execute(
+                "SELECT ticker, prediction, rank, action FROM signals WHERE date = ?",
+                (signal_date,)
+            ).fetchall()
+
+            for sig in signals:
+                ticker = sig["ticker"]
+                # Get price on signal date and current
+                ticker_prices = price_df[price_df["ticker"] == ticker].sort_values("date")
+                sig_dt = pd.to_datetime(signal_date)
+                after_signal = ticker_prices[ticker_prices["date"] > sig_dt]
+
+                if len(after_signal) < eval_window_days:
+                    continue
+
+                price_at_signal = ticker_prices[ticker_prices["date"] <= sig_dt]
+                if len(price_at_signal) == 0:
+                    continue
+
+                entry_price = price_at_signal.iloc[-1]["close"]
+                eval_price = after_signal.iloc[eval_window_days - 1]["close"]
+                actual_return = (eval_price / entry_price) - 1
+
+                self.db.record_accuracy(
+                    signal_date=signal_date,
+                    eval_date=today,
+                    ticker=ticker,
+                    predicted_rank=sig["rank"],
+                    predicted_score=sig["prediction"],
+                    actual_return=actual_return,
+                )
+
+        stats = self.db.get_accuracy_stats()
+        if stats["samples"] > 0:
+            print(f"  Accuracy: {stats['samples']} samples, "
+                  f"hit_rate={stats['hit_rate']:.1%}, "
+                  f"calibration={stats['calibration_factor']:.2f}")
+
+    def _check_risk_rules(self) -> Optional[str]:
+        """Run risk checks before trading. Returns halt reason or None."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        state = self.db.get_state()
+        initial_value = state["initial_value"]
+
+        # Get current portfolio value
+        if self.broker:
+            acct = self.broker.get_account()
+            current_value = float(acct.get("equity", 0))
+        else:
+            snapshots = self.db.get_snapshots(last_n=1)
+            current_value = snapshots[0]["portfolio_value"] if snapshots else initial_value
+
+        peak_value = self.db.get_peak_equity()
+        if peak_value == 0:
+            peak_value = initial_value
+
+        # Check drawdown from peak
+        dd_event = self.risk_manager.check_drawdown(current_value, peak_value, initial_value)
+        if dd_event:
+            self.db.record_risk_event(today, "drawdown_close", dd_event,
+                                      current_value, self.risk_manager.drawdown_pct)
+            print(f"  RISK: {dd_event}")
+            if self.broker:
+                print("  Liquidating all positions...")
+                self.broker.liquidate_all()
+            return dd_event
+
+        # Check daily loss
+        snapshots = self.db.get_snapshots(last_n=1)
+        if snapshots:
+            daily_return = snapshots[0].get("daily_return", 0) or 0
+            dl_event = self.risk_manager.check_daily_loss(daily_return)
+            if dl_event:
+                self.db.record_risk_event(today, "daily_loss_halt", dl_event,
+                                          current_value, self.risk_manager.daily_loss_limit)
+                print(f"  RISK: {dl_event}")
+                return dl_event
+
+        return None
+
     def run_daily(self, skip_refresh: bool = False):
         """Full daily paper trading cycle."""
         print(f"{'='*60}")
@@ -817,7 +1115,19 @@ class PaperTradingEngine:
         if not skip_refresh:
             self.refresh_data()
 
-        # 2. Generate signals
+        # 2. Evaluate past signal accuracy (calibration loop)
+        print("\nCalibration check...")
+        self._evaluate_past_signals()
+
+        # 3. Risk checks
+        print("Risk checks...")
+        halt_reason = self._check_risk_rules()
+        if halt_reason:
+            print(f"\nTrading halted: {halt_reason}")
+            print("Done (no trades).")
+            return
+
+        # 4. Generate signals
         print("\nGenerating signals...")
         signals = self.generate_signals()
 
@@ -830,7 +1140,7 @@ class PaperTradingEngine:
             print(f"  {row['action']:4s} {row['ticker']:6s}  "
                   f"score={row['prediction']:.4f}  rank={row['rank']}")
 
-        # 3. Execute
+        # 5. Execute
         print("\nExecuting trades...")
         self.execute_signals(signals)
 
