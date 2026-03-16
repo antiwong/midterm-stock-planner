@@ -761,7 +761,7 @@ class PaperTradingEngine:
         self.db.update_cash(cash)
 
         # Close all local active positions and re-create from Alpaca
-        self.db.conn.execute("UPDATE positions SET is_active = 0 WHERE is_active = 1")
+        self.db.conn.execute("DELETE FROM positions WHERE is_active = 1")
         for pos in alpaca_positions:
             symbol = pos.get("symbol", "")
             qty = float(pos.get("qty", 0))
