@@ -833,6 +833,7 @@ PROCESS_PHASES = [
         "page": "Monitor Hub",
         "children": [
             ("Paper Trading", "paper_trading", "Paper trading P&L, positions, signals, and trade history"),
+            ("Watchlist Comparison", "watchlist_comparison", "Side-by-side watchlist performance, regression, ensemble, stress test"),
             ("Real-Time Monitoring", "realtime_monitoring", "Live portfolio and market tracking"),
             ("Recommendation Tracking", "recommendation_tracking", "Track recommendation accuracy over time"),
             ("Alert Management", "alert_management", "Configure price and event alerts"),
