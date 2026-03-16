@@ -1,13 +1,19 @@
 {"created_at":"2026-03-15T21:52:46Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-bad","issue_id":"midterm-stock-planner-0z5","type":"blocks"}
+{"created_at":"2026-03-16T21:00:00Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-brc","issue_id":"midterm-stock-planner-1vm","type":"blocks"}
+{"created_at":"2026-03-16T21:00:01Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-e6w","issue_id":"midterm-stock-planner-1vm","type":"blocks"}
+{"created_at":"2026-03-16T20:59:58Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zvi","issue_id":"midterm-stock-planner-1vm","type":"blocks"}
 {"created_at":"2026-03-14T12:04:47Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-7e9","issue_id":"midterm-stock-planner-1xk","type":"blocks"}
 {"created_at":"2026-03-15T21:52:46Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-c3o","issue_id":"midterm-stock-planner-33j","type":"blocks"}
 {"created_at":"2026-03-15T21:52:46Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-c3o","issue_id":"midterm-stock-planner-6l4","type":"blocks"}
 {"created_at":"2026-03-14T06:28:18Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-8eu","issue_id":"midterm-stock-planner-ayi","type":"blocks"}
 {"created_at":"2026-03-15T21:52:46Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-c3o","issue_id":"midterm-stock-planner-bad","type":"blocks"}
+{"created_at":"2026-03-16T20:59:57Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zvi","issue_id":"midterm-stock-planner-brc","type":"blocks"}
 {"created_at":"2026-03-14T12:04:47Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-7e9","issue_id":"midterm-stock-planner-chj","type":"blocks"}
 {"created_at":"2026-03-14T12:04:47Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-chj","issue_id":"midterm-stock-planner-cm2","type":"blocks"}
+{"created_at":"2026-03-16T20:59:59Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zvi","issue_id":"midterm-stock-planner-cu6","type":"blocks"}
 {"created_at":"2026-03-14T06:28:18Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-8eu","issue_id":"midterm-stock-planner-e4e","type":"blocks"}
 {"created_at":"2026-03-15T18:37:33Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-svi","issue_id":"midterm-stock-planner-e5h","type":"blocks"}
+{"created_at":"2026-03-16T20:59:58Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zvi","issue_id":"midterm-stock-planner-e6w","type":"blocks"}
 {"created_at":"2026-03-15T14:36:09Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zsn","issue_id":"midterm-stock-planner-fcd","type":"blocks"}
 {"created_at":"2026-02-21T22:11:02Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-k2e","issue_id":"midterm-stock-planner-k2e.1","type":"parent-child"}
 {"created_at":"2026-02-21T22:11:03Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-k2e","issue_id":"midterm-stock-planner-k2e.2","type":"parent-child"}
@@ -15,4 +21,7 @@
 {"created_at":"2026-02-21T22:11:04Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-k2e","issue_id":"midterm-stock-planner-k2e.4","type":"parent-child"}
 {"created_at":"2026-02-21T22:11:04Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-k2e","issue_id":"midterm-stock-planner-k2e.5","type":"parent-child"}
 {"created_at":"2026-03-14T06:28:18Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-8eu","issue_id":"midterm-stock-planner-m7g","type":"blocks"}
+{"created_at":"2026-03-16T21:00:01Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-brc","issue_id":"midterm-stock-planner-vaj","type":"blocks"}
+{"created_at":"2026-03-16T21:00:01Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-e6w","issue_id":"midterm-stock-planner-vaj","type":"blocks"}
+{"created_at":"2026-03-16T20:59:58Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-zvi","issue_id":"midterm-stock-planner-vaj","type":"blocks"}
 {"created_at":"2026-03-15T14:36:09Z","created_by":"anthony wong","depends_on_id":"midterm-stock-planner-f0h","issue_id":"midterm-stock-planner-zsn","type":"blocks"}
