@@ -278,13 +278,22 @@ The system tracks signal accuracy over time:
 - Factor < 1.0 → model underperforming → reduce exposure
 - Requires 30+ samples before activating (returns 1.0 until then)
 
-### Confidence-Based Position Sizing
+### Position Sizing
 
-Replaces equal-weight allocation:
-- Weights are proportional to LightGBM prediction scores
+Two modes depending on watchlist:
+
+**Moby tier-weighted** (when trading `moby_picks`):
+- Platinum tickers: 6.8% weight (NVDA: 8.2%)
+- Gold tickers: 0.9% weight
+- Silver tickers: 0.3% weight
+- Normalized to sum to 1.0 for selected top-N
+- Calibration factor and concentration cap applied
+
+**Confidence-based** (all other watchlists):
+- Weights proportional to ensemble prediction scores
 - Higher-ranked stocks get larger positions
 - Calibration factor scales total exposure
-- Concentration cap enforced after sizing
+- Concentration cap (25% max) enforced after sizing
 
 ### Model (LightGBM)
 
@@ -329,21 +338,45 @@ The pipeline uses a **cross-sectional ranking model** (ML-based):
    - **Stop-loss**: If a stock drops 15% from entry, it's sold
    - **VIX scaling**: When VIX > 30, exposure reduced to 60%. Above 40, reduced to 30%.
 
-### Two Signal Sources (Architecture Note)
+### Ensemble Signal Generation (Validated)
 
-| Signal Source | Description | Per-ticker params? | Status |
+The daily pipeline uses an **ensemble** of two signal sources, weighted 70/30:
+
+| Signal Source | Weight | Description | Per-ticker params? |
 |---|---|---|---|
-| **ML walk-forward** (LightGBM) | Cross-sectional stock ranking model. Uses global MACD/Bollinger params for feature engineering — correct since the model needs consistent features across stocks. | No (global) | **Active** — used in daily pipeline |
-| **Trigger backtest** (RSI/MACD rules) | Rule-based buy/sell signals from per-ticker optimized MACD/RSI thresholds. Bayesian-optimized per ticker. | **Yes** — `config/tickers/*.yaml` | Available for ensemble/standalone use |
+| **ML walk-forward** (LightGBM) | **70%** | Cross-sectional stock ranking model. Global MACD/Bollinger features. | No (global) |
+| **Trigger backtest** (RSI/MACD rules) | **30%** | Rule-based signals from Bayesian-optimized per-ticker thresholds. | **Yes** — `config/tickers/*.yaml` |
 
-**Per-ticker Bayesian optimization** (`scripts/optimize_all_tickers.py`) tunes MACD fast/slow/signal and RSI period/overbought/oversold for each ticker independently. Results are stored in:
+**Ensemble process:**
+1. Run walk-forward backtest → ML prediction scores per ticker
+2. Run trigger backtest per ticker → trigger Sharpe scores
+3. Normalize both to [0, 1]
+4. Ensemble score = 0.7 × ML_norm + 0.3 × trigger_norm
+5. Re-rank by ensemble score → top-N become BUY signals
+
+**Validation results** (tech_giants, 249 weekly windows):
+
+| Metric | ML-Only | Ensemble | Improvement |
+|--------|---------|----------|-------------|
+| Sharpe Ratio | 0.399 | **0.680** | **+70.7%** |
+| Total Return | 44.4% | **199.9%** | **+155%** |
+| Max Drawdown | -67.1% | -66.8% | ~same |
+| Win Rate | 50.6% | 51.8% | +1.2% |
+| Turnover | 0.5 | 0.3 | Lower (more stable) |
+
+Stocks that rank high in **both** signal sources get a conviction boost. Stocks where signals disagree get penalized. Tickers without per-ticker configs (no trigger optimization) default to 0 trigger score (effectively ML-only for those).
+
+**Per-ticker Bayesian optimization** (`scripts/optimize_all_tickers.py`) tunes MACD fast/slow/signal and RSI period/overbought/oversold for each ticker independently. Results stored in:
 - `output/best_params_{TICKER}.json` — JSON with optimized params and performance
 - `config/tickers/{TICKER}.yaml` — YAML config loaded by `load_ticker_config()`
 
-To re-run optimization:
 ```bash
+# Re-run optimization
 python scripts/optimize_all_tickers.py --n-calls 40 --metric sharpe
-python scripts/optimize_all_tickers.py --tickers AAPL MSFT --n-calls 50  # specific tickers
+python scripts/optimize_all_tickers.py --tickers AAPL MSFT --n-calls 50
+
+# Compare ML-only vs ensemble
+python scripts/compare_ensemble.py --watchlist tech_giants --top-n 5
 ```
 
 ---
