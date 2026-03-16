@@ -1,0 +1,20 @@
+# Per-ticker configuration for TPR
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.297, Return=130.1%, MaxDD=-44.2%, Trades=248
+
+ticker: TPR
+trigger:
+  rsi_period: 18
+  rsi_oversold: 40
+  rsi_overbought: 80
+  macd_fast: 7
+  macd_slow: 31
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

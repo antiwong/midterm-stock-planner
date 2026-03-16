@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 10,
+    "macd_slow": 53,
+    "macd_signal": 20,
+    "rsi_period": 21,
+    "rsi_overbought": 60,
+    "rsi_oversold": 40
+  },
+  "best_score": 0.2507727165025805,
+  "metric": "sharpe",
+  "tickers": [
+    "ROKU"
+  ],
+  "sharpe_ratio": 0.2507727165025805,
+  "total_return": 1.5386898835231335,
+  "max_drawdown": -0.4289172465819952,
+  "num_trades": 261
+}

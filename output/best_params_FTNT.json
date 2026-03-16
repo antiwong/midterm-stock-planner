@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 20,
+    "macd_slow": 34,
+    "macd_signal": 20,
+    "rsi_period": 16,
+    "rsi_overbought": 80,
+    "rsi_oversold": 33
+  },
+  "best_score": 0.9713869190650187,
+  "metric": "sharpe",
+  "tickers": [
+    "FTNT"
+  ],
+  "sharpe_ratio": 0.9713869190650187,
+  "total_return": 1.1638704335936259,
+  "max_drawdown": -0.2393798643413641,
+  "num_trades": 17
+}

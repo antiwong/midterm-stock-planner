@@ -1,0 +1,20 @@
+# Per-ticker configuration for ROKU
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.251, Return=153.9%, MaxDD=-42.9%, Trades=261
+
+ticker: ROKU
+trigger:
+  rsi_period: 21
+  rsi_oversold: 40
+  rsi_overbought: 60
+  macd_fast: 10
+  macd_slow: 53
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

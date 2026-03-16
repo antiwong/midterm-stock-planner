@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 20,
+    "macd_slow": 55,
+    "macd_signal": 20,
+    "rsi_period": 9,
+    "rsi_overbought": 80,
+    "rsi_oversold": 36
+  },
+  "best_score": 0.13709645577088667,
+  "metric": "sharpe",
+  "tickers": [
+    "EFX"
+  ],
+  "sharpe_ratio": 0.13709645577088667,
+  "total_return": 0.2491544056250763,
+  "max_drawdown": -0.30021030796282794,
+  "num_trades": 230
+}

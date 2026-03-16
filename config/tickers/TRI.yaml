@@ -1,0 +1,20 @@
+# Per-ticker configuration for TRI
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=-0.038, Return=-14.3%, MaxDD=-50.0%, Trades=117
+
+ticker: TRI
+trigger:
+  rsi_period: 21
+  rsi_oversold: 40
+  rsi_overbought: 80
+  macd_fast: 20
+  macd_slow: 60
+  macd_signal: 20
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

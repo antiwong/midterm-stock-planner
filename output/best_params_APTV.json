@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 16,
+    "macd_slow": 60,
+    "macd_signal": 5,
+    "rsi_period": 9,
+    "rsi_overbought": 74,
+    "rsi_oversold": 34
+  },
+  "best_score": 0.019374943142044222,
+  "metric": "sharpe",
+  "tickers": [
+    "APTV"
+  ],
+  "sharpe_ratio": 0.019374943142044222,
+  "total_return": -0.08617382553596217,
+  "max_drawdown": -0.4417437262579835,
+  "num_trades": 284
+}

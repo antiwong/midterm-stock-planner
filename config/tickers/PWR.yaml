@@ -1,0 +1,20 @@
+# Per-ticker configuration for PWR
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.549, Return=235.4%, MaxDD=-25.8%, Trades=229
+
+ticker: PWR
+trigger:
+  rsi_period: 21
+  rsi_oversold: 40
+  rsi_overbought: 61
+  macd_fast: 10
+  macd_slow: 60
+  macd_signal: 7
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

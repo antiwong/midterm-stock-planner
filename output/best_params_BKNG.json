@@ -1,0 +1,19 @@
+{
+  "best_params": {
+    "macd_fast": 5,
+    "macd_slow": 53,
+    "macd_signal": 20,
+    "rsi_period": 14,
+    "rsi_overbought": 75,
+    "rsi_oversold": 40
+  },
+  "best_score": 0.2928634173214205,
+  "metric": "sharpe",
+  "tickers": [
+    "BKNG"
+  ],
+  "sharpe_ratio": 0.2928634173214205,
+  "total_return": 0.7288646820890387,
+  "max_drawdown": -0.20469240247798776,
+  "num_trades": 198
+}

@@ -1,0 +1,20 @@
+# Per-ticker configuration for APTV
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.019, Return=-8.6%, MaxDD=-44.2%, Trades=284
+
+ticker: APTV
+trigger:
+  rsi_period: 9
+  rsi_oversold: 34
+  rsi_overbought: 74
+  macd_fast: 16
+  macd_slow: 60
+  macd_signal: 5
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h
