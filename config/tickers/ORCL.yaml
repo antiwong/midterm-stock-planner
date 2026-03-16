@@ -1,0 +1,20 @@
+# Per-ticker configuration for ORCL
+# Optimized via Bayesian optimization on 2026-03-16
+# Sharpe=1.295, Return=230.2%, MaxDD=-36.0%, Trades=28
+
+ticker: ORCL
+trigger:
+  rsi_period: 18
+  rsi_oversold: 32
+  rsi_overbought: 61
+  macd_fast: 9
+  macd_slow: 31
+  macd_signal: 7
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

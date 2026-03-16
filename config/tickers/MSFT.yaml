@@ -1,0 +1,20 @@
+# Per-ticker configuration for MSFT
+# Optimized via Bayesian optimization on 2026-03-16
+# Sharpe=1.004, Return=55.0%, MaxDD=-13.3%, Trades=48
+
+ticker: MSFT
+trigger:
+  rsi_period: 7
+  rsi_oversold: 20
+  rsi_overbought: 76
+  macd_fast: 5
+  macd_slow: 60
+  macd_signal: 6
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

@@ -1,0 +1,106 @@
+{
+  "run_date": "2026-03-16 21:20:31",
+  "metric": "sharpe",
+  "n_calls": 40,
+  "total_duration_seconds": 39.948007345199585,
+  "results": {
+    "MSFT": {
+      "sharpe_ratio": 1.0035374407780295,
+      "total_return": 0.5502771002766241,
+      "max_drawdown": -0.13275928710335771,
+      "num_trades": 48,
+      "best_params": {
+        "macd_fast": 5,
+        "macd_slow": 60,
+        "macd_signal": 6,
+        "rsi_len": 7,
+        "rsi_hi": 76,
+        "rsi_lo": 20
+      }
+    },
+    "AMZN": {
+      "sharpe_ratio": 1.5729674908729683,
+      "total_return": 1.4729820325425156,
+      "max_drawdown": -0.1778890344170132,
+      "num_trades": 39,
+      "best_params": {
+        "macd_fast": 17,
+        "macd_slow": 60,
+        "macd_signal": 17,
+        "rsi_len": 7,
+        "rsi_hi": 71,
+        "rsi_lo": 31
+      }
+    },
+    "META": {
+      "sharpe_ratio": 2.0587160810742864,
+      "total_return": 1.5507749877387977,
+      "max_drawdown": -0.1013124430089617,
+      "num_trades": 25,
+      "best_params": {
+        "macd_fast": 9,
+        "macd_slow": 37,
+        "macd_signal": 12,
+        "rsi_len": 17,
+        "rsi_hi": 65,
+        "rsi_lo": 26
+      }
+    },
+    "NVDA": {
+      "sharpe_ratio": 1.1264192970171023,
+      "total_return": 73.50033409545492,
+      "max_drawdown": -0.6047572592928815,
+      "num_trades": 130,
+      "best_params": {
+        "macd_fast": 15,
+        "macd_slow": 20,
+        "macd_signal": 7,
+        "rsi_len": 14,
+        "rsi_hi": 80,
+        "rsi_lo": 40
+      }
+    },
+    "INTC": {
+      "sharpe_ratio": 0.8682135232325108,
+      "total_return": 11.02858399878452,
+      "max_drawdown": -0.5874670631384479,
+      "num_trades": 109,
+      "best_params": {
+        "macd_fast": 16,
+        "macd_slow": 56,
+        "macd_signal": 5,
+        "rsi_len": 15,
+        "rsi_hi": 63,
+        "rsi_lo": 32
+      }
+    },
+    "ORCL": {
+      "sharpe_ratio": 1.2954813084808554,
+      "total_return": 2.3017645819801387,
+      "max_drawdown": -0.36007260698777366,
+      "num_trades": 28,
+      "best_params": {
+        "macd_fast": 9,
+        "macd_slow": 31,
+        "macd_signal": 7,
+        "rsi_len": 18,
+        "rsi_hi": 61,
+        "rsi_lo": 32
+      }
+    },
+    "CRM": {
+      "sharpe_ratio": 0.7218985644326925,
+      "total_return": 0.4231670388314322,
+      "max_drawdown": -0.23961047777734193,
+      "num_trades": 23,
+      "best_params": {
+        "macd_fast": 20,
+        "macd_slow": 28,
+        "macd_signal": 16,
+        "rsi_len": 13,
+        "rsi_hi": 65,
+        "rsi_lo": 20
+      }
+    }
+  }
+}
