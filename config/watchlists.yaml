@@ -447,6 +447,8 @@ watchlists:
       - SMCI    # Super Micro Computer
       - TXN     # Texas Instruments
       - SMH     # VanEck Semiconductor ETF
+      - ARM     # Arm Holdings (chip IP/design)
+      - TEL     # TE Connectivity (electronic components)
 
   # Financials - Banks and financial services
   financials:
@@ -842,6 +844,23 @@ watchlists:
     symbols:
       - SLV     # iShares Silver Trust ETF
       - AMD     # Advanced Micro Devices
+
+  # Moby Picks - Analyst recommendations (2026-03-16)
+  moby_picks:
+    name: "Moby Picks"
+    description: "Stocks recommended by Moby analytics — cross-sector picks"
+    category: "custom"
+    symbols:
+      - LUMN    # Lumen Technologies (telecom/fiber)
+      - CTSH    # Cognizant Technology Solutions (IT services)
+      - CCJ     # Cameco Corporation (uranium/nuclear)
+      - CDE     # Coeur Mining (precious metals)
+      - PWR     # Quanta Services (infrastructure)
+      - ARM     # Arm Holdings (semiconductor/IP)
+      - EMR     # Emerson Electric (industrial)
+      - TEL     # TE Connectivity (electronic components)
+      - BKNG    # Booking Holdings (travel/tech)
+      - DXC     # DXC Technology (IT services)
 
   # Earnings Watch - Upcoming earnings to monitor
   earnings_watch:

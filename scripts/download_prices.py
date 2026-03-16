@@ -264,7 +264,7 @@ DELISTED_TICKERS = {
     'PXD',    # Pioneer Natural Resources — acquired by Exxon May 2024
     'VMW',    # VMware — acquired by Broadcom Nov 2023
     'TWTR',   # Twitter — taken private by Elon Musk Oct 2022
-    'LUMN',   # Lumen Technologies — bankrupt 2024
+    # 'LUMN',   # Lumen Technologies — emerged from bankruptcy, still trading
     'ANSS',   # ANSYS Inc — acquired by Synopsys Jan 2025
     'K',      # Kellanova — acquired by Mars Inc 2025
     'WBA',    # Walgreens Boots Alliance — taken private 2025
