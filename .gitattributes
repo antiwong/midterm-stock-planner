@@ -1,0 +1,4 @@
+data/prices.csv filter=lfs diff=lfs merge=lfs -text
+data/prices_daily.csv filter=lfs diff=lfs merge=lfs -text
+data/prices_15m.csv filter=lfs diff=lfs merge=lfs -text
+data/prices_backup_before_clean.csv filter=lfs diff=lfs merge=lfs -text
