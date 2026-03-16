@@ -59,7 +59,7 @@ import pandas as pd
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.config.config import load_config, BacktestConfig, ModelConfig, bars_per_day_from_interval
+from src.config.config import load_config, load_ticker_config, BacktestConfig, ModelConfig, bars_per_day_from_interval
 from src.features.engineering import (
     compute_all_features_extended,
     make_training_dataset,
@@ -67,6 +67,8 @@ from src.features.engineering import (
 )
 from src.data.loader import load_price_data, load_benchmark_data, load_fundamental_data
 from src.backtest.rolling import run_walk_forward_backtest, _construct_portfolio
+
+from src.backtest.trigger_backtest import TriggerConfig, run_trigger_backtest
 
 # Alpaca broker (optional — falls back to local simulation)
 try:
@@ -468,6 +470,118 @@ class RiskManager:
 
 
 # ---------------------------------------------------------------------------
+# Ensemble Signal Generator
+# ---------------------------------------------------------------------------
+
+class EnsembleSignalGenerator:
+    """Combines ML walk-forward rankings with per-ticker trigger backtest signals.
+
+    Stocks that rank high in BOTH signal sources get a conviction boost.
+    Stocks where signals disagree get a conviction penalty.
+
+    Weights:
+        ml_weight (default 0.7): Weight for ML walk-forward ranking signal
+        trigger_weight (default 0.3): Weight for trigger backtest signal
+    """
+
+    def __init__(self, ml_weight: float = 0.7, trigger_weight: float = 0.3):
+        self.ml_weight = ml_weight
+        self.trigger_weight = trigger_weight
+
+    def generate_trigger_signals(self, price_df: pd.DataFrame,
+                                  tickers: List[str]) -> Dict[str, float]:
+        """Run trigger backtest for each ticker using per-ticker optimized params.
+
+        Returns dict of ticker -> trigger_score (Sharpe ratio from recent backtest).
+        Tickers without per-ticker configs get score 0.0 (neutral).
+        """
+        trigger_scores = {}
+
+        for ticker in tickers:
+            ticker_cfg = load_ticker_config(ticker)
+            if not ticker_cfg or "trigger" not in ticker_cfg:
+                trigger_scores[ticker] = 0.0
+                continue
+
+            t = ticker_cfg["trigger"]
+            config = TriggerConfig(
+                signal_type="combined",
+                combined_use_rsi=True,
+                combined_use_macd=True,
+                combined_use_bollinger=False,
+                macd_fast=int(t.get("macd_fast", 12)),
+                macd_slow=int(t.get("macd_slow", 26)),
+                macd_signal=int(t.get("macd_signal", 9)),
+                rsi_period=int(t.get("rsi_period", 14)),
+                rsi_overbought=float(t.get("rsi_overbought", 70)),
+                rsi_oversold=float(t.get("rsi_oversold", 30)),
+            )
+
+            sub = price_df[price_df["ticker"] == ticker].copy()
+            if len(sub) < 100:
+                trigger_scores[ticker] = 0.0
+                continue
+
+            try:
+                res = run_trigger_backtest(sub, config)
+                sharpe = res.metrics.get("sharpe_ratio", 0.0) or 0.0
+                trigger_scores[ticker] = sharpe
+            except Exception:
+                trigger_scores[ticker] = 0.0
+
+        return trigger_scores
+
+    def combine_signals(self, ml_signals: pd.DataFrame,
+                        trigger_scores: Dict[str, float]) -> pd.DataFrame:
+        """Combine ML and trigger signals into an ensemble score.
+
+        ML signal: prediction score (cross-sectional ranking)
+        Trigger signal: per-ticker Sharpe from optimized params
+
+        Ensemble score = ml_weight * normalized_ml + trigger_weight * normalized_trigger
+        """
+        signals = ml_signals.copy()
+
+        # Normalize ML scores to [0, 1]
+        ml_scores = signals["prediction"].values
+        ml_min, ml_max = ml_scores.min(), ml_scores.max()
+        ml_range = ml_max - ml_min
+        if ml_range > 0:
+            signals["ml_norm"] = (ml_scores - ml_min) / ml_range
+        else:
+            signals["ml_norm"] = 0.5
+
+        # Normalize trigger scores to [0, 1]
+        trigger_vals = signals["ticker"].map(trigger_scores).fillna(0.0).values
+        t_min, t_max = trigger_vals.min(), trigger_vals.max()
+        t_range = t_max - t_min
+        if t_range > 0:
+            signals["trigger_norm"] = (trigger_vals - t_min) / t_range
+        else:
+            signals["trigger_norm"] = 0.5
+
+        # Ensemble score
+        signals["ensemble_score"] = (
+            self.ml_weight * signals["ml_norm"] +
+            self.trigger_weight * signals["trigger_norm"]
+        )
+
+        # Re-rank by ensemble score
+        signals = signals.sort_values("ensemble_score", ascending=False).reset_index(drop=True)
+        signals["rank"] = range(1, len(signals) + 1)
+
+        # Re-tag actions based on new ranking
+        top_n = ml_signals[ml_signals["action"] == "BUY"].shape[0] or 5
+        signals["action"] = "SELL"
+        signals.iloc[:top_n, signals.columns.get_loc("action")] = "BUY"
+
+        # Use ensemble_score as the prediction for downstream sizing
+        signals["prediction"] = signals["ensemble_score"]
+
+        return signals
+
+
+# ---------------------------------------------------------------------------
 # Paper Trading Engine
 # ---------------------------------------------------------------------------
 
@@ -490,6 +604,7 @@ class PaperTradingEngine:
             daily_loss_limit=-0.05,
             max_position_weight=getattr(self.config.backtest, "max_position_weight", 0.25),
         )
+        self.ensemble = EnsembleSignalGenerator(ml_weight=0.7, trigger_weight=0.3)
 
         # Try to connect to Alpaca paper trading
         self.broker: Optional[AlpacaBroker] = None  # type: ignore[assignment]
@@ -623,7 +738,7 @@ class PaperTradingEngine:
         return training_data, feature_cols, price_df, benchmark_df
 
     def generate_signals(self) -> pd.DataFrame:
-        """Run walk-forward backtest and extract latest signals."""
+        """Run walk-forward backtest, combine with trigger signals (ensemble)."""
         training_data, feature_cols, price_df, benchmark_df = self._load_data()
 
         print(f"Running walk-forward backtest ({len(feature_cols)} features)...")
@@ -640,16 +755,25 @@ class PaperTradingEngine:
         elapsed = time.time() - t0
         print(f"Backtest complete in {elapsed:.0f}s. Sharpe={results.metrics.get('sharpe_ratio', 0):.3f}")
 
-        # Extract final signals
+        # Extract ML signals
         if results.final_scores is not None and len(results.final_scores) > 0:
-            signals = results.final_scores[["ticker", "prediction", "rank", "percentile"]].copy()
-            signals = signals.sort_values("prediction", ascending=False)
+            ml_signals = results.final_scores[["ticker", "prediction", "rank", "percentile"]].copy()
+            ml_signals = ml_signals.sort_values("prediction", ascending=False)
 
             # Tag actions
             top_n = self.config.backtest.top_n or 5
-            signals["action"] = "HOLD"
-            signals.iloc[:top_n, signals.columns.get_loc("action")] = "BUY"
-            signals.iloc[top_n:, signals.columns.get_loc("action")] = "SELL"
+            ml_signals["action"] = "HOLD"
+            ml_signals.iloc[:top_n, ml_signals.columns.get_loc("action")] = "BUY"
+            ml_signals.iloc[top_n:, ml_signals.columns.get_loc("action")] = "SELL"
+
+            # Ensemble: combine ML + trigger backtest signals
+            tickers = ml_signals["ticker"].tolist()
+            print("Running trigger backtest for ensemble signals...")
+            trigger_scores = self.ensemble.generate_trigger_signals(price_df, tickers)
+            n_with_config = sum(1 for v in trigger_scores.values() if v != 0.0)
+            print(f"  Trigger signals: {n_with_config}/{len(tickers)} tickers have per-ticker configs")
+
+            signals = self.ensemble.combine_signals(ml_signals, trigger_scores)
             return signals
         else:
             print("Warning: No signals generated (empty final_scores).")

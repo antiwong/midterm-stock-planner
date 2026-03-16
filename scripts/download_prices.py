@@ -870,16 +870,50 @@ Examples:
     if not args.validate_only:
         try:
             if args.backend == "alpaca":
-                # --- Alpaca download path ---
-                alpaca = AlpacaClient()
-                df = alpaca.download(
-                    tickers=tickers,
-                    start_date=args.start,
-                    end_date=args.end,
-                    interval=args.interval,
-                    batch_size=20,
-                )
-                download_report = alpaca.get_report()
+                # --- Alpaca download path (with yfinance failover) ---
+                alpaca_failed_tickers = []
+                try:
+                    alpaca = AlpacaClient()
+                    df = alpaca.download(
+                        tickers=tickers,
+                        start_date=args.start,
+                        end_date=args.end,
+                        interval=args.interval,
+                        batch_size=20,
+                    )
+                    download_report = alpaca.get_report()
+
+                    # Check which tickers failed on Alpaca
+                    if download_report:
+                        alpaca_failed_tickers = download_report.get("failed_tickers", [])
+                    downloaded_tickers = set(df["ticker"].unique()) if not df.empty else set()
+                    alpaca_failed_tickers = [t for t in tickers if t not in downloaded_tickers]
+
+                except Exception as e:
+                    print(f"\n  Alpaca download failed: {e}")
+                    df = pd.DataFrame()
+                    alpaca_failed_tickers = tickers
+
+                # --- yfinance failover for failed tickers ---
+                if alpaca_failed_tickers and YFINANCE_AVAILABLE:
+                    print(f"\n  Failover: retrying {len(alpaca_failed_tickers)} tickers via yfinance...")
+                    fallback_downloader = PriceDownloader(args.output)
+                    fallback_df = fallback_downloader.download(
+                        tickers=alpaca_failed_tickers,
+                        start_date=args.start,
+                        end_date=args.end,
+                        interval=args.interval,
+                        merge_existing=False,
+                    )
+                    if not fallback_df.empty:
+                        recovered = fallback_df["ticker"].nunique()
+                        print(f"  Failover recovered {recovered}/{len(alpaca_failed_tickers)} tickers via yfinance")
+                        if not df.empty:
+                            df = pd.concat([df, fallback_df], ignore_index=True)
+                            df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
+                            df = df.sort_values(["ticker", "date"])
+                        else:
+                            df = fallback_df
 
                 if not df.empty:
                     # Merge with existing
@@ -896,11 +930,11 @@ Examples:
                     df.to_csv(output_path, index=False)
                     print(f"  Saved to {output_path}")
                 else:
-                    print("\nNo data downloaded")
+                    print("\nNo data downloaded (all sources failed)")
                     return 1
 
             else:
-                # --- yfinance download path (legacy) ---
+                # --- yfinance download path (with Alpaca failover) ---
                 if not YFINANCE_AVAILABLE:
                     print("\nyfinance is required. Install with: pip install yfinance")
                     return 1
@@ -915,6 +949,31 @@ Examples:
                     parallel=True,
                     max_workers=8,
                 )
+
+                # --- Alpaca failover for failed tickers ---
+                yf_failed = downloader.failed_tickers
+                if yf_failed and ALPACA_AVAILABLE and os.environ.get("ALPACA_API_KEY"):
+                    print(f"\n  Failover: retrying {len(yf_failed)} tickers via Alpaca...")
+                    try:
+                        alpaca = AlpacaClient()
+                        fallback_df = alpaca.download(
+                            tickers=yf_failed,
+                            start_date=args.start,
+                            end_date=args.end,
+                            interval=args.interval,
+                            batch_size=20,
+                        )
+                        if not fallback_df.empty:
+                            recovered = fallback_df["ticker"].nunique()
+                            print(f"  Failover recovered {recovered}/{len(yf_failed)} tickers via Alpaca")
+                            if not df.empty:
+                                df = pd.concat([df, fallback_df], ignore_index=True)
+                                df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
+                                df = df.sort_values(["ticker", "date"])
+                            else:
+                                df = fallback_df
+                    except Exception as e:
+                        print(f"  Alpaca failover failed: {e}")
 
                 if not df.empty:
                     downloader.save(df)
