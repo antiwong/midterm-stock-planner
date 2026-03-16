@@ -561,8 +561,13 @@ crontab -e
 
 | Time (ET) | Job | Log |
 |-----------|-----|-----|
-| 5:30 PM | `paper_trading.py run` — signals + execution | `logs/paper_trading.log` |
+| 5:30 PM | `paper_trading.py run --watchlist moby_picks` — **primary trading** (Alpaca) | `logs/paper_trading.log` |
+| 5:45 PM | `paper_trading.py run --watchlist tech_giants --local` — analysis only | `logs/analysis_tech_giants.log` |
+| 5:50 PM | `paper_trading.py run --watchlist semiconductors --local` — analysis only | `logs/analysis_semiconductors.log` |
+| 5:55 PM | `paper_trading.py run --watchlist precious_metals --local` — analysis only | `logs/analysis_precious_metals.log` |
 | 6:00 PM | `download_sentiment.py` + `score_sentiment.py` — sentiment accumulation | `logs/sentiment_download.log` |
+
+The moby_picks watchlist (56 tickers) is the primary trading universe based on regression testing (Sharpe=22.46, highest of all watchlists). The other 3 watchlists run as local simulations for signal tracking and comparison over time.
 
 ### Manual Daily Routine
 
@@ -607,3 +612,5 @@ For detailed documentation of every technique used in the pipeline, see the **[D
 - [Configuration options](configuration-cli.md)
 - [Backtesting and model training](backtesting.md)
 - [Position sizing and risk](risk-management.md)
+- [Common Workflows](common-workflows.md)
+- [Troubleshooting Guide](troubleshooting.md)
