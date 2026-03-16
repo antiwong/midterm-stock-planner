@@ -1,0 +1,22 @@
+{
+  "best_params": {
+    "macd_fast": 5,
+    "macd_slow": 51,
+    "macd_signal": 5,
+    "rsi_period": 14,
+    "rsi_overbought": 79,
+    "rsi_oversold": 40,
+    "macro_vix_enabled": true,
+    "vix_buy_max": 40,
+    "vix_sell_min": 20,
+    "macro_dxy_enabled": true,
+    "dxy_buy_max": 108,
+    "dxy_sell_min": 102
+  },
+  "best_score": 2.332,
+  "metric": "sharpe_dd",
+  "tickers": ["SLV"],
+  "optimize_vix": false,
+  "optimize_dxy": false,
+  "note": "RSI/MACD from no-macro optimization; macro params set permissive for validation"
+}

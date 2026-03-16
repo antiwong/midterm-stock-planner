@@ -1,0 +1,20 @@
+# Per-ticker configuration for ADI
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.136, Return=28.4%, MaxDD=-31.6%, Trades=264
+
+ticker: ADI
+trigger:
+  rsi_period: 11
+  rsi_oversold: 36
+  rsi_overbought: 79
+  macd_fast: 9
+  macd_slow: 20
+  macd_signal: 17
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h

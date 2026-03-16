@@ -1,0 +1,20 @@
+# Per-ticker configuration for MU
+# Optimized via Bayesian optimization on 2026-03-17
+# Sharpe=0.737, Return=1008.4%, MaxDD=-55.9%, Trades=142
+
+ticker: MU
+trigger:
+  rsi_period: 10
+  rsi_oversold: 39
+  rsi_overbought: 60
+  macd_fast: 15
+  macd_slow: 20
+  macd_signal: 11
+  bb_period: 20
+  bb_std: 2.0
+horizon_days: 63
+backtest:
+  train_years: 1.0
+  test_years: 0.25
+  step_unit: days
+  rebalance_freq: 4h
