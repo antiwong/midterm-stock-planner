@@ -62,6 +62,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.config.config import load_config, load_ticker_config, BacktestConfig, ModelConfig, bars_per_day_from_interval
 from src.features.engineering import (
     compute_all_features_extended,
+    compute_all_features_with_sentiment,
     make_training_dataset,
     get_feature_columns,
 )
@@ -709,22 +710,50 @@ class PaperTradingEngine:
         bpd = bars_per_day_from_interval("1d")
         feature_cfg = self.config.features
 
-        print(f"Computing features for {price_df['ticker'].nunique()} tickers...")
-        feature_df = compute_all_features_extended(
-            price_df=price_df,
-            fundamental_df=fundamental_df,
-            benchmark_df=benchmark_df,
-            include_technical=getattr(feature_cfg, 'include_technical', True),
-            include_rsi=getattr(feature_cfg, 'include_rsi', False),
-            include_obv=getattr(feature_cfg, 'include_obv', False),
-            include_momentum=getattr(feature_cfg, 'include_momentum', False),
-            include_mean_reversion=getattr(feature_cfg, 'include_mean_reversion', False),
-            bars_per_day=bpd,
-            rsi_period=feature_cfg.rsi_period,
-            macd_fast=feature_cfg.macd_fast,
-            macd_slow=feature_cfg.macd_slow,
-            macd_signal=feature_cfg.macd_signal,
-        )
+        # Load sentiment data if enabled
+        news_df = None
+        use_sentiment = getattr(feature_cfg, 'use_sentiment', False)
+        if use_sentiment:
+            sentiment_path = PROJECT_ROOT / "data" / "sentiment" / "news.csv"
+            if sentiment_path.exists():
+                news_df = pd.read_csv(sentiment_path, parse_dates=["date"])
+                print(f"Loaded sentiment: {len(news_df)} articles for {news_df['ticker'].nunique()} tickers")
+            else:
+                print("Warning: use_sentiment=true but no news data found. Run: python scripts/download_sentiment.py")
+
+        n_tickers = price_df['ticker'].nunique()
+        if use_sentiment and news_df is not None:
+            print(f"Computing features + sentiment for {n_tickers} tickers...")
+            feature_df = compute_all_features_with_sentiment(
+                price_df=price_df,
+                fundamental_df=fundamental_df,
+                benchmark_df=benchmark_df,
+                news_df=news_df,
+                sentiment_lookbacks=getattr(feature_cfg, 'sentiment_lookbacks', [1, 7, 14]),
+                sentiment_model_type=getattr(feature_cfg, 'sentiment_model_type', 'lexicon'),
+                sentiment_fillna=getattr(feature_cfg, 'sentiment_fillna', 0.0),
+                include_technical=getattr(feature_cfg, 'include_technical', True),
+                include_momentum=getattr(feature_cfg, 'include_momentum', False),
+                include_mean_reversion=getattr(feature_cfg, 'include_mean_reversion', False),
+                bars_per_day=bpd,
+            )
+        else:
+            print(f"Computing features for {n_tickers} tickers...")
+            feature_df = compute_all_features_extended(
+                price_df=price_df,
+                fundamental_df=fundamental_df,
+                benchmark_df=benchmark_df,
+                include_technical=getattr(feature_cfg, 'include_technical', True),
+                include_rsi=getattr(feature_cfg, 'include_rsi', False),
+                include_obv=getattr(feature_cfg, 'include_obv', False),
+                include_momentum=getattr(feature_cfg, 'include_momentum', False),
+                include_mean_reversion=getattr(feature_cfg, 'include_mean_reversion', False),
+                bars_per_day=bpd,
+                rsi_period=feature_cfg.rsi_period,
+                macd_fast=feature_cfg.macd_fast,
+                macd_slow=feature_cfg.macd_slow,
+                macd_signal=feature_cfg.macd_signal,
+            )
 
         training_data = make_training_dataset(
             feature_df=feature_df,
