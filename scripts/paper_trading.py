@@ -808,21 +808,72 @@ class PaperTradingEngine:
             print("Warning: No signals generated (empty final_scores).")
             return pd.DataFrame(columns=["ticker", "prediction", "rank", "percentile", "action"])
 
-    def _compute_target_weights(self, buy_signals: pd.DataFrame, top_n: int) -> Dict[str, float]:
-        """Compute target weights using confidence-based sizing + calibration + risk caps.
+    def _load_tier_weights(self) -> Optional[Dict[str, float]]:
+        """Load Moby tier weights from watchlist config if available.
 
-        Instead of equal-weight, allocates proportionally to prediction scores.
-        Applies calibration factor from historical accuracy tracking.
-        Applies concentration cap from risk manager.
+        Returns dict of ticker -> weight, or None if not a tier-weighted watchlist.
+        """
+        if not self.watchlist:
+            return None
+        import yaml
+        wl_path = PROJECT_ROOT / "config" / "watchlists.yaml"
+        with open(wl_path) as f:
+            watchlists = yaml.safe_load(f)
+        wls = watchlists.get("watchlists", watchlists)
+        wl = wls.get(self.watchlist)
+        if not wl or "tiers" not in wl or "tier_weights" not in wl:
+            return None
+
+        tier_weights = wl["tier_weights"]
+        tiers = wl["tiers"]
+        overrides = wl.get("overrides", {})
+
+        weights = {}
+        for tier_name, tickers in tiers.items():
+            default_weight = tier_weights.get(tier_name, 0)
+            for ticker in tickers:
+                weights[ticker] = overrides.get(ticker, default_weight)
+
+        return weights
+
+    def _compute_target_weights(self, buy_signals: pd.DataFrame, top_n: int) -> Dict[str, float]:
+        """Compute target weights using tier-based or confidence-based sizing.
+
+        If the watchlist has Moby tier weights, use those directly for BUY signals.
+        Otherwise, fall back to confidence-based sizing with calibration.
+        Applies concentration cap from risk manager in both cases.
         """
         top = buy_signals.head(top_n).copy()
         if len(top) == 0:
             return {}
 
+        # Try tier-based weights first (Moby picks)
+        tier_weights = self._load_tier_weights()
+        if tier_weights:
+            target_weights = {}
+            for ticker in top["ticker"].tolist():
+                target_weights[ticker] = tier_weights.get(ticker, 0.009)  # default to gold tier
+
+            # Normalize to sum to 1.0 (tiers don't sum to 1 when subset selected)
+            total = sum(target_weights.values())
+            if total > 0:
+                target_weights = {t: w / total for t, w in target_weights.items()}
+
+            # Apply calibration factor
+            calibration = self.db.get_calibration_factor()
+            if calibration != 1.0:
+                target_weights = {t: w * calibration for t, w in target_weights.items()}
+                total = sum(target_weights.values())
+                if total > 0:
+                    target_weights = {t: w / total for t, w in target_weights.items()}
+
+            target_weights = self.risk_manager.apply_concentration_cap(target_weights)
+            return target_weights
+
+        # Fallback: confidence-based sizing
         scores = top["prediction"].values.astype(float)
 
         # Normalize scores to weights (proportional to prediction score)
-        # Shift scores so minimum is > 0 (scores can be negative)
         score_min = scores.min()
         shifted = scores - score_min + 0.01  # ensure all positive
         raw_weights = shifted / shifted.sum()

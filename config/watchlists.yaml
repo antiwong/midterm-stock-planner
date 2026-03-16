@@ -858,6 +858,16 @@ watchlists:
     name: "Moby Picks"
     description: "Stocks recommended by Moby analytics — platinum/gold/silver tiers"
     category: "custom"
+    tier_weights:
+      platinum: 0.068   # 6.8% per stock (NVDA gets 8.2%)
+      gold: 0.009       # 0.9% per stock
+      silver: 0.003     # 0.3% per stock
+    tiers:
+      platinum: [NVDA, PODD, GRMN, DXC, EMR, ROK, ADP, WMT, SWKS, TPR]
+      gold: [ROKU, VRSK, SPGI, TRI, PH, ETN, TER, FTV, NXPI, ON, FTNT, ADI, MCHP, KEYS, APTV, BWA, TEL, APH, GLW, EFX, TRU, PAYX, CDW, CHKP, AKAM, HPE, CSCO, BKNG, EXPE, STX, WDC]
+      silver: [AN, PHM, COST, TGT, KMX, HD, TSCO, BBY, ORLY]
+    overrides:
+      NVDA: 0.082       # NVDA gets 8.2% (higher than other platinum)
     symbols:
       # --- Platinum Tier (6.80-8.20% weight) ---
       - NVDA    # NVIDIA Corp (8.20%)
