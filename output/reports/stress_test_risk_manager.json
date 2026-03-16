@@ -1,0 +1,143 @@
+[
+  {
+    "scenario": "COVID Crash (2020)",
+    "description": "Portfolio gains 6% then crashes 34% in 23 days, followed by V-shaped recovery",
+    "days": 58,
+    "initial_value": 100000.0,
+    "final_value": 87235.34328633305,
+    "total_return": -0.12764656713666944,
+    "max_drawdown": -0.17837468077492724,
+    "peak_value": 106174.11762408962,
+    "halted": true,
+    "halted_day": 28,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [
+      {
+        "day": 28,
+        "type": "daily_loss_halt",
+        "detail": "Daily loss -5.00% exceeds -5% limit \u2014 halting trades",
+        "daily_return": -0.050000000000000044,
+        "portfolio_value": 87235.34328633305,
+        "cumulative_return": -0.12764656713666944
+      }
+    ],
+    "saved_by_risk_rules": true,
+    "value_at_exit": 87235.34328633305,
+    "value_without_rules": 62874.09988086977,
+    "loss_prevented": -24361.243405463283
+  },
+  {
+    "scenario": "Tech Bear Market (2022)",
+    "description": "Slow 33% decline over 9 months with periodic relief rallies",
+    "days": 200,
+    "initial_value": 100000.0,
+    "final_value": 66600.45113733601,
+    "total_return": -0.33399548862663986,
+    "max_drawdown": -0.36367762307411644,
+    "peak_value": 104664.63785084424,
+    "halted": false,
+    "halted_day": null,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [],
+    "saved_by_risk_rules": false,
+    "value_at_exit": 66600.45113733601,
+    "value_without_rules": 66600.45113733603,
+    "loss_prevented": 0
+  },
+  {
+    "scenario": "Flash Crash (-10% single day)",
+    "description": "Portfolio gains 15% then suffers single-day -10% crash",
+    "days": 46,
+    "initial_value": 100000.0,
+    "final_value": 104526.00746058077,
+    "total_return": 0.04526007460580783,
+    "max_drawdown": -0.09999999999999998,
+    "peak_value": 116140.00828953419,
+    "halted": true,
+    "halted_day": 31,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [
+      {
+        "day": 31,
+        "type": "daily_loss_halt",
+        "detail": "Daily loss -10.00% exceeds -5% limit \u2014 halting trades",
+        "daily_return": -0.09999999999999998,
+        "portfolio_value": 104526.00746058077,
+        "cumulative_return": 0.04526007460580783
+      }
+    ],
+    "saved_by_risk_rules": true,
+    "value_at_exit": 104526.00746058077,
+    "value_without_rules": 117727.82384172762,
+    "loss_prevented": 13201.81638114684
+  },
+  {
+    "scenario": "Slow Bleed (-20% over 3 months)",
+    "description": "Portfolio gains 6% then slowly bleeds -20% with no large single-day drops",
+    "days": 75,
+    "initial_value": 100000.0,
+    "final_value": 91078.17388255897,
+    "total_return": -0.08921826117441034,
+    "max_drawdown": -0.15608110145562892,
+    "peak_value": 106170.94725356782,
+    "halted": false,
+    "halted_day": null,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [],
+    "saved_by_risk_rules": false,
+    "value_at_exit": 91078.17388255897,
+    "value_without_rules": 91078.17388255896,
+    "loss_prevented": 0
+  },
+  {
+    "scenario": "V-Recovery (no profit, no trigger)",
+    "description": "Drop 15% without prior profit \u2014 drawdown rule should NOT trigger",
+    "days": 36,
+    "initial_value": 100000.0,
+    "final_value": 108964.76189515574,
+    "total_return": 0.08964761895155737,
+    "max_drawdown": -0.14923697741821462,
+    "peak_value": 108964.76189515574,
+    "halted": false,
+    "halted_day": null,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [],
+    "saved_by_risk_rules": false,
+    "value_at_exit": 108964.76189515574,
+    "value_without_rules": 108964.76189515578,
+    "loss_prevented": 0
+  },
+  {
+    "scenario": "Bull then Crash (+28% then -55%)",
+    "description": "Strong bull run builds profit, then severe crash tests drawdown-from-peak rule",
+    "days": 65,
+    "initial_value": 100000.0,
+    "final_value": 121906.4524188595,
+    "total_return": 0.2190645241885949,
+    "max_drawdown": -0.050000000000000044,
+    "peak_value": 128322.58149353632,
+    "halted": true,
+    "halted_day": 51,
+    "liquidated": false,
+    "liquidated_day": null,
+    "risk_events": [
+      {
+        "day": 51,
+        "type": "daily_loss_halt",
+        "detail": "Daily loss -5.00% exceeds -5% limit \u2014 halting trades",
+        "daily_return": -0.050000000000000044,
+        "portfolio_value": 121906.4524188595,
+        "cumulative_return": 0.2190645241885949
+      }
+    ],
+    "saved_by_risk_rules": true,
+    "value_at_exit": 121906.4524188595,
+    "value_without_rules": 68053.608931379,
+    "loss_prevented": -53852.843487480495
+  }
+]

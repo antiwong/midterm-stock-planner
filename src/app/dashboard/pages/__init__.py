@@ -36,6 +36,7 @@ from .trigger_backtester import render_trigger_backtester
 from .strategy_optimizer import render_strategy_optimizer
 from .regression_testing import render_regression_testing
 from .paper_trading import render_paper_trading
+from .watchlist_comparison import render_watchlist_comparison
 from .hub_pages import render_setup_hub, render_analyze_hub, render_build_hub, render_monitor_hub, render_review_hub
 
 __all__ = [
@@ -76,4 +77,5 @@ __all__ = [
     'render_monitor_hub',
     'render_review_hub',
     'render_paper_trading',
+    'render_watchlist_comparison',
 ]

@@ -745,6 +745,7 @@ STANDALONE_TOOLS = [
     ("Strategy Optimizer", "strategy_optimizer"),
     ("Regression Testing", "regression_testing"),
     ("Paper Trading", "paper_trading"),
+    ("Watchlist Comparison", "watchlist_comparison"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
 ]
