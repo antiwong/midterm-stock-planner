@@ -102,6 +102,8 @@ features:
     nvda_lookback: 21         # NVDA peer momentum lookback (days)
     breadth_lookback: 21      # Semi sector breadth lookback (days)
     qqq_lookback: 63          # QQQ relative strength lookback (days)
+    rotation_lookback: 20     # Capital rotation feature lookback (days, tunable 10-42)
+    include_btc: true         # Include BTC-USD rotation features
 sentiment:
   news_data_path: null
   model_type: lexicon

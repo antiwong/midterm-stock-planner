@@ -113,6 +113,33 @@ def load_data(config, watchlist_name=None):
 
     bpd = bars_per_day_from_interval(config.data.interval)
 
+    # Build cross-asset reference prices dict from the daily price data
+    # Reference tickers needed: GLD, TIP, UUP, SPY, BTC-USD
+    cross_asset_prices = {}
+    reference_tickers = ["GLD", "TIP", "UUP", "BTC-USD"]
+    all_daily_path = Path(getattr(config.data, "price_data_path_daily", "data/prices_daily.csv"))
+    if all_daily_path.exists():
+        all_daily = pd.read_csv(all_daily_path, parse_dates=["date"])
+        for ref_ticker in reference_tickers:
+            ref_df = all_daily[all_daily["ticker"] == ref_ticker]
+            if not ref_df.empty:
+                cross_asset_prices[ref_ticker] = ref_df
+                print(f"  Loaded reference: {ref_ticker} ({len(ref_df)} rows)")
+            else:
+                print(f"  Warning: {ref_ticker} not found in {all_daily_path}")
+
+    # SPY from benchmark data (already loaded)
+    if "SPY" not in cross_asset_prices and not benchmark_df.empty:
+        spy_df = benchmark_df.copy()
+        if "ticker" not in spy_df.columns:
+            spy_df["ticker"] = "SPY"
+        cross_asset_prices["SPY"] = spy_df
+        print(f"  Loaded reference: SPY from benchmark ({len(spy_df)} rows)")
+
+    # Determine whether to enable cross-asset features
+    ca_params = config.features.cross_asset if hasattr(config.features, 'cross_asset') else {}
+    include_cross_asset = bool(cross_asset_prices)
+
     # Compute ALL features (so we can selectively use subsets)
     print("Computing all features...")
     feature_df = compute_all_features_extended(
@@ -122,6 +149,9 @@ def load_data(config, watchlist_name=None):
         include_technical=True,
         include_momentum=True,
         include_mean_reversion=True,
+        include_cross_asset=include_cross_asset,
+        cross_asset_prices=cross_asset_prices if include_cross_asset else None,
+        cross_asset_params=ca_params if include_cross_asset else None,
         bars_per_day=bpd,
         rsi_period=config.features.rsi_period,
         macd_fast=config.features.macd_fast,

@@ -319,6 +319,41 @@ python scripts/paper_trading.py run --watchlist tech_giants --capital 100000
 
 ---
 
+## Alpaca Paper Trading Execution
+
+When Alpaca API keys are configured, the `run` command places real orders on Alpaca's paper trading platform instead of simulating locally.
+
+### How It Works
+
+- Set `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` environment variables (or add to `.env`)
+- The pipeline auto-detects Alpaca credentials and routes orders through `AlpacaBroker`
+- Alpaca handles order routing, fills, and settlement; account state syncs back to local SQLite
+- Use `--local` flag to force local simulation even when keys are set
+
+### Alpaca-Specific Commands
+
+```bash
+# View Alpaca account info (buying power, equity, etc.)
+python scripts/paper_trading.py account
+
+# Liquidate all Alpaca positions
+python scripts/paper_trading.py liquidate
+```
+
+### Key Differences from Local Simulation
+
+| Aspect | Local Simulation | Alpaca Paper |
+|--------|-----------------|--------------|
+| Transaction costs | 0.1% applied | Free (no commissions) |
+| Order fills | Instant at close price | Realistic market simulation |
+| Fractional shares | Yes | Yes |
+| Market hours | Any time | 9:30 AM - 4:00 PM ET |
+| Starting capital | Configurable | $100,000 (reset via dashboard) |
+
+For full setup instructions, see [Alpaca Paper Trading Integration](alpaca-paper-trading.md).
+
+---
+
 ## Automation
 
 ### macOS/Linux (cron)

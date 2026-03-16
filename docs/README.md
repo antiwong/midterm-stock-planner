@@ -92,6 +92,14 @@
 | [Data Validation](data-validation.md) | Data quality checks for AI insights |
 | [GARCH Design](garch-design.md) | GARCH volatility modeling design |
 
+## Trading & Execution
+
+| Document | Description |
+|----------|-------------|
+| [Daily Run Guide](daily-run.md) | Daily paper trading pipeline, commands, automation |
+| [Alpaca Paper Trading](alpaca-paper-trading.md) | Alpaca integration setup, API keys, live paper execution |
+| [Cross-Asset Rotation Features](cross-asset-rotation-features.md) | Gold/silver/BTC rotation signals for capital flow detection |
+
 ## Data & Setup Guides
 
 | Document | Description |

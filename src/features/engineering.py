@@ -726,6 +726,8 @@ def compute_all_features_extended(
                 nvda_lookback=ca_params.get("nvda_lookback", 21),
                 breadth_lookback=ca_params.get("breadth_lookback", 21),
                 qqq_lookback=ca_params.get("qqq_lookback", 63),
+                rotation_lookback=ca_params.get("rotation_lookback", 20),
+                include_btc=ca_params.get("include_btc", True),
             )
         except Exception as e:
             import warnings

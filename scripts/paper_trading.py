@@ -1,23 +1,32 @@
 #!/usr/bin/env python3
 """Paper trading pipeline for midterm-stock-planner.
 
+Executes trades on Alpaca paper-trading account based on ML-generated signals.
+Falls back to local simulation when Alpaca keys are not configured.
+
 Runs daily after market close to:
 1. Refresh price data (append latest day)
 2. Retrain model on updated data
 3. Generate buy/sell signals for the next period
-4. Simulate execution with transaction costs
-5. Track cumulative P&L
+4. Execute orders via Alpaca paper trading (or simulate locally)
+5. Track cumulative P&L in local database + Alpaca account
 6. Log everything to database + JSON
 
 Usage:
-    # Run daily signal generation (after market close)
+    # Run daily signal generation and execute via Alpaca
     python scripts/paper_trading.py run
 
     # Run with specific watchlist
     python scripts/paper_trading.py run --watchlist tech_giants
 
-    # View current positions and P&L
+    # Force local simulation (no Alpaca orders)
+    python scripts/paper_trading.py run --local
+
+    # View current positions (from Alpaca or local DB)
     python scripts/paper_trading.py status
+
+    # View Alpaca account details
+    python scripts/paper_trading.py account
 
     # View trade history
     python scripts/paper_trading.py history --last 30
@@ -25,11 +34,11 @@ Usage:
     # Refresh data only (no signal generation)
     python scripts/paper_trading.py refresh
 
+    # Close all Alpaca positions (liquidate)
+    python scripts/paper_trading.py liquidate
+
     # Setup cron job (runs daily at 5:30 PM ET)
     python scripts/paper_trading.py setup-cron
-
-    # Backfill from a date (simulate paper trading from a past date)
-    python scripts/paper_trading.py backfill --start 2026-01-01
 """
 
 import argparse
@@ -58,6 +67,13 @@ from src.features.engineering import (
 )
 from src.data.loader import load_price_data, load_benchmark_data, load_fundamental_data
 from src.backtest.rolling import run_walk_forward_backtest, _construct_portfolio
+
+# Alpaca broker (optional — falls back to local simulation)
+try:
+    from src.trading.alpaca_broker import AlpacaBroker, ALPACA_TRADING_AVAILABLE
+except ImportError:
+    ALPACA_TRADING_AVAILABLE = False
+    AlpacaBroker = None  # type: ignore[assignment,misc]
 
 
 # ---------------------------------------------------------------------------
@@ -292,16 +308,32 @@ class PaperTradingDB:
 # ---------------------------------------------------------------------------
 
 class PaperTradingEngine:
-    """Core engine for paper trading simulation."""
+    """Core engine for paper trading — executes via Alpaca or local simulation."""
 
     def __init__(self, config_path: str = "config/config.yaml",
                  watchlist: Optional[str] = None,
-                 initial_capital: float = 100000.0):
+                 initial_capital: float = 100000.0,
+                 force_local: bool = False):
         self.config = load_config(config_path)
         self.watchlist = watchlist
         self.initial_capital = initial_capital
         self.db = PaperTradingDB()
         self.transaction_cost = self.config.backtest.transaction_cost
+        self.force_local = force_local
+
+        # Try to connect to Alpaca paper trading
+        self.broker: Optional[AlpacaBroker] = None  # type: ignore[assignment]
+        if not force_local and ALPACA_TRADING_AVAILABLE:
+            try:
+                self.broker = AlpacaBroker(paper=True)
+                acct = self.broker.get_account()
+                print(f"Connected to Alpaca paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
+            except Exception as e:
+                print(f"Alpaca not available ({e}), using local simulation")
+                self.broker = None
+
+        if self.broker is None:
+            print("Mode: local simulation (no real orders)")
 
         # Initialize state if first run
         state = self.db.get_state()
@@ -454,7 +486,151 @@ class PaperTradingEngine:
             return pd.DataFrame(columns=["ticker", "prediction", "rank", "percentile", "action"])
 
     def execute_signals(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
-        """Simulate execution of signals — rebalance portfolio to match target weights."""
+        """Execute signals — via Alpaca paper trading or local simulation."""
+        if self.broker is not None:
+            return self._execute_via_alpaca(signals, price_df)
+        return self._execute_local(signals, price_df)
+
+    def _execute_via_alpaca(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
+        """Execute signals by placing real orders on Alpaca paper account."""
+        today = datetime.now().strftime("%Y-%m-%d")
+        state = self.db.get_state()
+        initial_value = state["initial_value"]
+
+        # Target portfolio from signals
+        buy_signals = signals[signals["action"] == "BUY"].copy()
+        if len(buy_signals) == 0:
+            print("No BUY signals. Holding current positions.")
+            return
+
+        top_n = self.config.backtest.top_n or 5
+        max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
+
+        target_tickers = buy_signals.head(top_n)["ticker"].tolist()
+        n = len(target_tickers)
+        weight_per_stock = min(1.0 / n, max_weight) if n > 0 else 0
+        target_weights = {t: weight_per_stock for t in target_tickers}
+
+        print(f"\nTarget weights: {target_weights}")
+
+        # Execute via Alpaca rebalance
+        alpaca_trades = self.broker.rebalance_portfolio(target_weights)
+
+        # Log trades to local DB for dashboard tracking
+        trades = []
+        for at in alpaca_trades:
+            action = at.get("action", "unknown")
+            symbol = at.get("symbol", "?")
+            order = at.get("order", {})
+            notional = at.get("notional", 0)
+            error = at.get("error")
+
+            if error:
+                print(f"  WARNING {action} {symbol}: {error}")
+                continue
+
+            filled_qty = float(order.get("filled_qty", 0) or 0)
+            filled_price = float(order.get("filled_avg_price", 0) or 0)
+            value = notional or (filled_qty * filled_price)
+
+            trade_action = "SELL" if "sell" in action else "BUY"
+            trade = PaperTrade(
+                date=today, ticker=symbol, action=trade_action,
+                shares=filled_qty, price=filled_price, value=abs(value),
+                cost=0,  # Alpaca paper has no commissions
+                weight_before=0, weight_after=target_weights.get(symbol, 0)
+            )
+            trades.append(trade)
+            self.db.record_trade(trade)
+            print(f"  {trade_action} {symbol}: ${abs(value):,.2f} "
+                  f"(weight: {target_weights.get(symbol, 0):.1%})")
+
+        # Sync Alpaca state to local DB
+        self._sync_alpaca_state(signals, trades, today, initial_value)
+
+    def _sync_alpaca_state(self, signals, trades, today, initial_value):
+        """Sync Alpaca account/positions to local DB for dashboard display."""
+        acct = self.broker.get_account()
+        alpaca_positions = self.broker.get_positions()
+
+        cash = float(acct.get("cash", 0))
+        equity = float(acct.get("equity", 0))
+        invested = equity - cash
+
+        # Update local DB with Alpaca state
+        self.db.update_cash(cash)
+
+        # Close all local active positions and re-create from Alpaca
+        self.db.conn.execute("UPDATE positions SET is_active = 0 WHERE is_active = 1")
+        for pos in alpaca_positions:
+            symbol = pos.get("symbol", "")
+            qty = float(pos.get("qty", 0))
+            avg_entry = float(pos.get("avg_entry_price", 0))
+            market_value = float(pos.get("market_value", 0))
+            weight = market_value / equity if equity > 0 else 0
+            self.db.upsert_position(symbol, qty, avg_entry, today, weight)
+        self.db.conn.commit()
+
+        # Record signals
+        self.db.record_signals(today, signals)
+
+        # Benchmark return (SPY)
+        bench_path = PROJECT_ROOT / getattr(self.config.data, "benchmark_data_path_daily",
+                                             "data/benchmark_daily.csv")
+        bench_df = pd.read_csv(bench_path, parse_dates=["date"])
+        bench_prices = bench_df.sort_values("date")
+        if len(bench_prices) >= 2:
+            bench_start = bench_prices.iloc[0]["close"]
+            bench_end = bench_prices.iloc[-1]["close"]
+            benchmark_cumulative = (bench_end / bench_start) - 1
+        else:
+            benchmark_cumulative = 0.0
+
+        prev = self.db.get_snapshots(last_n=1)
+        if prev:
+            prev_value = prev[0]["portfolio_value"]
+            daily_pct = (equity / prev_value) - 1 if prev_value > 0 else 0
+            bench_daily = benchmark_cumulative - (prev[0].get("benchmark_cumulative", 0) or 0)
+        else:
+            daily_pct = 0
+            bench_daily = 0
+
+        positions_data = self.db.get_active_positions()
+        snapshot = DailySnapshot(
+            date=today,
+            portfolio_value=equity,
+            cash=cash,
+            invested=invested,
+            daily_return=daily_pct,
+            cumulative_return=(equity / initial_value) - 1,
+            benchmark_return=bench_daily,
+            benchmark_cumulative=benchmark_cumulative,
+            positions=[{
+                "ticker": p.get("symbol", p.get("ticker", "")),
+                "shares": float(p.get("qty", p.get("shares", 0))),
+                "weight": float(p.get("market_value", 0)) / equity if equity > 0 else 0,
+                "entry_price": float(p.get("avg_entry_price", p.get("entry_price", 0))),
+                "current_price": float(p.get("current_price", 0)),
+                "pnl": float(p.get("unrealized_pl", 0)),
+            } for p in alpaca_positions],
+            signals=signals.head(10).to_dict("records"),
+            trades=[asdict(t) for t in trades],
+            metrics={
+                "sharpe_ratio": None,
+                "total_trades": len(trades),
+                "total_cost": 0,
+                "broker": "alpaca",
+                "account_equity": equity,
+            }
+        )
+        self.db.record_snapshot(snapshot)
+
+        print(f"\nAlpaca Portfolio: ${equity:,.2f} (return: {(equity / initial_value - 1):+.2%})")
+        print(f"Cash: ${cash:,.2f} | Invested: ${invested:,.2f}")
+        print(f"Positions: {len(alpaca_positions)} | Trades today: {len(trades)}")
+
+    def _execute_local(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
+        """Local simulation execution (no Alpaca — original behavior)."""
         today = datetime.now().strftime("%Y-%m-%d")
         state = self.db.get_state()
         cash = state["cash"]
@@ -489,15 +665,11 @@ class PaperTradingEngine:
             print("No BUY signals. Holding current positions.")
             return
 
-        # Construct target weights using the model's predictions
         top_n = self.config.backtest.top_n or 5
         max_weight = getattr(self.config.backtest, "max_position_weight", 0.20)
 
         target_tickers = buy_signals.head(top_n)["ticker"].tolist()
         n = len(target_tickers)
-
-        # Equal-weight with max_position_weight cap
-        # With top_n=5 and max_weight=0.20, each gets exactly 20%
         weight_per_stock = min(1.0 / n, max_weight) if n > 0 else 0
         target_weights = {t: weight_per_stock for t in target_tickers}
 
@@ -573,7 +745,6 @@ class PaperTradingEngine:
         self.db.record_signals(today, signals)
 
         # Record daily snapshot
-        # Recalculate portfolio value after trades
         positions = self.db.get_active_positions()
         invested = sum(
             p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
@@ -594,7 +765,6 @@ class PaperTradingEngine:
         else:
             benchmark_cumulative = 0.0
 
-        # Previous snapshot for daily return
         prev = self.db.get_snapshots(last_n=1)
         if prev:
             prev_value = prev[0]["portfolio_value"]
@@ -625,9 +795,10 @@ class PaperTradingEngine:
             signals=signals.head(10).to_dict("records"),
             trades=[asdict(t) for t in trades],
             metrics={
-                "sharpe_ratio": None,  # Computed after enough data points
+                "sharpe_ratio": None,
                 "total_trades": len(trades),
                 "total_cost": sum(t.cost for t in trades),
+                "broker": "local",
             }
         )
         self.db.record_snapshot(snapshot)
@@ -666,51 +837,88 @@ class PaperTradingEngine:
         print(f"\nDone.")
 
     def show_status(self):
-        """Display current portfolio status."""
+        """Display current portfolio status — from Alpaca or local DB."""
         state = self.db.get_state()
-        positions = self.db.get_active_positions()
-
-        # Load latest prices
-        price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
-        price_df = pd.read_csv(price_path, parse_dates=["date"])
-        latest_prices = (
-            price_df.sort_values("date")
-            .groupby("ticker")
-            .last()["close"]
-            .to_dict()
-        )
-
-        cash = state["cash"]
         initial = state["initial_value"]
-        invested = sum(
-            p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
-            for p in positions
-        )
-        total = cash + invested
 
         print(f"\n{'='*60}")
-        print(f"Paper Trading Portfolio Status")
-        print(f"{'='*60}")
-        print(f"Portfolio Value: ${total:,.2f}")
-        print(f"Cash:           ${cash:,.2f}")
-        print(f"Invested:       ${invested:,.2f}")
-        print(f"Total Return:   {(total/initial - 1):+.2%}")
-        print(f"Initial Value:  ${initial:,.2f}")
-        print(f"Last Updated:   {state.get('last_updated', 'Never')}")
 
-        if positions:
-            print(f"\nPositions ({len(positions)}):")
-            print(f"{'Ticker':8s} {'Shares':>8s} {'Entry':>8s} {'Current':>8s} {'PnL':>10s} {'Weight':>8s}")
-            print("-" * 60)
-            for p in sorted(positions, key=lambda x: -x["weight"]):
-                current = latest_prices.get(p["ticker"], p["entry_price"])
-                pnl = (current - p["entry_price"]) * p["shares"]
-                print(f"{p['ticker']:8s} {p['shares']:8.1f} ${p['entry_price']:7.2f} "
-                      f"${current:7.2f} ${pnl:+9.2f} {p['weight']:7.1%}")
+        if self.broker is not None:
+            # Live Alpaca data
+            acct = self.broker.get_account()
+            alpaca_positions = self.broker.get_positions()
+
+            equity = float(acct.get("equity", 0))
+            cash = float(acct.get("cash", 0))
+            invested = equity - cash
+            buying_power = float(acct.get("buying_power", 0))
+
+            print(f"Alpaca Paper Trading Portfolio")
+            print(f"{'='*60}")
+            print(f"Portfolio Value: ${equity:,.2f}")
+            print(f"Cash:           ${cash:,.2f}")
+            print(f"Invested:       ${invested:,.2f}")
+            print(f"Buying Power:   ${buying_power:,.2f}")
+            print(f"Total Return:   {(equity/initial - 1):+.2%}")
+            print(f"Initial Value:  ${initial:,.2f}")
+            print(f"Account Status: {acct.get('status', 'unknown')}")
+
+            if alpaca_positions:
+                print(f"\nPositions ({len(alpaca_positions)}):")
+                print(f"{'Ticker':8s} {'Shares':>8s} {'Entry':>8s} {'Current':>8s} {'PnL':>10s} {'Weight':>8s}")
+                print("-" * 60)
+                for p in sorted(alpaca_positions, key=lambda x: -abs(float(x.get("market_value", 0)))):
+                    sym = p.get("symbol", "?")
+                    qty = float(p.get("qty", 0))
+                    avg_entry = float(p.get("avg_entry_price", 0))
+                    current = float(p.get("current_price", 0))
+                    pnl = float(p.get("unrealized_pl", 0))
+                    mv = float(p.get("market_value", 0))
+                    weight = mv / equity if equity > 0 else 0
+                    print(f"{sym:8s} {qty:8.1f} ${avg_entry:7.2f} "
+                          f"${current:7.2f} ${pnl:+9.2f} {weight:7.1%}")
+            else:
+                print("\nNo active positions.")
         else:
-            print("\nNo active positions.")
+            # Local DB
+            positions = self.db.get_active_positions()
+            price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+            price_df = pd.read_csv(price_path, parse_dates=["date"])
+            latest_prices = (
+                price_df.sort_values("date")
+                .groupby("ticker")
+                .last()["close"]
+                .to_dict()
+            )
+            cash = state["cash"]
+            invested = sum(
+                p["shares"] * latest_prices.get(p["ticker"], p["entry_price"])
+                for p in positions
+            )
+            total = cash + invested
 
-        # Recent performance
+            print(f"Paper Trading Portfolio (Local Simulation)")
+            print(f"{'='*60}")
+            print(f"Portfolio Value: ${total:,.2f}")
+            print(f"Cash:           ${cash:,.2f}")
+            print(f"Invested:       ${invested:,.2f}")
+            print(f"Total Return:   {(total/initial - 1):+.2%}")
+            print(f"Initial Value:  ${initial:,.2f}")
+            print(f"Last Updated:   {state.get('last_updated', 'Never')}")
+
+            if positions:
+                print(f"\nPositions ({len(positions)}):")
+                print(f"{'Ticker':8s} {'Shares':>8s} {'Entry':>8s} {'Current':>8s} {'PnL':>10s} {'Weight':>8s}")
+                print("-" * 60)
+                for p in sorted(positions, key=lambda x: -x["weight"]):
+                    current = latest_prices.get(p["ticker"], p["entry_price"])
+                    pnl = (current - p["entry_price"]) * p["shares"]
+                    print(f"{p['ticker']:8s} {p['shares']:8.1f} ${p['entry_price']:7.2f} "
+                          f"${current:7.2f} ${pnl:+9.2f} {p['weight']:7.1%}")
+            else:
+                print("\nNo active positions.")
+
+        # Recent performance from local DB
         snapshots = self.db.get_snapshots(last_n=10)
         if snapshots:
             print(f"\nRecent Performance:")
@@ -740,7 +948,7 @@ class PaperTradingEngine:
 # ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Paper trading pipeline")
+    parser = argparse.ArgumentParser(description="Paper trading pipeline (Alpaca + local simulation)")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
 
     # run
@@ -751,10 +959,16 @@ def main():
                             help="Skip data refresh")
     run_parser.add_argument("--capital", type=float, default=100000,
                             help="Initial capital (default: 100000)")
+    run_parser.add_argument("--local", action="store_true",
+                            help="Force local simulation (no Alpaca orders)")
 
     # status
     status_parser = subparsers.add_parser("status", help="Show portfolio status")
     status_parser.add_argument("--watchlist", type=str, default="tech_giants")
+    status_parser.add_argument("--local", action="store_true")
+
+    # account — Alpaca-only
+    account_parser = subparsers.add_parser("account", help="Show Alpaca account details")
 
     # history
     hist_parser = subparsers.add_parser("history", help="Show trade history")
@@ -764,6 +978,9 @@ def main():
     # refresh
     refresh_parser = subparsers.add_parser("refresh", help="Refresh price data only")
     refresh_parser.add_argument("--watchlist", type=str, default="tech_giants")
+
+    # liquidate — Alpaca-only
+    liquidate_parser = subparsers.add_parser("liquidate", help="Close all Alpaca positions")
 
     # setup-cron
     subparsers.add_parser("setup-cron", help="Setup daily cron job")
@@ -778,12 +995,52 @@ def main():
         engine = PaperTradingEngine(
             watchlist=args.watchlist,
             initial_capital=args.capital,
+            force_local=args.local,
         )
         engine.run_daily(skip_refresh=args.skip_refresh)
 
     elif args.command == "status":
-        engine = PaperTradingEngine(watchlist=args.watchlist)
+        engine = PaperTradingEngine(
+            watchlist=args.watchlist,
+            force_local=getattr(args, "local", False),
+        )
         engine.show_status()
+
+    elif args.command == "account":
+        if not ALPACA_TRADING_AVAILABLE:
+            print("Alpaca SDK not installed. Run: pip install alpaca-py")
+            return
+        try:
+            broker = AlpacaBroker(paper=True)
+            acct = broker.get_account()
+            print(f"\n{'='*60}")
+            print("Alpaca Paper Trading Account")
+            print(f"{'='*60}")
+            for key in ["equity", "cash", "buying_power", "portfolio_value",
+                        "long_market_value", "short_market_value",
+                        "status", "account_number", "currency"]:
+                val = acct.get(key, "N/A")
+                if isinstance(val, (int, float)):
+                    print(f"  {key:25s}: ${val:,.2f}")
+                else:
+                    print(f"  {key:25s}: {val}")
+
+            positions = broker.get_positions()
+            print(f"\nOpen Positions: {len(positions)}")
+            for p in positions:
+                sym = p.get("symbol", "?")
+                qty = float(p.get("qty", 0))
+                pnl = float(p.get("unrealized_pl", 0))
+                mv = float(p.get("market_value", 0))
+                print(f"  {sym:8s} {qty:8.1f} shares  ${mv:>10,.2f}  PnL: ${pnl:+,.2f}")
+
+            clock = broker.get_clock()
+            market_status = "OPEN" if clock.get("is_open") else "CLOSED"
+            print(f"\nMarket: {market_status}")
+            if not clock.get("is_open"):
+                print(f"  Next open: {clock.get('next_open', 'N/A')}")
+        except Exception as e:
+            print(f"Error connecting to Alpaca: {e}")
 
     elif args.command == "history":
         engine = PaperTradingEngine(watchlist=args.watchlist)
@@ -792,6 +1049,26 @@ def main():
     elif args.command == "refresh":
         engine = PaperTradingEngine(watchlist=args.watchlist)
         engine.refresh_data()
+
+    elif args.command == "liquidate":
+        if not ALPACA_TRADING_AVAILABLE:
+            print("Alpaca SDK not installed. Run: pip install alpaca-py")
+            return
+        try:
+            broker = AlpacaBroker(paper=True)
+            positions = broker.get_positions()
+            if not positions:
+                print("No open positions to close.")
+                return
+            print(f"Closing {len(positions)} positions...")
+            results = broker.close_all_positions()
+            for r in results:
+                sym = r.get("symbol", "?")
+                status = r.get("status", "unknown")
+                print(f"  Closed {sym}: {status}")
+            print("All positions closed.")
+        except Exception as e:
+            print(f"Error: {e}")
 
     elif args.command == "setup-cron":
         script_path = Path(__file__).resolve()
@@ -807,7 +1084,6 @@ def main():
         print(cron_line)
         print("\nThis runs at 5:30 PM ET every weekday (M-F).")
 
-        # Create logs directory
         logs_dir = project_dir / "logs"
         logs_dir.mkdir(exist_ok=True)
         print(f"\nLogs directory: {logs_dir}")

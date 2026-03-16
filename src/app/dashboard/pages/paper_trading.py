@@ -50,13 +50,14 @@ def render_paper_trading():
     """Render paper trading dashboard page."""
     render_page_header(
         "Paper Trading",
-        "Simulated portfolio tracking and signal history"
+        "Alpaca paper trading portfolio"
     )
 
     conn = _get_db()
     if conn is None:
         st.warning(
-            "No paper trading data found. Run `python scripts/paper_trading.py run` to start."
+            "No paper trading data found. Ensure Alpaca API keys are configured "
+            "in `.env` and run `python scripts/paper_trading.py run` to start."
         )
         st.code("python scripts/paper_trading.py run --watchlist tech_giants", language="bash")
         return
@@ -550,11 +551,27 @@ def _render_controls_tab():
 
     render_section_header("Quick Commands", "🚀")
     st.markdown("""
-Copy and run these in your terminal:
+Copy and run these in your terminal. Orders are routed through **Alpaca paper trading** by default;
+add `--local` to any `run` command to use local-only simulation instead.
 
-**Run daily signal generation:**
+**Run daily signal generation (Alpaca):**
 ```bash
 python scripts/paper_trading.py run --watchlist tech_giants
+```
+
+**Run in local-only mode (no broker):**
+```bash
+python scripts/paper_trading.py run --watchlist tech_giants --local
+```
+
+**Alpaca account details:**
+```bash
+python scripts/paper_trading.py account
+```
+
+**Liquidate all Alpaca positions:**
+```bash
+python scripts/paper_trading.py liquidate
 ```
 
 **Check status:**
@@ -590,6 +607,7 @@ Current model configuration (from `config/config.yaml`):
 | **Stop Loss** | -15% | Limits per-position drawdown |
 | **VIX Scaling** | Enabled | Reduces exposure at VIX>30 |
 | **Transaction Cost** | 0.1% | Includes bid-ask spread |
+| **Broker** | Alpaca paper (auto-detect) | Uses Alpaca when API keys present, else local |
 """)
 
     st.divider()

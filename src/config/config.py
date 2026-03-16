@@ -133,6 +133,8 @@ class FeatureConfig:
         'nvda_lookback': 21,
         'breadth_lookback': 21,
         'qqq_lookback': 63,
+        'rotation_lookback': 20,
+        'include_btc': True,
     })
 
 

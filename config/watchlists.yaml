@@ -852,6 +852,7 @@ watchlists:
 # These tickers provide macro/inter-market signals merged by date
 reference_etfs:
   commodities: [GLD, UUP, TIP]       # Gold, Dollar index proxy, TIPS (real yields)
+  rotation: [GLD, TIP, UUP, SPY, BTC-USD]  # Capital rotation signals
   semiconductor: [NVDA, INTC, QCOM, TXN, MU, MRVL, AVGO, QQQ]  # Semi peers + QQQ
 
 # Default watchlist to use when none specified

@@ -421,6 +421,328 @@ def add_qqq_relative_strength(
     return df
 
 
+# ---------------------------------------------------------------------------
+# Capital rotation features (universal macro signals)
+# ---------------------------------------------------------------------------
+
+def add_gold_momentum_decay(
+    df: pd.DataFrame,
+    gld_prices: pd.DataFrame,
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Add gold momentum and its decay (exhaustion signal).
+
+    Features added:
+    - gold_momentum_20d: GLD *lookback*-day return.
+    - gold_momentum_decay: 5-day change in gold_momentum_20d (negative = exhaustion).
+
+    Args:
+        df: Target DataFrame with 'date' column.
+        gld_prices: GLD price DataFrame.
+        lookback: Return lookback in trading days (default 20).
+
+    Returns:
+        DataFrame with gold momentum features added.
+    """
+    df = _merge_reference_close(df, gld_prices, "GLD", "_gld_close")
+
+    if df["_gld_close"].isna().all():
+        df["gold_momentum_20d"] = np.nan
+        df["gold_momentum_decay"] = np.nan
+        df = df.drop(columns=["_gld_close"], errors="ignore")
+        return df
+
+    gld_series = (
+        df[["date", "_gld_close"]]
+        .drop_duplicates(subset=["date"])
+        .sort_values("date")
+        .set_index("date")["_gld_close"]
+    )
+    gld_mom = gld_series.pct_change(lookback, fill_method=None).rename("gold_momentum_20d")
+    gld_decay = gld_mom.diff(5).rename("gold_momentum_decay")
+
+    df = df.merge(gld_mom, left_on="date", right_index=True, how="left")
+    df = df.merge(gld_decay, left_on="date", right_index=True, how="left")
+    df = df.drop(columns=["_gld_close"], errors="ignore")
+    return df
+
+
+def add_gold_equity_rotation(
+    df: pd.DataFrame,
+    gld_prices: pd.DataFrame,
+    spy_prices: pd.DataFrame,
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Add gold vs equity relative momentum.
+
+    Feature added:
+    - gold_spy_relative_momentum: GLD *lookback*-day return minus SPY *lookback*-day return.
+      When high & declining, signals rotation from gold into equities.
+
+    Args:
+        df: Target DataFrame with 'date' column.
+        gld_prices: GLD price DataFrame.
+        spy_prices: SPY price DataFrame.
+        lookback: Return lookback in trading days (default 20).
+
+    Returns:
+        DataFrame with gold_spy_relative_momentum added.
+    """
+    df = _merge_reference_close(df, gld_prices, "GLD", "_gld_close_rot")
+    df = _merge_reference_close(df, spy_prices, "SPY", "_spy_close_rot")
+
+    if df["_gld_close_rot"].isna().all() or df["_spy_close_rot"].isna().all():
+        df["gold_spy_relative_momentum"] = np.nan
+        df = df.drop(columns=["_gld_close_rot", "_spy_close_rot"], errors="ignore")
+        return df
+
+    for alias, col_name in [("_gld_close_rot", "_gld_ret_rot"), ("_spy_close_rot", "_spy_ret_rot")]:
+        series = (
+            df[["date", alias]]
+            .drop_duplicates(subset=["date"])
+            .sort_values("date")
+            .set_index("date")[alias]
+        )
+        ret = series.pct_change(lookback, fill_method=None).rename(col_name)
+        df = df.merge(ret, left_on="date", right_index=True, how="left")
+
+    df["gold_spy_relative_momentum"] = df["_gld_ret_rot"] - df["_spy_ret_rot"]
+    df = df.drop(columns=["_gld_close_rot", "_spy_close_rot", "_gld_ret_rot", "_spy_ret_rot"], errors="ignore")
+    return df
+
+
+def add_safe_haven_flow(
+    df: pd.DataFrame,
+    gld_prices: pd.DataFrame,
+    tip_prices: pd.DataFrame,
+    spy_prices: pd.DataFrame,
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Add safe-haven flow indicator.
+
+    Feature added:
+    - safe_haven_flow: avg(GLD ret, TIP ret) - SPY ret over *lookback* days.
+      Positive = money flowing to safety; negative = risk-on.
+
+    Args:
+        df: Target DataFrame with 'date' column.
+        gld_prices: GLD price DataFrame.
+        tip_prices: TIP price DataFrame.
+        spy_prices: SPY price DataFrame.
+        lookback: Return lookback in trading days (default 20).
+
+    Returns:
+        DataFrame with safe_haven_flow added.
+    """
+    df = _merge_reference_close(df, gld_prices, "GLD", "_gld_shf")
+    df = _merge_reference_close(df, tip_prices, "TIP", "_tip_shf")
+    df = _merge_reference_close(df, spy_prices, "SPY", "_spy_shf")
+
+    rets = {}
+    for alias in ["_gld_shf", "_tip_shf", "_spy_shf"]:
+        if df[alias].isna().all():
+            rets[alias] = None
+            continue
+        series = (
+            df[["date", alias]]
+            .drop_duplicates(subset=["date"])
+            .sort_values("date")
+            .set_index("date")[alias]
+        )
+        rets[alias] = series.pct_change(lookback, fill_method=None)
+
+    if rets["_gld_shf"] is not None and rets["_spy_shf"] is not None:
+        haven_avg = rets["_gld_shf"]
+        if rets["_tip_shf"] is not None:
+            haven_avg = (rets["_gld_shf"] + rets["_tip_shf"]) / 2.0
+        flow = (haven_avg - rets["_spy_shf"]).rename("safe_haven_flow")
+        df = df.merge(flow, left_on="date", right_index=True, how="left")
+    else:
+        df["safe_haven_flow"] = np.nan
+
+    df = df.drop(columns=["_gld_shf", "_tip_shf", "_spy_shf"], errors="ignore")
+    return df
+
+
+def add_cross_asset_momentum_dispersion(
+    df: pd.DataFrame,
+    reference_prices: Dict[str, pd.DataFrame],
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Add cross-asset momentum dispersion.
+
+    Feature added:
+    - cross_asset_momentum_dispersion: std of *lookback*-day returns across
+      GLD, TIP, UUP, SPY. High dispersion = strong rotation in progress.
+
+    Args:
+        df: Target DataFrame with 'date' column.
+        reference_prices: Dict mapping ticker -> price DataFrame.
+        lookback: Return lookback in trading days (default 20).
+
+    Returns:
+        DataFrame with cross_asset_momentum_dispersion added.
+    """
+    dispersion_tickers = ["GLD", "TIP", "UUP", "SPY"]
+    unique_dates = df[["date"]].drop_duplicates().sort_values("date")
+    if not pd.api.types.is_datetime64_any_dtype(unique_dates["date"]):
+        unique_dates["date"] = pd.to_datetime(unique_dates["date"], format="mixed")
+
+    ret_columns = []
+    for ticker in dispersion_tickers:
+        ref = reference_prices.get(ticker, pd.DataFrame())
+        if ref.empty:
+            continue
+        ref = ref.copy()
+        if "ticker" in ref.columns:
+            ref = ref[ref["ticker"] == ticker]
+        if ref.empty:
+            continue
+        if not pd.api.types.is_datetime64_any_dtype(ref["date"]):
+            ref["date"] = pd.to_datetime(ref["date"], format="mixed")
+        ref = ref[["date", "close"]].drop_duplicates(subset=["date"]).sort_values("date")
+        ref = ref.set_index("date")["close"]
+        ret = ref.pct_change(lookback, fill_method=None)
+        aligned = ret.reindex(unique_dates["date"])
+        ret_columns.append(aligned)
+
+    if len(ret_columns) >= 2:
+        ret_df = pd.concat(ret_columns, axis=1)
+        dispersion = ret_df.std(axis=1).rename("cross_asset_momentum_dispersion").reset_index()
+        dispersion.columns = ["date", "cross_asset_momentum_dispersion"]
+        df = df.merge(dispersion, on="date", how="left")
+    else:
+        df["cross_asset_momentum_dispersion"] = np.nan
+
+    return df
+
+
+def add_btc_rotation(
+    df: pd.DataFrame,
+    btc_prices: pd.DataFrame,
+    gld_prices: pd.DataFrame,
+    lookback: int = 20,
+) -> pd.DataFrame:
+    """Add BTC rotation features.
+
+    Features added:
+    - btc_momentum_20d: BTC-USD *lookback*-day return.
+    - btc_gold_relative: BTC ret - GLD ret ("digital gold" rotation).
+
+    Args:
+        df: Target DataFrame with 'date' column.
+        btc_prices: BTC-USD price DataFrame.
+        gld_prices: GLD price DataFrame.
+        lookback: Return lookback in trading days (default 20).
+
+    Returns:
+        DataFrame with BTC rotation features added.
+    """
+    df = _merge_reference_close(df, btc_prices, "BTC-USD", "_btc_close")
+    df = _merge_reference_close(df, gld_prices, "GLD", "_gld_close_btc")
+
+    btc_ret = None
+    gld_ret = None
+
+    if not df["_btc_close"].isna().all():
+        btc_series = (
+            df[["date", "_btc_close"]]
+            .drop_duplicates(subset=["date"])
+            .sort_values("date")
+            .set_index("date")["_btc_close"]
+        )
+        btc_ret = btc_series.pct_change(lookback, fill_method=None).rename("btc_momentum_20d")
+        df = df.merge(btc_ret, left_on="date", right_index=True, how="left")
+    else:
+        df["btc_momentum_20d"] = np.nan
+
+    if not df["_gld_close_btc"].isna().all():
+        gld_series = (
+            df[["date", "_gld_close_btc"]]
+            .drop_duplicates(subset=["date"])
+            .sort_values("date")
+            .set_index("date")["_gld_close_btc"]
+        )
+        gld_ret = gld_series.pct_change(lookback, fill_method=None)
+
+    if btc_ret is not None and gld_ret is not None:
+        relative = (btc_ret - gld_ret).rename("btc_gold_relative")
+        df = df.merge(relative, left_on="date", right_index=True, how="left")
+    else:
+        df["btc_gold_relative"] = np.nan
+
+    df = df.drop(columns=["_btc_close", "_gld_close_btc"], errors="ignore")
+    return df
+
+
+def add_rotation_features(
+    df: pd.DataFrame,
+    reference_prices: Dict[str, pd.DataFrame],
+    lookback: int = 20,
+    include_btc: bool = True,
+) -> pd.DataFrame:
+    """Add all capital rotation features (universal macro signals).
+
+    Convenience wrapper that adds:
+    - gold_momentum_20d, gold_momentum_decay
+    - gold_spy_relative_momentum
+    - safe_haven_flow
+    - cross_asset_momentum_dispersion
+    - btc_momentum_20d, btc_gold_relative (optional)
+
+    Args:
+        df: Target DataFrame with 'date' (and optionally 'ticker').
+        reference_prices: Dict mapping ticker -> DataFrame.
+            Expected keys: "GLD", "SPY". Optional: "TIP", "UUP", "BTC-USD".
+        lookback: Rotation lookback period in trading days (default 20).
+        include_btc: Whether to include BTC-USD features (default True).
+
+    Returns:
+        DataFrame with rotation features added.
+    """
+    gld = reference_prices.get("GLD", pd.DataFrame())
+    spy = reference_prices.get("SPY", pd.DataFrame())
+    tip = reference_prices.get("TIP", pd.DataFrame())
+    btc = reference_prices.get("BTC-USD", pd.DataFrame())
+
+    # Gold momentum + decay
+    if not gld.empty:
+        df = add_gold_momentum_decay(df, gld, lookback=lookback)
+    else:
+        df["gold_momentum_20d"] = np.nan
+        df["gold_momentum_decay"] = np.nan
+
+    # Gold vs SPY relative momentum
+    if not gld.empty and not spy.empty:
+        df = add_gold_equity_rotation(df, gld, spy, lookback=lookback)
+    else:
+        df["gold_spy_relative_momentum"] = np.nan
+
+    # Safe haven flow
+    if not gld.empty and not spy.empty:
+        df = add_safe_haven_flow(df, gld, tip, spy, lookback=lookback)
+    else:
+        df["safe_haven_flow"] = np.nan
+
+    # Cross-asset momentum dispersion
+    df = add_cross_asset_momentum_dispersion(df, reference_prices, lookback=lookback)
+
+    # BTC rotation features
+    if include_btc:
+        if not btc.empty:
+            df = add_btc_rotation(df, btc, gld, lookback=lookback)
+        else:
+            df["btc_momentum_20d"] = np.nan
+            df["btc_gold_relative"] = np.nan
+
+    return df
+
+
+# ---------------------------------------------------------------------------
+# Semiconductor cross-asset features (AMD)
+# ---------------------------------------------------------------------------
+
+
 def add_semiconductor_cross_asset_features(
     df: pd.DataFrame,
     reference_prices: Dict[str, pd.DataFrame],
@@ -487,6 +809,8 @@ def add_cross_asset_features(
     breadth_lookback: int = 21,
     qqq_lookback: int = 63,
     semi_peers: Optional[List[str]] = None,
+    rotation_lookback: int = 20,
+    include_btc: bool = True,
 ) -> pd.DataFrame:
     """Add cross-asset features based on target ticker or auto-detect.
 
@@ -495,6 +819,7 @@ def add_cross_asset_features(
     tickers in *price_df* and applies all applicable feature sets:
     - SLV -> commodity features
     - AMD -> semiconductor features
+    - Always: rotation features (universal macro signals)
 
     Args:
         price_df: DataFrame with ['date', 'ticker', 'close'] at minimum.
@@ -507,6 +832,8 @@ def add_cross_asset_features(
         breadth_lookback: Sector breadth lookback.
         qqq_lookback: QQQ relative strength lookback.
         semi_peers: Custom list of semiconductor peers for breadth.
+        rotation_lookback: Lookback for rotation features (default 20).
+        include_btc: Whether to include BTC-USD rotation features (default True).
 
     Returns:
         DataFrame with cross-asset features added.
@@ -563,5 +890,13 @@ def add_cross_asset_features(
             breadth_lookback=breadth_lookback,
             qqq_lookback=qqq_lookback,
         )
+
+    # Rotation features are universal (not ticker-gated)
+    df = add_rotation_features(
+        df,
+        reference_prices,
+        lookback=rotation_lookback,
+        include_btc=include_btc,
+    )
 
     return df

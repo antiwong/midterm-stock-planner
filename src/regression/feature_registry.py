@@ -75,6 +75,7 @@ DEFAULT_FEATURE_ORDER = [
     "momentum",
     "mean_reversion",
     "sentiment",
+    "rotation",
 ]
 
 # Default baseline features (minimal viable model)
@@ -279,6 +280,25 @@ class FeatureRegistry:
             enabled_by_default=False,
             description="Semiconductor cross-asset features (AMD focus): "
                         "NVDA peer momentum, sector breadth, QQQ relative strength",
+        ))
+
+        # --- Cross-asset features (capital rotation) ---
+        self.register(FeatureSpec(
+            name="rotation",
+            columns=[
+                "gold_momentum_20d", "gold_momentum_decay",
+                "gold_spy_relative_momentum",
+                "safe_haven_flow",
+                "cross_asset_momentum_dispersion",
+                "btc_momentum_20d", "btc_gold_relative",
+            ],
+            group=FeatureGroup.CROSS_ASSET,
+            tunable_params={
+                "rotation_lookback": TunableParam("int", 10, 42, 20),
+            },
+            enabled_by_default=False,
+            description="Capital rotation features (universal macro): gold momentum/decay, "
+                        "gold-equity rotation, safe haven flow, momentum dispersion, BTC rotation",
         ))
 
     def register(self, spec: FeatureSpec) -> None:
