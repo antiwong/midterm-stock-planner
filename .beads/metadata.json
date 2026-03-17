@@ -1,6 +1,7 @@
 {
   "database": "dolt",
-  "jsonl_export": "issues.jsonl",
   "backend": "dolt",
-  "dolt_database": "beads_midterm-stock-planner"
+  "dolt_mode": "server",
+  "dolt_database": "beads_midterm-stock-planner",
+  "project_id": "d1ace231-e551-4d9e-815d-7e64fafdf6ad"
 }
