@@ -366,16 +366,45 @@ class DailyRoutine:
             self.logger.info("MOBY_APP_PASSWORD not set — skipping Moby parsing")
             return {"status": "skipped", "reason": "no_credentials"}
 
+        result = {}
+
+        # Parse emails for ticker picks
         try:
             from scripts.parse_moby_emails import MobyEmailParser
             parser = MobyEmailParser()
             picks = parser.download(days=7)
             count = len(picks) if picks is not None else 0
-            self.logger.info(f"Parsed {count} Moby picks")
-            return {"status": "success", "picks": count}
+            self.logger.info(f"Parsed {count} Moby email picks")
+            result["email_picks"] = {"status": "success", "picks": count}
         except Exception as e:
-            self.logger.error(f"Moby parsing failed: {e}")
-            return {"status": "error", "error": str(e)}
+            self.logger.error(f"Moby email parsing failed: {e}")
+            result["email_picks"] = {"status": "error", "error": str(e)}
+
+        # Parse structured analysis from moby_news/ markdown
+        try:
+            from scripts.parse_moby_analysis import parse_all_files
+            moby_dir = PROJECT_ROOT / "moby_news"
+            if moby_dir.exists():
+                df = parse_all_files(moby_dir)
+                if len(df) > 0:
+                    output_path = DATA_DIR / "sentiment" / "moby_analysis.csv"
+                    # Merge with existing
+                    if output_path.exists():
+                        existing = pd.read_csv(output_path)
+                        df = pd.concat([existing, df], ignore_index=True)
+                        df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
+                    df.to_csv(output_path, index=False)
+                    self.logger.info(f"Parsed {len(df)} Moby stock analyses")
+                    result["analysis"] = {"status": "success", "stocks": len(df)}
+                else:
+                    result["analysis"] = {"status": "no_files"}
+            else:
+                result["analysis"] = {"status": "skipped", "reason": "no moby_news/ dir"}
+        except Exception as e:
+            self.logger.error(f"Moby analysis parsing failed: {e}")
+            result["analysis"] = {"status": "error", "error": str(e)}
+
+        return result
 
     # ------------------------------------------------------------------
     # Portfolio Runs
