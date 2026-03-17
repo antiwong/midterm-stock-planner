@@ -1,0 +1,83 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-03-16T22:06:03.380467",
+  "watchlist": null,
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_START",
+        "message": "Data starts at 2016-01-04, but 2016-01-01 was requested",
+        "details": {
+          "data_start": "2016-01-04",
+          "required_start": "2016-01-01"
+        }
+      },
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-03-13, but 2026-03-16 was requested",
+        "details": {
+          "data_end": "2026-03-13",
+          "required_end": "2026-03-16"
+        }
+      }
+    ],
+    "stats": {
+      "available_tickers": 29,
+      "missing_tickers": 0,
+      "total_required": 29,
+      "coverage_pct": 100.0,
+      "data_start": "2016-01-04",
+      "data_end": "2026-03-13",
+      "required_start": "2016-01-01",
+      "required_end": "2026-03-16",
+      "tickers_with_gaps": 0,
+      "quality_issues": 0,
+      "total_rows": 351981,
+      "unique_tickers": 143,
+      "date_range_days": 3721,
+      "avg_rows_per_ticker": 2461.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 2 warning(s) detected\n\nCoverage: 29/29 tickers (100.0%)\nDate Range: 2016-01-04 to 2026-03-13\nTotal Rows: 351,981"
+  },
+  "download": {
+    "successful": 29,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "  + TSM: 2563 bars",
+      "  + ASML: 2563 bars",
+      "  + SMCI: 2563 bars",
+      "  + IAU: 2563 bars",
+      "  + GLDM: 1939 bars",
+      "  + SGOL: 2563 bars",
+      "  + SIVR: 2563 bars",
+      "  + PSLV: 2563 bars",
+      "  + SILJ: 2563 bars",
+      "  + RING: 2563 bars",
+      "  + NEM: 2563 bars",
+      "  + GOLD: 2563 bars",
+      "  + FNV: 2563 bars",
+      "  + WPM: 2563 bars",
+      "  + AEM: 2563 bars",
+      "  + KGC: 2563 bars",
+      "  + AU: 2563 bars",
+      "  + HMY: 2563 bars",
+      "  + EGO: 2563 bars",
+      "  + BTG: 2563 bars",
+      "  + AGI: 2563 bars",
+      "  + PAAS: 2563 bars",
+      "  + HL: 2563 bars",
+      "  + CDE: 2563 bars",
+      "  + MAG: 2310 bars",
+      "  + AG: 2563 bars",
+      "  + RGLD: 2563 bars",
+      "  + SAND: 2463 bars",
+      "  + OR: 2436 bars"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

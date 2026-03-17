@@ -1,0 +1,114 @@
+{
+  "run_id": "20260220_223357_dcd35183",
+  "run_name": "S&P 500 - Backtest 2026-02-20 22:33",
+  "generated_at": "2026-02-20T22:34:09.688138",
+  "workflow_steps": {
+    "data_validation": true,
+    "portfolio_enrichment": true,
+    "vertical_analysis": true,
+    "horizontal_analysis": true
+  },
+  "run_metrics": {
+    "total_return": 1.408545777832042,
+    "sharpe_ratio": 0.5213884348458929,
+    "max_drawdown": -0.6572187202698243,
+    "volatility": 0,
+    "win_rate": 0.5034542314335061
+  },
+  "portfolio_summary": {
+    "run_id": "20260220_223357_dcd35183",
+    "run_name": "S&P 500 - Backtest 2026-02-20 22:33",
+    "n_stocks": 206,
+    "n_sectors": 11,
+    "diversification": {
+      "stock_level_ew": 0.9951456310679612,
+      "stock_level_rp": 0.9946051868698041,
+      "sector_level_ew": 0.8960316712225469,
+      "sector_level_rp": 0.8951955281438005,
+      "effective_n_ew": 206.00000000000009,
+      "effective_n_rp": 185.36323239869003
+    },
+    "score_distributions": {
+      "Value Score": {
+        "mean": 50.0,
+        "std": 0.0,
+        "min": 50.0,
+        "max": 50.0,
+        "median": 50.0
+      },
+      "Quality Score": {
+        "mean": 50.0,
+        "std": 0.0,
+        "min": 50.0,
+        "max": 50.0,
+        "median": 50.0
+      },
+      "Tech Score": {
+        "mean": 100.0,
+        "std": 0.0,
+        "min": 100.0,
+        "max": 100.0,
+        "median": 100.0
+      }
+    },
+    "sector_breakdown": {
+      "count": {
+        "Basic Materials": 12,
+        "Communication Services": 10,
+        "Consumer Cyclical": 20,
+        "Consumer Defensive": 18,
+        "Energy": 13,
+        "Financial Services": 28,
+        "Healthcare": 31,
+        "Industrials": 28,
+        "Real Estate": 11,
+        "Technology": 20,
+        "Utilities": 15
+      },
+      "ew_pct": {
+        "Basic Materials": 5.825242718446601,
+        "Communication Services": 4.854368932038835,
+        "Consumer Cyclical": 9.70873786407767,
+        "Consumer Defensive": 8.737864077669903,
+        "Energy": 6.310679611650485,
+        "Financial Services": 13.592233009708737,
+        "Healthcare": 15.048543689320388,
+        "Industrials": 13.592233009708737,
+        "Real Estate": 5.339805825242718,
+        "Technology": 9.70873786407767,
+        "Utilities": 7.281553398058252
+      },
+      "rp_pct": {
+        "Basic Materials": 5.429120650918335,
+        "Communication Services": 4.503317302770991,
+        "Consumer Cyclical": 9.108327759091429,
+        "Consumer Defensive": 11.559527714715312,
+        "Energy": 4.9739775142907545,
+        "Financial Services": 14.632926000833299,
+        "Healthcare": 13.40668341480077,
+        "Industrials": 13.258351726765252,
+        "Real Estate": 6.179979919144025,
+        "Technology": 6.813585579528247,
+        "Utilities": 10.134202417141587
+      }
+    },
+    "top_sectors": [
+      "Healthcare",
+      "Financial Services",
+      "Industrials"
+    ],
+    "generated_at": "2026-02-20T22:34:08.921566"
+  },
+  "data_validation": {
+    "status": "PASSED",
+    "coverage_pct": 100.0,
+    "available_tickers": 90,
+    "missing_tickers": 0,
+    "errors": [],
+    "warnings": [
+      "Data starts at 2015-01-02, but 2015-01-01 was requested",
+      "Data ends at 2026-02-19, but 2026-02-20 was requested",
+      "1 data quality issues detected"
+    ]
+  }
+}

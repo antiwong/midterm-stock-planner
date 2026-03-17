@@ -1,0 +1,48 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-02-21T13:49:26.735569",
+  "watchlist": null,
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-02-20, but 2026-02-21 was requested",
+        "details": {
+          "data_end": "2026-02-20",
+          "required_end": "2026-02-21"
+        }
+      }
+    ],
+    "stats": {
+      "available_tickers": 2,
+      "missing_tickers": 0,
+      "total_required": 2,
+      "coverage_pct": 100.0,
+      "data_start": "2024-04-01",
+      "data_end": "2026-02-20",
+      "required_start": "2024-04-01",
+      "required_end": "2026-02-21",
+      "tickers_with_gaps": 0,
+      "quality_issues": 0,
+      "total_rows": 23994,
+      "unique_tickers": 9,
+      "date_range_days": 690,
+      "avg_rows_per_ticker": 2666.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 1 warning(s) detected\n\nCoverage: 2/2 tickers (100.0%)\nDate Range: 2024-04-01 to 2026-02-20\nTotal Rows: 23,994"
+  },
+  "download": {
+    "successful": 2,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "\u2713 AMD: 475 rows",
+      "\u2713 SLV: 475 rows"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

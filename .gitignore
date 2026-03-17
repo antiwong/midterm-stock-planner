@@ -45,6 +45,7 @@ Thumbs.db
 .streamlit/credentials.toml
 
 # Database
+*.db
 *.db-journal
 
 # Logs

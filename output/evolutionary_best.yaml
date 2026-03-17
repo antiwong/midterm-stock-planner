@@ -1,0 +1,9 @@
+backtest:
+  train_years: 2.0
+  test_years: 0.5
+  step_value: 1.0
+  step_unit: years
+  rebalance_freq: MS
+  top_n: 10
+  top_pct: 0.1
+  transaction_cost: 0.001

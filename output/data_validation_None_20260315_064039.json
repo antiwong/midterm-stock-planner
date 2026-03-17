@@ -1,0 +1,78 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-03-15T06:40:39.600678",
+  "watchlist": null,
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_START",
+        "message": "Data starts at 2014-01-02, but 2014-01-01 was requested",
+        "details": {
+          "data_start": "2014-01-02",
+          "required_start": "2014-01-01"
+        }
+      },
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-03-13, but 2026-03-15 was requested",
+        "details": {
+          "data_end": "2026-03-13",
+          "required_end": "2026-03-15"
+        }
+      },
+      {
+        "type": "DATA_QUALITY",
+        "message": "1 data quality issues detected",
+        "details": [
+          {
+            "issue": "null_values",
+            "details": {
+              "open": 1860,
+              "high": 1860,
+              "low": 1860,
+              "close": 1860,
+              "volume": 1860
+            }
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "available_tickers": 7,
+      "missing_tickers": 0,
+      "total_required": 7,
+      "coverage_pct": 100.0,
+      "data_start": "2014-01-02",
+      "data_end": "2026-03-13",
+      "required_start": "2014-01-01",
+      "required_end": "2026-03-15",
+      "tickers_with_gaps": 0,
+      "quality_issues": 1,
+      "total_rows": 122047,
+      "unique_tickers": 127,
+      "date_range_days": 4453,
+      "avg_rows_per_ticker": 961.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 3 warning(s) detected\n\nCoverage: 7/7 tickers (100.0%)\nDate Range: 2014-01-02 to 2026-03-13\nTotal Rows: 122,047"
+  },
+  "download": {
+    "successful": 7,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "skipped_delisted": [],
+    "log": [
+      "\u2713 NVDA: 3067 rows",
+      "\u2713 INTC: 3067 rows",
+      "\u2713 QCOM: 3067 rows",
+      "\u2713 TXN: 3067 rows",
+      "\u2713 MU: 3067 rows",
+      "\u2713 MRVL: 3067 rows",
+      "\u2713 AVGO: 3067 rows"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

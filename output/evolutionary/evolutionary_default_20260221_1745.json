@@ -1,0 +1,40 @@
+[
+  {
+    "run_id": "20260221_174532_e38d97",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "24a2ff27f461e8df",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260221_174534_9b4f1e",
+    "param_vector": {
+      "train_years": 5.116265482954734,
+      "test_years": 0.8127612342199964,
+      "step_value": 0.7009021370446549,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": 18,
+      "top_pct": 0.1247095607392138,
+      "transaction_cost": 0.0013554399105421063
+    },
+    "config_hash": "43e5d6d335701a92",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  }
+]

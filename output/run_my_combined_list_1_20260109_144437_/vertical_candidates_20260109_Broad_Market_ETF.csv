@@ -1,4 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-DIA,Broad Market ETF,-0.04564665525297717,50.0,50.0,25.47763313892604,1
-SPY,Broad Market ETF,-0.060077841014995456,50.0,50.0,25.470561857902652,2
-IWM,Broad Market ETF,-0.08232517956025687,50.0,50.0,25.459660662015473,3
+version https://git-lfs.github.com/spec/v1
+oid sha256:0432f75419d9ab17ad2715fcab02d10bc51afc1baf21a926e8ee27e9da84b2ad
+size 296

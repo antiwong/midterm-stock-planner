@@ -1,2 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-NLR,Energy,0.014225022002362992,30.0,30.0,15.306970260781158,1
+version https://git-lfs.github.com/spec/v1
+oid sha256:536888abcebe2f576a6abbbb1dc30b895de2e3ba2d2e37843b555220429a8747
+size 140

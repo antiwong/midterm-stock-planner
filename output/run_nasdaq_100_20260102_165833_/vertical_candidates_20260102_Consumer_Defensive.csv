@@ -1,6 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-DLTR,Consumer Defensive,0.35100099032180415,50.0,50.0,25.175500495160904,1
-MNST,Consumer Defensive,0.2955628084049802,50.0,50.0,25.14778140420249,2
-KDP,Consumer Defensive,0.1989519646077064,50.0,50.0,25.09947598230385,3
-KHC,Consumer Defensive,0.17972916827269753,50.0,50.0,25.08986458413635,4
-MDLZ,Consumer Defensive,0.16573678174725787,50.0,50.0,25.082868390873628,5
+version https://git-lfs.github.com/spec/v1
+oid sha256:e08e8ee39fcf94a8ff34563babc9f0a06de34d053eda149d26ac7ff009119573
+size 445

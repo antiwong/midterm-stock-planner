@@ -1,0 +1,63 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-03-16T22:14:47.691215",
+  "watchlist": null,
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-03-13, but 2026-03-16 was requested",
+        "details": {
+          "data_end": "2026-03-13",
+          "required_end": "2026-03-16"
+        }
+      },
+      {
+        "type": "DATA_QUALITY",
+        "message": "1 data quality issues detected",
+        "details": [
+          {
+            "issue": "null_values",
+            "details": {
+              "open": 1859,
+              "high": 1859,
+              "low": 1859,
+              "close": 1859,
+              "volume": 1859
+            }
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "available_tickers": 1,
+      "missing_tickers": 0,
+      "total_required": 1,
+      "coverage_pct": 100.0,
+      "data_start": "2014-01-02",
+      "data_end": "2026-03-13",
+      "required_start": "2023-03-15",
+      "required_end": "2026-03-16",
+      "tickers_with_gaps": 0,
+      "quality_issues": 1,
+      "total_rows": 523328,
+      "unique_tickers": 166,
+      "date_range_days": 4453,
+      "avg_rows_per_ticker": 3153.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 2 warning(s) detected\n\nCoverage: 1/1 tickers (100.0%)\nDate Range: 2014-01-02 to 2026-03-13\nTotal Rows: 523,328"
+  },
+  "download": {
+    "successful": 1,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "  + LUMN: 10964 bars"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

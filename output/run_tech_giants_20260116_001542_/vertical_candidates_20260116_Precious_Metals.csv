@@ -1,2 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-SLV,Precious Metals,0.027187510205730413,30.0,30.0,15.313321880000808,1
+version https://git-lfs.github.com/spec/v1
+oid sha256:9b758d151efc0bdfeda703253b755bf3ae73fb327822fd756f86a6987d99e38d
+size 149

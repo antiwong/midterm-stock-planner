@@ -1,0 +1,15 @@
+{
+  "best_params": {
+    "macd_fast": 5,
+    "macd_slow": 48,
+    "macd_signal": 8,
+    "rsi_period": 13,
+    "rsi_overbought": 79,
+    "rsi_oversold": 39
+  },
+  "best_score": 2.447749807235218,
+  "metric": "sharpe",
+  "tickers": [
+    "SLV"
+  ]
+}

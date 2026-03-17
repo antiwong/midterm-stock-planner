@@ -1,6 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-WBD,Communication Services,0.49563886456613426,50.0,50.0,25.247819432283066,1
-BIDU,Communication Services,0.2596166467634097,50.0,50.0,25.129808323381702,2
-CMCSA,Communication Services,0.22282847587051652,50.0,50.0,25.111414237935257,3
-EA,Communication Services,0.1280352680123196,50.0,50.0,25.06401763400616,4
-TMUS,Communication Services,0.06806140770517694,50.0,50.0,25.034030703852586,5
+version https://git-lfs.github.com/spec/v1
+oid sha256:1ffaaccc2c601dd3fddcb6c2ea7db0da68d17ad85275fcaa6d6209bf41c018e0
+size 467

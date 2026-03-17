@@ -1,4 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-XEL,Utilities,0.4859991128034469,50.0,50.0,25.242999556401724,1
-EXC,Utilities,0.23049856061009188,50.0,50.0,25.115249280305044,2
-AEP,Utilities,0.20238853625753675,50.0,50.0,25.10119426812877,3
+version https://git-lfs.github.com/spec/v1
+oid sha256:51300f1dd3d0bfe429dfa0f9fdb8fcc5c2e2d314940f3d0070ee197d04a007c4
+size 270

@@ -1,0 +1,83 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-03-16T22:05:29.748401",
+  "watchlist": null,
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-03-13, but 2026-03-16 was requested",
+        "details": {
+          "data_end": "2026-03-13",
+          "required_end": "2026-03-16"
+        }
+      },
+      {
+        "type": "DATA_QUALITY",
+        "message": "1 data quality issues detected",
+        "details": [
+          {
+            "issue": "null_values",
+            "details": {
+              "open": 1860,
+              "high": 1860,
+              "low": 1860,
+              "close": 1860,
+              "volume": 1860
+            }
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "available_tickers": 21,
+      "missing_tickers": 0,
+      "total_required": 21,
+      "coverage_pct": 100.0,
+      "data_start": "2014-01-02",
+      "data_end": "2026-03-13",
+      "required_start": "2023-03-15",
+      "required_end": "2026-03-16",
+      "tickers_with_gaps": 0,
+      "quality_issues": 1,
+      "total_rows": 451154,
+      "unique_tickers": 158,
+      "date_range_days": 4453,
+      "avg_rows_per_ticker": 2855.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 2 warning(s) detected\n\nCoverage: 21/21 tickers (100.0%)\nDate Range: 2014-01-02 to 2026-03-13\nTotal Rows: 451,154"
+  },
+  "download": {
+    "successful": 21,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "  + IAU: 11189 bars",
+      "  + SGOL: 9767 bars",
+      "  + SLV: 11974 bars",
+      "  + SIVR: 9607 bars",
+      "  + GDX: 11899 bars",
+      "  + GDXJ: 10895 bars",
+      "  + SILJ: 9809 bars",
+      "  + RING: 6636 bars",
+      "  + NEM: 11500 bars",
+      "  + GOLD: 6735 bars",
+      "  + WPM: 8944 bars",
+      "  + AEM: 9398 bars",
+      "  + EGO: 8115 bars",
+      "  + BTG: 10798 bars",
+      "  + PAAS: 10655 bars",
+      "  + HL: 10740 bars",
+      "  + CDE: 10561 bars",
+      "  + MAG: 6258 bars",
+      "  + AG: 11195 bars",
+      "  + SAND: 7471 bars",
+      "  + OR: 7191 bars"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

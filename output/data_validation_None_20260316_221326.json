@@ -1,0 +1,78 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-03-16T22:13:26.099316",
+  "watchlist": null,
+  "validation": {
+    "valid": false,
+    "errors": [
+      {
+        "type": "MISSING_TICKERS",
+        "message": "1 tickers missing from price data",
+        "details": [
+          "LUMN"
+        ]
+      }
+    ],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-03-13, but 2026-03-16 was requested",
+        "details": {
+          "data_end": "2026-03-13",
+          "required_end": "2026-03-16"
+        }
+      },
+      {
+        "type": "DATA_QUALITY",
+        "message": "1 data quality issues detected",
+        "details": [
+          {
+            "issue": "null_values",
+            "details": {
+              "open": 1859,
+              "high": 1859,
+              "low": 1859,
+              "close": 1859,
+              "volume": 1859
+            }
+          }
+        ]
+      }
+    ],
+    "stats": {
+      "available_tickers": 8,
+      "missing_tickers": 1,
+      "total_required": 9,
+      "coverage_pct": 88.88888888888889,
+      "data_start": "2014-01-02",
+      "data_end": "2026-03-13",
+      "required_start": "2023-03-15",
+      "required_end": "2026-03-16",
+      "tickers_with_gaps": 0,
+      "quality_issues": 1,
+      "total_rows": 512364,
+      "unique_tickers": 165,
+      "date_range_days": 4453,
+      "avg_rows_per_ticker": 3105.0
+    },
+    "summary": "\u274c Data validation FAILED with 1 error(s)\n\u26a0\ufe0f 2 warning(s) detected\n\nCoverage: 8/9 tickers (88.9%)\nDate Range: 2014-01-02 to 2026-03-13\nTotal Rows: 512,364"
+  },
+  "download": {
+    "successful": 8,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "  + CTSH: 7072 bars",
+      "  + CCJ: 10540 bars",
+      "  + PWR: 6965 bars",
+      "  + ARM: 9893 bars",
+      "  + EMR: 7019 bars",
+      "  + TEL: 6485 bars",
+      "  + BKNG: 6553 bars",
+      "  + DXC: 6851 bars"
+    ]
+  },
+  "status": "FAILED",
+  "status_emoji": "\u274c"
+}

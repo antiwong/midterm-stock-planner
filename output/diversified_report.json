@@ -1,0 +1,87 @@
+{
+  "templates_run": [
+    "balanced",
+    "momentum_tilt",
+    "quality_tilt",
+    "value_tilt"
+  ],
+  "templates_failed": [
+    "low_vol"
+  ],
+  "errors": {
+    "low_vol": "Invalid frequency: M. Failed to parse with error message: ValueError(\"'M' is no longer supported for offsets. Please use 'ME' instead.\")"
+  },
+  "metrics": {
+    "balanced": {
+      "total_return": 1.2644847588215207,
+      "annualized_return": 0.26643498868468685,
+      "sharpe_ratio": 1.3632208621792112,
+      "max_drawdown": -0.1468571024740626,
+      "turnover": 0.0,
+      "hit_rate": 0.5561926605504587,
+      "excess_return": 0.20842136168650494,
+      "volatility": 0.19544521073332935
+    },
+    "momentum_tilt": {
+      "total_return": 1.118771562352595,
+      "annualized_return": 0.21861190043159606,
+      "sharpe_ratio": 1.3694552868109595,
+      "max_drawdown": -0.11899910928051056,
+      "turnover": 0.0,
+      "hit_rate": 0.554858934169279,
+      "excess_return": 0.13081486851073532,
+      "volatility": 0.15963420093888278
+    },
+    "quality_tilt": {
+      "total_return": 1.2644847588215207,
+      "annualized_return": 0.26643498868468685,
+      "sharpe_ratio": 1.3632208621792112,
+      "max_drawdown": -0.1468571024740626,
+      "turnover": 0.0,
+      "hit_rate": 0.5561926605504587,
+      "excess_return": 0.20842136168650494,
+      "volatility": 0.19544521073332935
+    },
+    "value_tilt": {
+      "total_return": 1.2644847588215207,
+      "annualized_return": 0.26643498868468685,
+      "sharpe_ratio": 1.3632208621792112,
+      "max_drawdown": -0.1468571024740626,
+      "turnover": 0.0,
+      "hit_rate": 0.5561926605504587,
+      "excess_return": 0.20842136168650494,
+      "volatility": 0.19544521073332935
+    }
+  },
+  "correlation_matrix": {
+    "balanced": {
+      "balanced": 1.0,
+      "momentum_tilt": 0.8605,
+      "quality_tilt": 1.0,
+      "value_tilt": 1.0
+    },
+    "momentum_tilt": {
+      "balanced": 0.8605,
+      "momentum_tilt": 1.0,
+      "quality_tilt": 0.8605,
+      "value_tilt": 0.8605
+    },
+    "quality_tilt": {
+      "balanced": 1.0,
+      "momentum_tilt": 0.8605,
+      "quality_tilt": 1.0,
+      "value_tilt": 1.0
+    },
+    "value_tilt": {
+      "balanced": 1.0,
+      "momentum_tilt": 0.8605,
+      "quality_tilt": 1.0,
+      "value_tilt": 1.0
+    }
+  },
+  "diversified_subset": [
+    "balanced",
+    "momentum_tilt"
+  ],
+  "max_correlation_threshold": 0.85
+}

@@ -1,0 +1,25 @@
+{
+  "run_id": "20260221_133942_5825cd6f",
+  "name": "Tech Giants Test - Backtest 2026-02-21 13:39",
+  "created_at": "2026-02-21T13:39:46.997817",
+  "watchlist": "tech_giants",
+  "watchlist_display_name": "Tech Giants Test",
+  "date_range": {
+    "requested_start": null,
+    "requested_end": null,
+    "actual_start": "2025-04-01 15:30:00",
+    "actual_end": "2025-11-17 20:30:00"
+  },
+  "config": {
+    "train_years": 1.0,
+    "test_years": 0.25,
+    "step_value": 7.0,
+    "step_unit": "days",
+    "rebalance_freq": "4h",
+    "top_n": 10,
+    "top_pct": 0.1,
+    "transaction_cost": 0.001,
+    "sentiment_enabled": false
+  },
+  "output_folder": "output/run_tech_giants_20260221_133942_"
+}

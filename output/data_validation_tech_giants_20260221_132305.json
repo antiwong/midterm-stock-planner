@@ -1,0 +1,61 @@
+{
+  "report_type": "data_validation",
+  "generated_at": "2026-02-21T13:23:05.529908",
+  "watchlist": "tech_giants",
+  "validation": {
+    "valid": true,
+    "errors": [],
+    "warnings": [
+      {
+        "type": "DATE_RANGE_START",
+        "message": "Data starts at 2024-04-01, but 2024-04-01 was requested",
+        "details": {
+          "data_start": "2024-04-01",
+          "required_start": "2024-04-01"
+        }
+      },
+      {
+        "type": "DATE_RANGE_END",
+        "message": "Data ends at 2026-02-20, but 2026-02-21 was requested",
+        "details": {
+          "data_end": "2026-02-20",
+          "required_end": "2026-02-21"
+        }
+      }
+    ],
+    "stats": {
+      "available_tickers": 7,
+      "missing_tickers": 0,
+      "total_required": 7,
+      "coverage_pct": 100.0,
+      "data_start": "2024-04-01",
+      "data_end": "2026-02-20",
+      "required_start": "2024-04-01",
+      "required_end": "2026-02-21",
+      "tickers_with_gaps": 0,
+      "quality_issues": 0,
+      "total_rows": 23044,
+      "unique_tickers": 7,
+      "date_range_days": 690,
+      "avg_rows_per_ticker": 3292.0
+    },
+    "summary": "\u2705 Data validation PASSED\n\u26a0\ufe0f 2 warning(s) detected\n\nCoverage: 7/7 tickers (100.0%)\nDate Range: 2024-04-01 to 2026-02-20\nTotal Rows: 23,044"
+  },
+  "download": {
+    "successful": 7,
+    "failed": 0,
+    "failed_tickers": [],
+    "failed_reasons": {},
+    "log": [
+      "\u2713 AAPL: 3292 rows",
+      "\u2713 AMZN: 3292 rows",
+      "\u2713 GOOGL: 3292 rows",
+      "\u2713 META: 3292 rows",
+      "\u2713 MSFT: 3292 rows",
+      "\u2713 NVDA: 3292 rows",
+      "\u2713 TSLA: 3292 rows"
+    ]
+  },
+  "status": "PASSED",
+  "status_emoji": "\u2705"
+}

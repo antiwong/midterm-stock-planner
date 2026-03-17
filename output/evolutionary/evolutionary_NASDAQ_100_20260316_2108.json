@@ -1,0 +1,670 @@
+[
+  {
+    "run_id": "20260316_210754_63f3e1",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "24a2ff27f461e8df",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210755_7f2eb4",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "e9d150cd4b5b7523",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210755_0c41bd",
+    "param_vector": {
+      "train_years": 6.435917796280296,
+      "test_years": 0.2779957708832359,
+      "step_value": 0.9823291622061956,
+      "step_unit": "days",
+      "rebalance_freq": "W",
+      "top_n": 13,
+      "top_pct": 0.10894573334465284,
+      "transaction_cost": 0.00067617363366667
+    },
+    "config_hash": "697c4590747ba464",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210756_608c43",
+    "param_vector": {
+      "train_years": 4.074156428924658,
+      "test_years": 0.563933626215855,
+      "step_value": 1.423069976604919,
+      "step_unit": "months",
+      "rebalance_freq": "2W",
+      "top_n": 9,
+      "top_pct": 0.15019925583496552,
+      "transaction_cost": 0.000822641840448068
+    },
+    "config_hash": "a3cab9a990f9e9d1",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210756_3049f2",
+    "param_vector": {
+      "train_years": 3.1009930462268978,
+      "test_years": 0.25114244337707015,
+      "step_value": 1.0158821581452255,
+      "step_unit": "months",
+      "rebalance_freq": "W",
+      "top_n": 15,
+      "top_pct": 0.2379834581021204,
+      "transaction_cost": 0.0005351395997556961
+    },
+    "config_hash": "6e896967550a2015",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210756_12d5fa",
+    "param_vector": {
+      "train_years": 3.7322656342780656,
+      "test_years": 1.0316194255050686,
+      "step_value": 0.5921995231287518,
+      "step_unit": "days",
+      "rebalance_freq": "W",
+      "top_n": 19,
+      "top_pct": 0.06230249506837429,
+      "transaction_cost": 0.0015148888565930942
+    },
+    "config_hash": "07022cb3a22846a5",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210757_5d809f",
+    "param_vector": {
+      "train_years": 6.454906941903208,
+      "test_years": 1.732646760010964,
+      "step_value": 1.3896569862998773,
+      "step_unit": "years",
+      "rebalance_freq": "W",
+      "top_n": 16,
+      "top_pct": 0.1106478744744554,
+      "transaction_cost": 0.0008246319522079161
+    },
+    "config_hash": "7e162fcd48f5df0f",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210757_1fdfad",
+    "param_vector": {
+      "train_years": 4.3837094159978145,
+      "test_years": 0.3826243767209381,
+      "step_value": 1.0613306500663005,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": 13,
+      "top_pct": 0.10224314249810268,
+      "transaction_cost": 0.0015579830926245016
+    },
+    "config_hash": "fc69c67e7b4a9aba",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260316_210758_102671",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 1.0938217693440642,
+      "step_value": 1.4702430728599123,
+      "step_unit": "years",
+      "rebalance_freq": "W",
+      "top_n": null,
+      "top_pct": 0.10018662724514527,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "2300cb5bdfc6a49e",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210758_2cfcb0",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.1,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "2d48261203ba02ea",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210758_c275e7",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.0019026104681910574
+    },
+    "config_hash": "b4ec84e0491171bd",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210759_bfe306",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "2c80958e81170ae8",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4",
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "crossover",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210759_a19ae4",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "afba2c23812c5dfb",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210800_af08d7",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "5a55cfd02e2bf96c",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 1
+  },
+  {
+    "run_id": "20260316_210800_668fbd",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "5440fdddcfc16713",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210800_7b473b",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "a60f31d4f1ae56c1",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4",
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "crossover",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210801_2f1a9a",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.1,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "43001a6f2f423c11",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210801_1c348b",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "be27de3e2df2b76e",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4",
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "crossover",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210802_56636f",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.4702430728599123,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "e65aceb1a93a0396",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210802_a76ea3",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 1.084886769985307,
+      "step_value": 1.4702430728599123,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.08697355422345601,
+      "transaction_cost": 0.0018328004552412283
+    },
+    "config_hash": "3f1a627a3592cc3f",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 2
+  },
+  {
+    "run_id": "20260316_210802_f4804c",
+    "param_vector": {
+      "train_years": 1.9861459974524078,
+      "test_years": 0.6854463433528251,
+      "step_value": 1.4702430728599123,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "3cdc6c8922fe2e4f",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210803_03902f",
+    "param_vector": {
+      "train_years": 3.644109297861746,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.10462148990955866,
+      "transaction_cost": 0.0016902238876389305
+    },
+    "config_hash": "140692f3f3d50f39",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210803_683f42",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.1,
+      "transaction_cost": 0.0018519743680904081
+    },
+    "config_hash": "1be124b5e0f5fc72",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210803_224fad",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 13,
+      "top_pct": 0.07698723275771757,
+      "transaction_cost": 0.0009358853353516169
+    },
+    "config_hash": "372a1b91ac6bee3c",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "mutation",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210804_dda5ae",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.8573329122998462,
+      "step_value": 1.4702430728599123,
+      "step_unit": "days",
+      "rebalance_freq": "2W",
+      "top_n": null,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.001957975530712419
+    },
+    "config_hash": "42f26839973860ce",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210804_f80007",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.13194749440379083,
+      "transaction_cost": 0.0009799369496758257
+    },
+    "config_hash": "0ab27b2f724c7f4f",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "mutation",
+    "generation": 3
+  },
+  {
+    "run_id": "20260316_210805_a4aadb",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.9912167754917471,
+      "step_value": 1.0,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "2c80958e81170ae8",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1",
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "crossover",
+    "generation": 4
+  },
+  {
+    "run_id": "20260316_210805_12d1f8",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 1.1493759192691573,
+      "step_value": 1.704578741566775,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.07779909577980579,
+      "transaction_cost": 0.002
+    },
+    "config_hash": "28c318441cf82ee7",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4"
+    ],
+    "mutation_type": "mutation",
+    "generation": 4
+  },
+  {
+    "run_id": "20260316_210805_1a155c",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.6582110705343636,
+      "step_value": 1.0,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": 13,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001225779626858068
+    },
+    "config_hash": "55cc332d63333294",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "mutation",
+    "generation": 4
+  },
+  {
+    "run_id": "20260316_210806_dd1a65",
+    "param_vector": {
+      "train_years": 2.874933012612483,
+      "test_years": 0.5,
+      "step_value": 1.4702430728599123,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.06756668844751441,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "18270664fedc3af3",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210755_7f2eb4",
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "crossover",
+    "generation": 4
+  },
+  {
+    "run_id": "20260316_210806_f19b2a",
+    "param_vector": {
+      "train_years": 3.3229794242919533,
+      "test_years": 0.5,
+      "step_value": 0.9602839649291777,
+      "step_unit": "days",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.11645666226111037,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "5021c9827c9cb4d5",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "mutation",
+    "generation": 4
+  },
+  {
+    "run_id": "20260316_210807_46cf1d",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.7317740158849254,
+      "step_value": 1.0,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": 15,
+      "top_pct": 0.13613027113051268,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "df9617b860db8658",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260316_210754_63f3e1"
+    ],
+    "mutation_type": "mutation",
+    "generation": 4
+  }
+]

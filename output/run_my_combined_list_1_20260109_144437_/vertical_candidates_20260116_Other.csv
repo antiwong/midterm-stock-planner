@@ -1,2 +1,3 @@
-ticker,sector,model_score,value_score,quality_score,domain_score,domain_rank
-PSLV,Other,-0.057048137833799036,30.0,30.0,15.272046412461439,1
+version https://git-lfs.github.com/spec/v1
+oid sha256:bd09074e3b91c0c3fbff4e8c3510fbbdc68dcc6f31759c4e7eb22155d9c0753e
+size 141

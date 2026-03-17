@@ -1,0 +1,24 @@
+{
+  "regression_id": "reg_20260314_104333_326a3b85",
+  "test": {
+    "regression_id": "reg_20260314_104333_326a3b85",
+    "name": "Tech Giants 10yr Daily Full Regression",
+    "description": "Full feature regression on 10yr daily data with Bayesian parameter tuning",
+    "created_at": "2026-03-14T10:43:33.683138",
+    "status": "completed",
+    "config_json": "{\"name\": \"Tech Giants 10yr Daily Full Regression\", \"description\": \"Full feature regression on 10yr daily data with Bayesian parameter tuning\", \"baseline_features\": [\"returns\", \"volatility\", \"volume\"], \"features_to_test\": [\"valuation\", \"rsi\", \"macd\", \"bollinger\", \"atr\", \"adx\", \"obv\", \"gap\", \"momentum\", \"mean_reversion\", \"sentiment\"], \"tune_on_add\": true, \"tune_model_params\": true, \"tuning_trials\": 30, \"model_tuning_trials\": 50, \"objective_metric\": \"mean_rank_ic\", \"db_path\": \"data/runs.db\"}",
+    "baseline_features_json": "[\"returns\", \"volatility\", \"volume\"]",
+    "features_tested_json": "[\"valuation\", \"rsi\", \"macd\", \"bollinger\", \"atr\", \"adx\", \"obv\", \"gap\", \"momentum\", \"mean_reversion\", \"sentiment\"]",
+    "total_steps": 13,
+    "best_feature": null,
+    "best_marginal_sharpe": null,
+    "final_sharpe": 0.0,
+    "final_rank_ic": 0.0,
+    "baseline_run_id": null,
+    "final_run_id": null,
+    "duration_seconds": 3.303270101547241
+  },
+  "steps": [],
+  "leaderboard": [],
+  "generated_at": "2026-03-14T10:43:36.987999"
+}

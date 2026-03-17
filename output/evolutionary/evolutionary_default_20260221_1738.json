@@ -1,0 +1,150 @@
+[
+  {
+    "run_id": "20260221_173822_19c97a",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.1,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "24a2ff27f461e8df",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260221_173824_68191f",
+    "param_vector": {
+      "train_years": 2.044504617681215,
+      "test_years": 1.0180339983152074,
+      "step_value": 0.6837498757584375,
+      "step_unit": "years",
+      "rebalance_freq": "W",
+      "top_n": 16,
+      "top_pct": 0.12379469335398777,
+      "transaction_cost": 0.0010916432494199552
+    },
+    "config_hash": "c643524db1f4b113",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260221_173825_e4b844",
+    "param_vector": {
+      "train_years": 4.869961033113862,
+      "test_years": 0.48068307061669957,
+      "step_value": 1.6311813804428712,
+      "step_unit": "months",
+      "rebalance_freq": "2W",
+      "top_n": null,
+      "top_pct": 0.13724449018649726,
+      "transaction_cost": 0.0015301124717208162
+    },
+    "config_hash": "400988653b34aa8e",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260221_173827_345ead",
+    "param_vector": {
+      "train_years": 4.487724725976857,
+      "test_years": 1.1458298430828582,
+      "step_value": 0.50626810141597,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": null,
+      "top_pct": 0.07797625197335017,
+      "transaction_cost": 0.001884670774595659
+    },
+    "config_hash": "0cc03ee1729a0294",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [],
+    "mutation_type": "initial",
+    "generation": 0
+  },
+  {
+    "run_id": "20260221_173828_dd612f",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "M",
+      "top_n": null,
+      "top_pct": 0.12553833597995853,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "de8de9fc55632412",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260221_173822_19c97a"
+    ],
+    "mutation_type": "mutation",
+    "generation": 1
+  },
+  {
+    "run_id": "20260221_173830_0e6612",
+    "param_vector": {
+      "train_years": 2.0,
+      "test_years": 0.5494958714056414,
+      "step_value": 1.0,
+      "step_unit": "years",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.07166903075464372,
+      "transaction_cost": 0.001
+    },
+    "config_hash": "e93c5593c6a4b5f5",
+    "fitness": -1000000000.0,
+    "metrics": {},
+    "parent_run_ids": [
+      "20260221_173822_19c97a"
+    ],
+    "mutation_type": "mutation",
+    "generation": 1
+  },
+  {
+    "run_id": "20260221_173831_5511f4",
+    "param_vector": {
+      "train_years": 1.0,
+      "test_years": 0.5778693714529798,
+      "step_value": 1.2967838254438238,
+      "step_unit": "months",
+      "rebalance_freq": "MS",
+      "top_n": 10,
+      "top_pct": 0.06820137851434224,
+      "transaction_cost": 0.0007979370227389295
+    },
+    "config_hash": "33c58e873c66cc31",
+    "fitness": 0.9404752764134092,
+    "metrics": {
+      "total_return": 0.4326643182055976,
+      "annualized_return": 0.10949234962427101,
+      "sharpe_ratio": 0.9404752764134092,
+      "max_drawdown": -0.1468571024740626,
+      "turnover": 0.0,
+      "hit_rate": 0.5344036697247706,
+      "excess_return": 0.055160903319634524,
+      "volatility": 0.11642235832273058
+    },
+    "parent_run_ids": [
+      "20260221_173822_19c97a"
+    ],
+    "mutation_type": "mutation",
+    "generation": 1
+  }
+]
