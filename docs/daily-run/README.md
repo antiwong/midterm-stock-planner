@@ -2,7 +2,9 @@
 
 > [← Back to Documentation Index](../README.md) | [Daily Run Guide](../daily-run.md) (quick start & commands)
 
-This folder contains detailed technical documentation for every method used in the daily paper trading pipeline (`scripts/paper_trading.py`).
+This folder contains detailed technical documentation for the daily paper trading pipeline.
+
+The system is managed by a **single orchestrator** (`scripts/daily_routine.py`) that runs 4 portfolios, data downloads, forward prediction journal, and Slack/Google Chat notifications. See [orchestrator.md](orchestrator.md) for the top-level reference.
 
 ---
 
@@ -27,6 +29,8 @@ This folder contains detailed technical documentation for every method used in t
 | 7. Risk Controls | Drawdown limits, stop-loss, VIX scaling | [risk-controls.md](risk-controls.md) |
 | 8. Trade Execution | Alpaca paper trading or local simulation | [alpaca-execution.md](alpaca-execution.md) |
 | 9. Accuracy Calibration | Track signal accuracy, adjust exposure | [accuracy-calibration.md](accuracy-calibration.md) |
+| 10. Forward Testing | Log predictions, evaluate at 5d/63d horizons | [forward-testing.md](forward-testing.md) |
+| 11. Orchestrator | Single entry point for daily/weekly/monthly routines | [orchestrator.md](orchestrator.md) |
 
 ---
 
@@ -71,7 +75,9 @@ This folder contains detailed technical documentation for every method used in t
 
 | File | Purpose |
 |------|---------|
-| `scripts/paper_trading.py` | Main pipeline orchestrator |
+| `scripts/daily_routine.py` | Consolidated daily/weekly/monthly orchestrator |
+| `scripts/forward_journal.py` | Forward prediction journal DB |
+| `scripts/paper_trading.py` | Per-portfolio trading engine |
 | `src/backtest/rolling.py` | Walk-forward backtest engine |
 | `src/models/trainer.py` | LightGBM training |
 | `src/models/predictor.py` | Prediction & ranking |

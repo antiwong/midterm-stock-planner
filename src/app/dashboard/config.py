@@ -745,6 +745,8 @@ STANDALONE_TOOLS = [
     ("Strategy Optimizer", "strategy_optimizer"),
     ("Regression Testing", "regression_testing"),
     ("Paper Trading", "paper_trading"),
+    ("Forward Testing", "forward_testing"),
+    ("Multi-Portfolio", "multi_portfolio"),
     ("Watchlist Comparison", "watchlist_comparison"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
@@ -833,6 +835,8 @@ PROCESS_PHASES = [
         "page": "Monitor Hub",
         "children": [
             ("Paper Trading", "paper_trading", "Paper trading P&L, positions, signals, and trade history"),
+            ("Forward Testing", "forward_testing", "Track prediction accuracy over time"),
+            ("Multi-Portfolio", "multi_portfolio", "Compare 4 portfolios side-by-side"),
             ("Watchlist Comparison", "watchlist_comparison", "Side-by-side watchlist performance, regression, ensemble, stress test"),
             ("Real-Time Monitoring", "realtime_monitoring", "Live portfolio and market tracking"),
             ("Recommendation Tracking", "recommendation_tracking", "Track recommendation accuracy over time"),

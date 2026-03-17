@@ -579,45 +579,93 @@ For full setup instructions, see [Alpaca Paper Trading Integration](alpaca-paper
 
 ## Automation
 
-### macOS/Linux (cron)
+### Consolidated Orchestrator
+
+All cron jobs are consolidated into a single script: `scripts/daily_routine.py`. See [Orchestrator Reference](daily-run/orchestrator.md) for full details.
 
 ```bash
-# Generate the cron line
-python scripts/paper_trading.py setup-cron
+# Daily routine (after US market close)
+python scripts/daily_routine.py daily
 
-# Add to crontab
-crontab -e
-# Paste the line, save, and exit
+# Weekly review (Sunday)
+python scripts/daily_routine.py weekly
+
+# Monthly maintenance (1st of month)
+python scripts/daily_routine.py monthly
+
+# Dry run (log without executing)
+python scripts/daily_routine.py daily --dry-run
 ```
 
-**Active cron schedule** (weekdays):
+**What the daily routine does (in order):**
 
-| Time (ET) | Job | Log |
-|-----------|-----|-----|
-| 5:30 PM | `paper_trading.py run --watchlist moby_picks` — **primary trading** (Alpaca) | `logs/paper_trading.log` |
-| 5:45 PM | `paper_trading.py run --watchlist tech_giants --local` — analysis only | `logs/analysis_tech_giants.log` |
-| 5:50 PM | `paper_trading.py run --watchlist semiconductors --local` — analysis only | `logs/analysis_semiconductors.log` |
-| 5:55 PM | `paper_trading.py run --watchlist precious_metals --local` — analysis only | `logs/analysis_precious_metals.log` |
-| 6:00 PM | `download_sentiment.py` + `score_sentiment.py` — sentiment accumulation | `logs/sentiment_download.log` |
+| Step | What | Duration |
+|------|------|----------|
+| 1. Data refresh | Download prices for ~100+ tickers (all 4 watchlists, deduplicated) | ~1 min |
+| 2. Sentiment | Finnhub download + lexicon scoring | ~2 min |
+| 3. Moby parse | Check Gmail for Moby newsletter picks | ~10 sec |
+| 4. moby_picks | Run ML signals + execute via Alpaca paper | ~3 min |
+| 5. tech_giants | Run ML signals (local simulation) | ~2 min |
+| 6. semiconductors | Run ML signals (local simulation) | ~2 min |
+| 7. precious_metals | Run ML signals (local simulation) | ~2 min |
+| 8. Forward journal | Log predictions at 5-day + 63-day horizons | ~1 sec |
+| 9. Evaluate matured | Check old predictions vs actuals | ~1 sec |
+| 10. Notify | Post summary to Slack + Google Chat | ~1 sec |
 
-The moby_picks watchlist (56 tickers) is the primary trading universe based on regression testing (Sharpe=22.46, highest of all watchlists). The other 3 watchlists run as local simulations for signal tracking and comparison over time.
+### Cron Schedule (SGT)
+
+This system runs from Singapore (UTC+8). US market closes 4:00 PM ET = 5:00 AM SGT next day.
+
+```crontab
+# Daily: Tue-Sat 6:30 AM SGT (= Mon-Fri 5:30 PM ET)
+30 6 * * 2-6 cd /home/antiwong/code/midterm-stock-planner && python scripts/daily_routine.py daily >> logs/daily_routine.log 2>&1
+
+# Weekly: Sunday 10:00 AM SGT
+0 10 * * 0 cd /home/antiwong/code/midterm-stock-planner && python scripts/daily_routine.py weekly >> logs/weekly_routine.log 2>&1
+
+# Monthly: 1st of month 10:00 AM SGT
+0 10 1 * * cd /home/antiwong/code/midterm-stock-planner && python scripts/daily_routine.py monthly >> logs/monthly_routine.log 2>&1
+```
+
+**Day mapping (SGT -> ET):**
+
+| SGT Cron Day | US Trading Day |
+|-------------|----------------|
+| Tuesday 6:30 AM | Monday 5:30 PM ET |
+| Wednesday 6:30 AM | Tuesday 5:30 PM ET |
+| Thursday 6:30 AM | Wednesday 5:30 PM ET |
+| Friday 6:30 AM | Thursday 5:30 PM ET |
+| Saturday 6:30 AM | Friday 5:30 PM ET |
+
+The script also checks `is_us_trading_day()` and skips US holidays automatically.
+
+### Per-Portfolio Databases
+
+Each portfolio gets its own SQLite database:
+
+| Watchlist | DB File | Execution Mode |
+|-----------|---------|---------------|
+| moby_picks | `data/paper_trading_moby_picks.db` | Alpaca paper trading |
+| tech_giants | `data/paper_trading_tech_giants.db` | Local simulation |
+| semiconductors | `data/paper_trading_semiconductors.db` | Local simulation |
+| precious_metals | `data/paper_trading_precious_metals.db` | Local simulation |
+
+The forward prediction journal is stored separately in `data/forward_journal.db`.
 
 ### Manual Daily Routine
 
 If you prefer running manually:
 
 ```bash
-# After market close (~4:30 PM ET)
-cd /path/to/midterm-stock-planner
+# After US market close
+cd /home/antiwong/code/midterm-stock-planner
 
-# 1. Update data
-python scripts/paper_trading.py refresh
+# Full daily routine
+python scripts/daily_routine.py daily
 
-# 2. Generate signals and execute
-python scripts/paper_trading.py run --watchlist tech_giants --skip-refresh
-
-# 3. Review
-python scripts/paper_trading.py status
+# Or run individual portfolios
+python scripts/paper_trading.py run --watchlist tech_giants
+python scripts/paper_trading.py status --watchlist tech_giants
 ```
 
 ---
@@ -628,6 +676,8 @@ python scripts/paper_trading.py status
 
 For detailed documentation of every technique used in the pipeline, see the **[Daily Run Technical Reference](daily-run/README.md)** folder:
 
+- [Orchestrator](daily-run/orchestrator.md) — consolidated daily/weekly/monthly entry point
+- [Forward Testing](daily-run/forward-testing.md) — prediction journal, hit rates, evaluation
 - [Pipeline Overview](daily-run/pipeline-overview.md) — end-to-end execution flow
 - [Feature Engineering](daily-run/feature-engineering.md) — MACD, Bollinger, ATR, ADX formulas and rationale
 - [Walk-Forward Backtest](daily-run/walk-forward-backtest.md) — rolling window methodology, IC, overfitting detection

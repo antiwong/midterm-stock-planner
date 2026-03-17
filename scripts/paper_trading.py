@@ -592,11 +592,13 @@ class PaperTradingEngine:
     def __init__(self, config_path: str = "config/config.yaml",
                  watchlist: Optional[str] = None,
                  initial_capital: float = 100000.0,
-                 force_local: bool = False):
+                 force_local: bool = False,
+                 db_path: Optional[str] = None):
         self.config = load_config(config_path)
         self.watchlist = watchlist
         self.initial_capital = initial_capital
-        self.db = PaperTradingDB()
+        db_path = db_path or f"data/paper_trading_{watchlist or 'default'}.db"
+        self.db = PaperTradingDB(db_path=db_path)
         self.transaction_cost = self.config.backtest.transaction_cost
         self.force_local = force_local
         self.risk_manager = RiskManager(
