@@ -86,16 +86,25 @@ flowchart TD
 ## Quick Start
 
 ```bash
-# First run — generates signals and creates initial portfolio ($100K paper money)
+# Full daily routine (all 4 portfolios + sentiment + forward journal)
+python scripts/daily_routine.py daily
+
+# Re-run without sentiment download (saves ~18 min)
+python scripts/daily_routine.py daily --skip-sentiment
+
+# Dry run (log only, no trades)
+python scripts/daily_routine.py daily --dry-run
+
+# Single portfolio only
 python scripts/paper_trading.py run --watchlist tech_giants
 
-# Check your portfolio
-python scripts/paper_trading.py status
+# Check portfolio status
+python scripts/paper_trading.py status --watchlist tech_giants
 
 # View trade history
 python scripts/paper_trading.py history --last 30
 
-# Automate (runs 5:30 PM ET every weekday)
+# Automate (cron fires Tue-Sat 6:30 AM SGT = Mon-Fri 5:30 PM ET)
 python scripts/paper_trading.py setup-cron
 ```
 

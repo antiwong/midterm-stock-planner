@@ -73,7 +73,26 @@ Maintenance and long-horizon evaluation.
 | `semiconductors` | 25 | Local simulation | `data/paper_trading_semiconductors.db` |
 | `precious_metals` | 31 | Local simulation | `data/paper_trading_precious_metals.db` |
 
-Each portfolio gets its own SQLite database. The orchestrator refreshes price data once for the union of all tickers (~100+ unique), then each portfolio runs with `--skip-refresh`.
+Each portfolio gets its own SQLite database. The orchestrator refreshes price data once for the union of all tickers (~110 unique), then each portfolio runs with `--skip-refresh`.
+
+### Per-Ticker Trigger Optimization
+
+Each ticker can have Bayesian-optimized MACD/RSI parameters for the ensemble signal generator (70% ML + 30% trigger). Run optimization with:
+
+```bash
+python scripts/optimize_all_tickers.py --tickers NVDA AMD TSM ... --n-calls 40 --metric sharpe --parallel 4
+```
+
+**Optimization status (2026-03-17):**
+
+| Watchlist | Optimized | Avg Sharpe | Top Performers |
+|-----------|-----------|------------|----------------|
+| tech_giants | 13/13 | — | META 2.06, AMZN 1.57, SLV 2.47 |
+| semiconductors | 25/25 | 0.54 | TSM 1.98, ASML 1.21, AVGO 1.15 |
+| precious_metals | 31/31 | 0.81 | HMY 2.82, SIL 2.48, AU 2.45 |
+| moby_picks | 56/56 | — | In progress |
+
+Configs saved to `config/tickers/{TICKER}.yaml`. The ensemble automatically picks up trigger signals when configs exist. Re-run quarterly or when model accuracy degrades.
 
 ---
 
