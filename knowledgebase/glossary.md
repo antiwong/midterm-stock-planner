@@ -71,6 +71,9 @@ Portfolio allocation where each position contributes equally to total risk:
 - **Equal risk contribution**: Iterative optimization for equal risk per position
 - Implemented in `RiskParityAllocator`
 
+### **Concentration Cap**
+Maximum allowed weight for any single stock in the portfolio (default 25%). Prevents catastrophic single-stock risk.
+
 ### **Position Sizing**
 Determining how much capital to allocate per stock:
 - **Equal weight**: 1/N allocation
@@ -82,6 +85,15 @@ Determining how much capital to allocate per stock:
 ---
 
 ## Risk Metrics Terminology
+
+### **Calibration Factor**
+Multiplier that adjusts portfolio exposure based on historical signal accuracy. Formula: hit_rate / 0.50, clamped to [0.5, 1.5].
+
+### **Daily Loss Limit**
+Maximum daily portfolio loss before trading is halted (-5%). Prevents cascading losses during crashes.
+
+### **Drawdown-from-Peak**
+Risk rule that liquidates all positions when portfolio retraces 30% from its peak equity (only active after 5% profit).
 
 ### **Sharpe Ratio**
 Risk-adjusted return metric:
@@ -118,11 +130,20 @@ Standard deviation of the difference between portfolio and benchmark returns:
 - Lower tracking error = closer to benchmark
 - Used with information ratio: alpha / tracking error
 
+### **Hit Rate**
+Fraction of BUY signals that produce positive returns over a 5-day evaluation window. Used for accuracy calibration.
+
 ### **Information Ratio**
 Risk-adjusted active return vs benchmark:
 - Formula: Alpha / Tracking Error
 - Measures consistency of outperformance
 - >0.5 is good, >1.0 is excellent
+
+### **Stop-Loss**
+Per-position rule that sells a stock if it drops 15% from its entry price.
+
+### **Z-Score**
+Number of standard deviations from the mean. Used in IC regime detection: z = (recent_mean - historical_mean) / (historical_std / sqrt(n)).
 
 ### **Calmar Ratio**
 Annualised return divided by maximum drawdown:
@@ -146,12 +167,39 @@ Ranking stocks relative to each other at each point in time:
 - Top-N stocks selected for portfolio
 - Different from time-series prediction (absolute returns)
 
+### **Early Stopping**
+Training technique that halts model fitting when validation loss stops improving (patience=30 rounds). Prevents overfitting.
+
+### **Feature Importance (Gain)**
+LightGBM's built-in measure of how much each feature contributes to reducing the loss function during tree splitting.
+
+### **IC (Information Coefficient)**
+Pearson correlation between model predictions and actual future excess returns. Measures predictive power.
+
+### **IC Regime Detection**
+Z-score test comparing recent IC to historical IC to detect model degradation. Z < -2.0 = degraded.
+
+### **Marginal IC**
+Spearman rank correlation between a single feature and the target variable. Model-free measure of feature predictive power.
+
+### **Rank IC (Spearman)**
+Spearman rank correlation between predicted and actual rankings. More robust than Pearson IC to outliers.
+
+### **Regime Detection**
+See IC Regime Detection.
+
+### **Regularization (L1/L2)**
+Penalty terms added to the loss function to prevent overfitting. L1 (alpha=0.3) drives small weights to zero; L2 (lambda=0.5) shrinks all weights.
+
 ### **SHAP (SHapley Additive exPlanations)**
 Model interpretability framework:
 - Explains individual stock predictions
 - Shows which features drive each prediction
 - Feature importance across entire model
 - Implemented in `src/explain/shap_explain.py`
+
+### **TreeSHAP**
+Efficient algorithm for computing Shapley values on tree-based models. Decomposes each prediction into per-feature contributions.
 
 ### **Feature Engineering**
 Creating input variables for the ML model:
@@ -168,6 +216,12 @@ Rolling window approach for model validation:
 - Slide window forward (e.g., 1 month step)
 - Prevents look-ahead bias
 - Implemented in `src/backtest/rolling.py`
+
+### **Walk-Forward Step**
+The number of days (default 7) the walk-forward window advances between iterations. Controls the number of evaluation windows.
+
+### **Window (Walk-Forward)**
+A single train/test split in the walk-forward backtest. Train = 3 years, Test = 6 months.
 
 ### **Overfitting**
 Model memorises training data instead of learning generalisable patterns:
@@ -369,6 +423,7 @@ User preference configuration for portfolio construction:
 - **ESG**: Environmental, Social, Governance
 - **ETF**: Exchange-Traded Fund
 - **HHI**: Herfindahl-Hirschman Index
+- **IC**: Information Coefficient
 - **JSON**: JavaScript Object Notation
 - **LLM**: Large Language Model
 - **LOC**: Lines of Code
@@ -399,5 +454,5 @@ User preference configuration for portfolio construction:
 
 ---
 
-**Last Updated**: 2026-02-20
+**Last Updated**: 2026-03-17
 **Version**: 3.11.2

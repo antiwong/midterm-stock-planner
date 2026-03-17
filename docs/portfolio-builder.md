@@ -1,5 +1,7 @@
 # Portfolio Builder
 
+> [← Back to Documentation Index](README.md)
+
 The Portfolio Builder creates personalized stock portfolios based on your investment preferences, risk tolerance, and return objectives.
 
 ## Overview
@@ -353,3 +355,13 @@ print(ai_analysis)
 - [Domain Analysis](domain-analysis.md) - Vertical/horizontal analysis details
 - [Risk Management](risk-management.md) - Risk metrics and constraints
 - [AI Insights](ai-insights.md) - AI analysis capabilities
+
+---
+
+## See Also
+
+- [Risk metrics and position sizing](risk-management.md)
+- [Risk-aware allocation](risk-parity.md)
+- [Comparison of portfolio methods](portfolio-comparison.md)
+- [Sector-based stock selection](domain-analysis.md)
+- [Entry point identification](purchase-triggers.md)

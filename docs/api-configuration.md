@@ -1,5 +1,7 @@
 # API Configuration
 
+> [← Back to Documentation Index](README.md)
+
 This document describes how to configure API keys and external services for the Mid-term Stock Planner.
 
 ## Overview
@@ -296,3 +298,12 @@ def rate_limited(max_per_minute):
 | `ALPHA_VANTAGE_API_KEY` | Alpha Vantage API key | None |
 | `OPENAI_API_KEY` | OpenAI API key | None |
 | `DATABASE_PATH` | SQLite database path | `data/analysis.db` |
+
+---
+
+## See Also
+
+- [Configuration and CLI](configuration-cli.md)
+- [Sentiment analysis (uses Gemini API)](sentiment.md)
+- [AI insights (uses Gemini API)](ai-insights.md)
+- [Data provider options](data-providers-guide.md)

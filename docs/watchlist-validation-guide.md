@@ -1,5 +1,7 @@
 # Watchlist Symbol Validation Guide
 
+> [← Back to Documentation Index](README.md)
+
 This guide explains how to validate symbols in your watchlists to ensure they exist and are correct.
 
 ## Overview
@@ -238,3 +240,11 @@ done
 - `src/app/dashboard/symbol_validator.py` - Core validation functions
 - `src/app/dashboard/data.py` - Watchlist data management
 - `src/app/dashboard/pages/watchlist_manager.py` - GUI watchlist manager
+
+---
+
+## See Also
+
+- [Adding new symbols](adding-symbols-guide.md)
+- [Handling failed downloads](failed-symbols-guide.md)
+- [Data quality tracking](data-quality.md)

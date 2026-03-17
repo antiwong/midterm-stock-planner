@@ -1,5 +1,10 @@
 # Comprehensive System Guide -- QuantaAlpha Midterm Stock Planner
 
+> [← Back to Documentation Index](README.md)
+
+> For the analysis subsystem specifically, see [Comprehensive Analysis System](comprehensive-analysis-system.md).
+> For step-by-step instructions, see [Running Comprehensive Analysis](running-comprehensive-analysis.md).
+
 **Version:** 3.11.2
 **Last Updated:** 2026-03-13
 **System:** midterm-stock-planner (QuantaAlpha)
@@ -954,3 +959,12 @@ The project contains 67 documentation files across `docs/`. Key references:
 | Full Documentation Index | `docs/README.md` |
 
 For the complete file inventory (96 files including skills, prompts, and knowledge base), see `CONTENTS.md`.
+
+---
+
+## See Also
+
+- [System architecture](design.md)
+- [User workflows](user-guide.md)
+- [Analysis system](comprehensive-analysis-system.md)
+- [Backtesting framework](backtesting.md)

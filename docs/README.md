@@ -80,7 +80,6 @@
 | [Feature Importance Methods](feature-importance-methods.md) | [Reference] Multi-method walk-forward importance analysis (LightGBM gain, IC, SHAP) |
 | [Cross-Asset Rotation](cross-asset-rotation-features.md) | [Reference] Gold/silver/BTC rotation signals for capital flow detection |
 | [Purchase Triggers](purchase-triggers.md) | [Reference] Entry point identification and trigger logic |
-| [Purchase Trigger Improvements](purchase-triggers-improvements.md) | [Reference] Enhancement roadmap for trigger system |
 | [Sentiment Analysis](sentiment.md) | [Architecture] Multi-source news sentiment with Gemini LLM |
 | [Fundamental Data](fundamental-data.md) | [Reference] SEC filings, PE/PB/ROE data fetching |
 | [AI Insights](ai-insights.md) | [Reference] Gemini-powered analysis and recommendations |

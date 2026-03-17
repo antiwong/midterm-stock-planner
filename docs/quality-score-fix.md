@@ -1,5 +1,7 @@
 # Quality Score Fix: Penalty for Missing Data
 
+> [← Back to Documentation Index](README.md)
+
 ## Problem
 
 Previously, when fundamental data (ROE, margins, PE, PB) was missing, stocks would receive a **neutral score of 50.0**. This was problematic because:
@@ -88,3 +90,10 @@ Stock C: Quality = 30.0 (no data) - penalized
 - [Download Fundamentals Guide](download-fundamentals-guide.md) - How to download comprehensive fundamental data
 - [Purchase Triggers](purchase-triggers.md) - How purchase triggers work
 - [Domain Analysis](domain-analysis.md) - Detailed scoring methodology
+
+---
+
+## See Also
+
+- [Data quality tracking](data-quality.md)
+- [Model training](model-training.md)

@@ -1,9 +1,16 @@
 # API Documentation
 
+> [← Back to Documentation Index](README.md)
+
 Complete API reference for all analysis modules and core functionality (v3.11.2).
 
 ## Table of Contents
 
+- [Model Training & Prediction](#model-training--prediction)
+- [Backtesting](#backtesting)
+- [Risk Metrics](#risk-metrics)
+- [Position Sizing](#position-sizing)
+- [Trading (Alpaca Broker)](#trading-alpaca-broker)
 - [Analysis Modules](#analysis-modules)
 - [Report Templates](#report-templates)
 - [Data Loading](#data-loading)
@@ -11,6 +18,131 @@ Complete API reference for all analysis modules and core functionality (v3.11.2)
 - [Export Functions](#export-functions)
 - [Performance Utilities](#performance-utilities)
 - [Utility Functions](#utility-functions)
+
+---
+
+## Model Training & Prediction
+
+### Trainer
+
+**Module:** `src/models/trainer.py`
+
+| Function | Signature | Returns |
+|----------|-----------|---------|
+| `train_lgbm_regressor` | `train_lgbm_regressor(data: pd.DataFrame, feature_cols: List[str], config: Optional[ModelConfig] = None)` | `Tuple[LGBMRegressor, pd.DataFrame, pd.DataFrame, Dict[str, float]]` — (model, X_train, X_valid, metrics) |
+| `save_model` | `save_model(model: LGBMRegressor, feature_names: List[str], config: ModelConfig, metrics: Dict[str, float], base_dir: str = "models", model_id: Optional[str] = None, data_info: Optional[Dict[str, Any]] = None)` | `str` — path to saved model directory |
+| `load_model` | `load_model(model_dir: str)` | `Tuple[LGBMRegressor, ModelMetadata]` — (model, metadata) |
+
+**`train_lgbm_regressor`** trains a LightGBM regressor with train/validation split. Returns the trained model, train/validation DataFrames, and validation metrics (MSE, RMSE, MAE, sample counts). Uses early stopping via callbacks when configured.
+
+**`save_model`** persists a trained model to `{base_dir}/{model_id}/` containing `model.txt` (native LightGBM format) and `metadata.json` (feature names, config, training date, performance metrics).
+
+**`load_model`** loads a previously saved model and its metadata from a directory path.
+
+### Predictor
+
+**Module:** `src/models/predictor.py`
+
+| Function | Signature | Returns |
+|----------|-----------|---------|
+| `predict` | `predict(model, feature_df: pd.DataFrame, feature_names: List[str], metadata: Optional[ModelMetadata] = None, include_rankings: bool = True)` | `pd.DataFrame` with columns: `date`, `ticker`, `score`, `rank`, `percentile` |
+| `get_top_stocks` | `get_top_stocks(predictions: pd.DataFrame, n: Optional[int] = None, top_pct: Optional[float] = None)` | `pd.DataFrame` — filtered to top-ranked stocks |
+
+**`predict`** generates model predictions for a feature DataFrame. Validates features against metadata when provided, fills missing features with 0, and optionally computes cross-sectional rank and percentile within each date.
+
+**`get_top_stocks`** filters predictions to the top N stocks or top percentage (default: top 10% decile) per date.
+
+---
+
+## Backtesting
+
+### Walk-Forward Backtest
+
+**Module:** `src/backtest/rolling.py`
+
+| Function | Signature | Returns |
+|----------|-----------|---------|
+| `run_walk_forward_backtest` | `run_walk_forward_backtest(training_data: pd.DataFrame, benchmark_data: pd.DataFrame, price_data: pd.DataFrame, feature_cols: List[str], config: Optional[BacktestConfig] = None, model_config: Optional[ModelConfig] = None, verbose: bool = True, compute_shap: bool = False)` | `BacktestResults` |
+
+Runs a rolling walk-forward backtest. For each window: trains a LightGBM model on the train split, predicts on the test split, selects top-N stocks, and computes portfolio returns vs benchmark. Set `compute_shap=True` to calculate TreeSHAP feature attributions per window (adds ~15 min).
+
+---
+
+## Risk Metrics
+
+### RiskMetrics
+
+**Module:** `src/risk/metrics.py`
+
+```python
+from src.risk.metrics import RiskMetrics
+rm = RiskMetrics(risk_free_rate=0.02)
+```
+
+| Method | Signature | Returns |
+|--------|-----------|---------|
+| `calculate_sharpe_ratio` | `(returns: pd.Series, periods_per_year: int = 252)` | `float` |
+| `calculate_sortino_ratio` | `(returns: pd.Series, periods_per_year: int = 252)` | `float` |
+| `calculate_max_drawdown` | `(equity_curve: pd.Series)` | `Dict[str, float]` — keys: `max_drawdown`, `max_drawdown_pct`, `peak_date`, `trough_date` |
+| `calculate_var` | `(returns: pd.Series, confidence_level: float = 0.95, method: str = "historical")` | `float` — VaR (negative value) |
+| `calculate_cvar` | `(returns: pd.Series, confidence_level: float = 0.95)` | `float` — average loss beyond VaR |
+| `calculate_beta` | `(portfolio_returns: pd.Series, market_returns: pd.Series)` | `float` |
+| `calculate_information_ratio` | `(portfolio_returns: pd.Series, benchmark_returns: pd.Series, periods_per_year: int = 252)` | `float` |
+| `calculate_all_metrics` | `(equity_curve: pd.Series, returns: Optional[pd.Series] = None, periods_per_year: int = 252)` | `RiskMetricsResult` |
+
+`calculate_all_metrics` is a convenience method that computes all risk metrics at once and returns a `RiskMetricsResult` dataclass containing total return, annualized return, volatility, Sharpe, Sortino, max drawdown, VaR, and CVaR.
+
+---
+
+## Position Sizing
+
+### PositionSizer
+
+**Module:** `src/risk/position_sizing.py`
+
+```python
+from src.risk.position_sizing import PositionSizer
+sizer = PositionSizer(capital=100000.0)
+```
+
+| Method | Signature | Returns |
+|--------|-----------|---------|
+| `equal_weight` | `(symbols: List[str], prices: Dict[str, float], max_positions: Optional[int] = None)` | `List[PositionSizeResult]` |
+| `volatility_weighted` | `(symbols: List[str], prices: Dict[str, float], volatilities: Dict[str, float], target_volatility: float = 0.15)` | `List[PositionSizeResult]` |
+| `score_weighted` | `(symbols: List[str], prices: Dict[str, float], scores: Dict[str, float], min_weight: float = 0.02, max_weight: float = 0.15)` | `List[PositionSizeResult]` |
+
+Each method returns a list of `PositionSizeResult` objects with fields: `symbol`, `shares`, `position_value`, `weight_pct`, `method`.
+
+- **`equal_weight`**: Allocates equal capital (1/N) to each position.
+- **`volatility_weighted`**: Inverse-volatility weighting — lower-volatility stocks receive larger allocations.
+- **`score_weighted`**: Allocates proportionally to model scores, clamped to `[min_weight, max_weight]`.
+
+---
+
+## Trading (Alpaca Broker)
+
+### AlpacaBroker
+
+**Module:** `src/trading/alpaca_broker.py`
+
+```python
+from src.trading.alpaca_broker import AlpacaBroker
+broker = AlpacaBroker(api_key="...", secret_key="...", paper=True)
+```
+
+| Method | Signature | Returns |
+|--------|-----------|---------|
+| `get_account` | `()` | `dict` — account summary (equity, cash, buying_power, etc.) |
+| `get_positions` | `()` | `List[dict]` — all open positions |
+| `submit_order` | `(symbol: str, qty: float, side: str, type: str = "market", time_in_force: str = "day", limit_price: Optional[float] = None)` | `dict` — order confirmation |
+| `submit_market_order` | `(symbol: str, notional: Optional[float] = None, qty: Optional[float] = None, side: str = "buy")` | `dict` — order confirmation |
+| `close_position` | `(symbol: str)` | `dict` — close order confirmation |
+| `close_all_positions` | `()` | `List[dict]` — list of close order confirmations |
+
+All public methods return plain dicts/lists (never raw SDK objects) for easy JSON serialization. Requires `ALPACA_API_KEY` and `ALPACA_SECRET_KEY` environment variables, or pass keys directly to the constructor.
+
+- **`submit_order`**: Generic order submission supporting market and limit order types with configurable time-in-force.
+- **`submit_market_order`**: Convenience method for market orders by dollar amount (`notional`) or share count (`qty`). Exactly one must be provided.
 
 ---
 
@@ -825,3 +957,13 @@ except Exception as e:
 - [Turnover & Churn Analysis Guide](turnover-churn-analysis-guide.md) - Detailed turnover analysis guide
 - [Risk Analysis Guide](risk-analysis-guide.md) - Risk analysis documentation
 - [Comprehensive Analysis System](comprehensive-analysis-system.md) - System overview
+
+---
+
+## See Also
+
+- [System architecture](design.md)
+- [Configuration and CLI](configuration-cli.md)
+- [API key setup](api-configuration.md)
+- [User workflows](user-guide.md)
+- [Developer Guide](developer-guide.md)

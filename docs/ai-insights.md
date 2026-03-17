@@ -1,5 +1,7 @@
 # AI-Powered Analysis Insights
 
+> [← Back to Documentation Index](README.md)
+
 This document describes the Gemini-powered AI insights feature for generating detailed explanations and recommendations.
 
 ## Overview
@@ -414,3 +416,12 @@ except Exception as e:
 
 - Each section takes 2-5 seconds
 - Consider generating asynchronously for better UX
+
+---
+
+## See Also
+
+- [Sentiment analysis](sentiment.md)
+- [API key setup for Gemini](api-configuration.md)
+- [Data quality checks for AI](data-validation.md)
+- [Report generation](report-templates-guide.md)

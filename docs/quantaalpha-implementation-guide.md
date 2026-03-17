@@ -1,5 +1,7 @@
 # QuantaAlpha Implementation Guide
 
+> [← Back to Documentation Index](README.md)
+
 **Concrete examples, parameter values, and step-by-step workflows for the QuantaAlpha-inspired pipeline.**
 
 **Related**: [QuantaAlpha Feature Proposal](quantaalpha-feature-proposal.md) (design rationale), [Backtesting](backtesting.md) (walk-forward details), [Technical Indicators](technical-indicators.md) (feature formulas), [Macro Indicators](macro-indicators.md) (DXY, VIX, GSR), [Risk Analysis Guide](risk-analysis-guide.md) (strengthen recommendations)
@@ -219,3 +221,13 @@ These items are identified as gaps that need implementation:
 | 2.3 | Relative strength feature (`rel_strength_21d`) | Done | `calculate_relative_strength(..., lookback_days=21, output_col="rel_strength_21d")` in `compute_all_features_extended` when `benchmark_df` is provided. |
 | 2.4 | Regime-aware VIX gating for AI names | Done | `vix_enabled: true`, `vix_buy_max: 25` in `config/tickers/AMD.yaml` and `config/tickers/NVDA.yaml` under `trigger.macro_factors`. |
 | 2.5 | Overfitting detection in walk-forward | Done | Per-window `train_sharpe` and `test_sharpe` in `window_results`; `metrics["max_train_test_sharpe_ratio"]`; verbose warning when ratio ≥ `overfit_sharpe_ratio_threshold` (default 2.0). |
+
+---
+
+## See Also
+
+- [Feature proposals overview](quantaalpha-feature-proposal.md)
+- [Academic paper summary](quantaalpha-paper-summary.md)
+- [Technical indicator definitions](technical-indicators.md)
+- [Macro indicator definitions](macro-indicators.md)
+- [Backtesting framework](backtesting.md)

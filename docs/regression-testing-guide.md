@@ -1,5 +1,7 @@
 # Regression Testing Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 The regression testing framework systematically evaluates features by adding them **one at a time** to a baseline model, measuring each feature's marginal contribution with statistical significance tests, and optionally tuning parameters via Bayesian optimization.
@@ -184,3 +186,12 @@ src/regression/
 scripts/
     run_regression_test.py   # CLI entry point
 ```
+
+---
+
+## See Also
+
+- [Backtesting framework](backtesting.md)
+- [Feature importance analysis](feature-importance-methods.md)
+- [Test suite overview](test-suite-documentation.md)
+- [Model training](model-training.md)

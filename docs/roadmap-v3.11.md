@@ -1,5 +1,9 @@
 # Roadmap - Version 3.11
 
+> [← Back to Documentation Index](README.md)
+
+> See also: [Analysis Improvements](analysis-improvements.md) for the analysis-specific feature roadmap.
+
 **Last Updated:** 2026-01-17  
 **Status:** Planning Phase
 
@@ -325,3 +329,12 @@ Version 3.11 will focus on **performance, reliability, and user experience enhan
 - What are the biggest pain points?
 - What would make the biggest difference?
 - What can be done quickly for immediate impact?
+
+---
+
+## See Also
+
+- [v3.11 release notes](v3.11-complete-summary.md)
+- [Implementation tracking](implementation-progress-v3.11.md)
+- [Post-v3.11 priorities](next-steps-v3.11.md)
+- [Analysis Improvements](analysis-improvements.md) — analysis-specific feature roadmap

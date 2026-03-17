@@ -1,5 +1,6 @@
 # Visualization & Analytics
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers charts, performance visualization, and analytics reporting.

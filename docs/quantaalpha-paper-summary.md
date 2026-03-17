@@ -1,5 +1,7 @@
 # QuantaAlpha Paper Summary
 
+> [← Back to Documentation Index](README.md)
+
 **Source**: QuantaAlpha: An Evolutionary Framework for LLM-Driven Alpha Mining. arXiv:2602.07085v1, Feb 2026.
 
 **Related**: [Implementation Guide](quantaalpha-implementation-guide.md) (concrete examples, parameter tables, codebase mapping), [Feature Proposal](quantaalpha-feature-proposal.md) (design rationale, status of each feature)
@@ -50,3 +52,10 @@ For concrete factor formulas, parameter thresholds, step-by-step workflows, silv
 
 For feature status (implemented, planned) and design rationale, see the **[Feature Proposal](quantaalpha-feature-proposal.md)**.
 
+---
+
+## See Also
+
+- [Feature proposals for this project](quantaalpha-feature-proposal.md)
+- [Implementation guide](quantaalpha-implementation-guide.md)
+- [Integration analysis](quantaalpha-integration-analysis.md)

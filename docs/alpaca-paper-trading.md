@@ -1,5 +1,7 @@
 # Alpaca Paper Trading Integration
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 The paper trading pipeline now executes real orders on Alpaca's paper trading platform. When Alpaca API keys are configured, all trades go through Alpaca's paper trading environment. Without keys, it falls back to local simulation.
 
@@ -131,3 +133,12 @@ See [Daily Run Guide — Two Signal Sources](daily-run.md#two-signal-sources-arc
 - Paper account starts with $100,000 by default
 - Reset paper account via Alpaca dashboard if needed
 - Account number and status visible via `account` command
+
+---
+
+## See Also
+
+- [Daily pipeline and automation](daily-run.md)
+- [API key setup](api-configuration.md)
+- [Position sizing](risk-management.md)
+- [Configuration options](configuration-cli.md)

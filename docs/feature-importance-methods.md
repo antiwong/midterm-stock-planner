@@ -1,5 +1,7 @@
 # Feature Importance Methods for Walk-Forward Backtesting
 
+> [← Back to Documentation Index](README.md)
+
 ## Context
 
 Our walk-forward backtest runs ~265 overlapping windows (7-day step, 3yr train, 6mo test) on 114 tickers. Each window trains a LightGBM regressor independently. We need feature importance that reflects this walk-forward structure, not a single model trained on all data.
@@ -105,3 +107,13 @@ All Tier 1 methods handle correlated features imperfectly. The practical mitigat
 - Strobl et al. (2007). *Bias in random forest variable importance measures*.
 - Hooker & Mentch (2019). *Please Stop Permuting Features*.
 - Coqueret & Guida (2020). *Machine Learning for Factor Investing*.
+
+---
+
+## See Also
+
+- [Model training pipeline](model-training.md)
+- [Walk-forward backtesting](backtesting.md)
+- [SHAP explanations](explainability.md)
+- [Feature definitions](technical-indicators.md)
+- [Regression testing](regression-testing-guide.md)

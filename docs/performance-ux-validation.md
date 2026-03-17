@@ -1,5 +1,7 @@
 # Performance & UX Improvements - Validation Report
 
+> [← Back to Documentation Index](README.md)
+
 **Date:** 2026-01-16  
 **Version:** v3.9.3  
 **Status:** ✅ **VALIDATED**
@@ -139,3 +141,10 @@ All performance and UX improvements have been successfully implemented and valid
 **Validated By:** Automated Test Suite  
 **Date:** 2026-01-16  
 **Next Review:** After production deployment
+
+---
+
+## See Also
+
+- [Dashboard interface](dashboard.md)
+- [General validation results](validation-results.md)

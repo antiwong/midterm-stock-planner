@@ -1,5 +1,7 @@
 # Comprehensive Update Summary - v3.10.5
 
+> [← Back to Documentation Index](README.md)
+
 **Date:** 2026-01-17  
 **Status:** ✅ All Features Completed & Committed
 
@@ -206,3 +208,10 @@ This comprehensive update significantly enhances the application with:
 **All features are committed and pushed to GitHub!** 🎉
 
 The application is now more user-friendly, automated, and maintainable.
+
+---
+
+## See Also
+
+- [v3.11 release notes](v3.11-complete-summary.md)
+- [v3.10.3 UI improvements](ui-improvements-v3.10.3.md)

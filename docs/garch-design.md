@@ -1,5 +1,7 @@
 # GARCH Volatility Modeling: Design Document
 
+> [← Back to Documentation Index](README.md)
+
 **Version:** 2.0  
 **Date:** January 2026  
 **Status:** Design Phase (Updated with Professional-Grade Approach)  
@@ -1685,3 +1687,12 @@ Where σᵢₜ is GARCH forecast for asset i
   2. Begin Phase 1 implementation
   3. Set up development environment with `arch` package
   4. Implement model selector for asset-class assignment
+
+---
+
+## See Also
+
+- [Risk metrics](risk-management.md)
+- [Advanced risk analysis](risk-analysis-guide.md)
+- [Backtesting framework](backtesting.md)
+- [Model training](model-training.md)

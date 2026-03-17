@@ -1,5 +1,7 @@
 # UI Improvements & Testing - v3.10.3
 
+> [← Back to Documentation Index](README.md)
+
 **Date:** 2026-01-17  
 **Status:** ✅ Completed
 
@@ -202,3 +204,11 @@ This update significantly improves the user experience with:
 - **Performance**: Optimized queries and lazy chart loading
 
 The application is now more polished, user-friendly, and performant.
+
+---
+
+## See Also
+
+- [Dashboard overview](dashboard.md)
+- [Charts and visualizations](visualization-analytics.md)
+- [v3.10.5 update](comprehensive-update-v3.10.5.md)

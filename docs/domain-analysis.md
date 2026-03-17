@@ -1,5 +1,7 @@
 # Domain Analysis
 
+> [← Back to Documentation Index](README.md)
+
 Domain analysis provides systematic stock selection through vertical (within-sector) and horizontal (cross-sector) analysis.
 
 ## Overview
@@ -335,3 +337,11 @@ print(horizontal_result.risk_metrics)
 - [QuantaAlpha](quantaalpha-feature-proposal.md) - Strategy templates, domain_score weights
 - [Design](design.md) - Architecture overview
 - [Full index](README.md)
+
+---
+
+## See Also
+
+- [Portfolio construction](portfolio-builder.md)
+- [Risk-aware allocation](risk-parity.md)
+- [Adding new stock symbols](adding-symbols-guide.md)

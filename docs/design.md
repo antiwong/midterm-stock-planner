@@ -1,5 +1,6 @@
 # DESIGN.md – Mid-term Stock Planner
 
+> [← Back to Documentation Index](README.md)
 > **Main Design Document** - This document provides the high-level overview of the system.
 > For detailed specifications, see the linked documents below.
 
@@ -37,6 +38,125 @@
 | [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) | Evolutionary optimizer, diversified templates, lineage, complexity control |
 | [macro-indicators.md](macro-indicators.md) | DXY, VIX, GSR for Trigger Backtester |
 | [risk-analysis-guide.md](risk-analysis-guide.md) | Tail risk, VaR, stress testing, conscience filters |
+
+---
+
+## System Architecture Diagram
+
+The following diagram shows the end-to-end pipeline from data ingestion through trade execution, along with the data flow between source modules.
+
+```mermaid
+flowchart TB
+    subgraph DataSources["Data Sources"]
+        CSV["prices.csv / fundamentals.csv"]
+        Bench["benchmark.csv"]
+        Sector["sectors.csv / yfinance"]
+        Macro["VIX / DXY / GSR"]
+    end
+
+    subgraph DataLoading["Data Loading (src/data/)"]
+        Loader["loader.py<br/>load_price_data()<br/>load_fundamental_data()<br/>load_benchmark_data()"]
+    end
+
+    subgraph FeatureEng["Feature Engineering (src/features/)"]
+        Returns["add_return_features()"]
+        Vol["add_volatility_features()"]
+        Volume["add_volume_features()"]
+        Valuation["add_valuation_features()"]
+        GapFeat["gap_features.py"]
+    end
+
+    subgraph Indicators["Technical Indicators (src/indicators/)"]
+        Tech["technical.py<br/>RSI, MACD, BB, ADX, OBV, ATR"]
+    end
+
+    subgraph Strategies["Strategy Features (src/strategies/)"]
+        Momentum["momentum.py"]
+        MeanRev["mean_reversion.py"]
+    end
+
+    subgraph WalkForward["Walk-Forward Backtest (src/backtest/)"]
+        Rolling["rolling.py<br/>run_walk_forward_backtest()"]
+    end
+
+    subgraph ModelLayer["LightGBM Model (src/models/)"]
+        Trainer["trainer.py<br/>Train on window"]
+        Predictor["predictor.py<br/>Score universe"]
+    end
+
+    subgraph SignalGen["Signal Generation"]
+        MLSignal["ML Predictions & Ranking"]
+        TriggerEnsemble["Trigger Ensemble<br/>(RSI + MACD + BB + CMF)"]
+        Combined["Combined Signal"]
+    end
+
+    subgraph PosSizing["Position Sizing (src/risk/)"]
+        Sizing["position_sizing.py<br/>Confidence-Based Sizing<br/>Vol-Weighted / Kelly / ATR"]
+    end
+
+    subgraph RiskControls["Risk Controls (src/risk/)"]
+        Drawdown["Drawdown Guard"]
+        VIXScale["VIX Scaling"]
+        StopLoss["Stop-Loss / Trailing Stop"]
+        Portfolio["portfolio.py<br/>Sector & Concentration Limits"]
+    end
+
+    subgraph Execution["Trade Execution (src/trading/)"]
+        Alpaca["Alpaca Broker API"]
+        LocalSim["Local Simulation"]
+    end
+
+    subgraph Tracking["Performance Tracking"]
+        SQLite["SQLite (data/runs.db, analysis.db)"]
+        Explain["SHAP Explanations (src/explain/)"]
+        Viz["Visualization (src/visualization/)"]
+    end
+
+    %% Main pipeline flow
+    DataSources --> Loader
+    Loader --> Returns --> Vol --> Volume --> Valuation
+    GapFeat --> FeatureEng
+    Indicators --> FeatureEng
+    Strategies --> FeatureEng
+    FeatureEng --> Rolling
+
+    Rolling --> Trainer --> Predictor
+    Predictor --> MLSignal
+    Macro --> TriggerEnsemble
+    MLSignal --> Combined
+    TriggerEnsemble --> Combined
+
+    Combined --> Sizing
+    Sizing --> Drawdown --> VIXScale --> StopLoss --> Portfolio
+    Portfolio --> Alpaca
+    Portfolio --> LocalSim
+
+    Rolling --> SQLite
+    Alpaca --> SQLite
+    LocalSim --> SQLite
+    Predictor --> Explain
+    SQLite --> Viz
+
+    %% Module data flow (cross-references)
+    style DataSources fill:#e1f5fe
+    style DataLoading fill:#e8f5e9
+    style FeatureEng fill:#e8f5e9
+    style Indicators fill:#fff3e0
+    style Strategies fill:#fff3e0
+    style WalkForward fill:#f3e5f5
+    style ModelLayer fill:#f3e5f5
+    style SignalGen fill:#fce4ec
+    style PosSizing fill:#fce4ec
+    style RiskControls fill:#fce4ec
+    style Execution fill:#e0f2f1
+    style Tracking fill:#f5f5f5
+```
+
+**Module data flow summary:**
+- `src/data/` --> `src/features/` --> `src/models/` --> `src/backtest/`
+- `src/indicators/` --> `src/features/`
+- `src/risk/` <-- `src/backtest/`
+- `src/trading/` <-- `src/backtest/`
 
 ---
 
@@ -572,3 +692,14 @@ from src.visualization.charts import plot_price_with_indicators
 - **[report-templates-guide.md](report-templates-guide.md)** - Custom report template engine
 - **[v3.11-complete-summary.md](v3.11-complete-summary.md)** - Complete v3.11 release notes
 - **[migration-guide-v3.11.md](migration-guide-v3.11.md)** - Upgrading from v3.10 to v3.11
+
+---
+
+## See Also
+
+- [Data loading and feature engineering](data-engineering.md)
+- [LightGBM training and prediction](model-training.md)
+- [Walk-forward backtesting](backtesting.md)
+- [Risk metrics and position sizing](risk-management.md)
+- [SHAP explanations](explainability.md)
+- [Complete API reference](api-documentation.md)

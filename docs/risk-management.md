@@ -1,5 +1,6 @@
 # Risk Management
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers risk metrics, position sizing, and portfolio risk management.
@@ -11,6 +12,52 @@
 - [visualization-analytics.md](visualization-analytics.md) - Risk visualization
 - **[risk-parity.md](risk-parity.md)** - Advanced risk parity allocation, beta control, sector constraints
 - **Factor complexity & redundancy** - `src/risk/complexity.py`: `compute_config_complexity`, `compute_factor_redundancy`. Used in evolutionary optimizer (`--complexity-penalty`, `--reject-complexity-above`). See [quantaalpha-feature-proposal.md §3](quantaalpha-feature-proposal.md)
+
+---
+
+## Risk Control Flow
+
+The following diagram shows the decision tree that risk controls follow before a trade is executed.
+
+```mermaid
+flowchart TD
+    Signal["Incoming Trade Signal<br/>(from ML + Trigger Ensemble)"]
+
+    CheckDD{"Check Portfolio Drawdown<br/>Current DD > max_drawdown?"}
+    CheckDaily{"Check Daily Loss Limit<br/>Today's loss > daily_limit?"}
+    CheckConc{"Check Concentration<br/>Position > max_weight?<br/>Sector > max_sector_weight?"}
+    ApplyVIX{"Apply VIX Scaling<br/>VIX > threshold?"}
+    SizePos["Size Position<br/>Vol-Weighted / Kelly / ATR<br/>Apply confidence scaling"]
+    Execute["Execute Trade<br/>(Alpaca API or Local Sim)"]
+    Block["BLOCK Trade<br/>Log reason, hold cash"]
+    Reduce["Reduce Position Size<br/>Scale down by VIX factor"]
+
+    Signal --> CheckDD
+    CheckDD -->|"Yes: DD exceeded"| Block
+    CheckDD -->|"No: DD OK"| CheckDaily
+    CheckDaily -->|"Yes: daily limit hit"| Block
+    CheckDaily -->|"No: within limit"| CheckConc
+    CheckConc -->|"Yes: too concentrated"| Reduce
+    CheckConc -->|"No: within limits"| ApplyVIX
+    Reduce --> ApplyVIX
+    ApplyVIX -->|"VIX high"| SizePos
+    ApplyVIX -->|"VIX normal"| SizePos
+    SizePos --> Execute
+
+    style Signal fill:#e1f5fe
+    style Block fill:#ffcdd2
+    style Reduce fill:#fff9c4
+    style Execute fill:#c8e6c9
+    style SizePos fill:#e8f5e9
+```
+
+**Decision sequence:**
+1. **Drawdown guard** -- if portfolio drawdown exceeds the configured threshold, all new trades are blocked.
+2. **Daily loss limit** -- if the day's cumulative loss exceeds the limit, no more entries are allowed.
+3. **Concentration check** -- single-position and sector weight limits are enforced; oversized positions are scaled down.
+4. **VIX scaling** -- when VIX is elevated, position sizes are reduced proportionally.
+5. **Position sizing** -- the final size is computed using the configured method (vol-weighted, Kelly, ATR, etc.) with confidence-based adjustment.
+6. **Execution** -- the sized order is sent to Alpaca or executed in local simulation.
 
 ---
 
@@ -146,6 +193,55 @@ def calculate_cvar(
     var = calculate_var(returns, confidence)
     return returns[returns <= var].mean()
 ```
+
+### 2.6 Beta
+
+```
+beta = Cov(portfolio, market) / Var(market)
+```
+
+Beta measures the portfolio's sensitivity to market movements. A beta of 1.0 means the portfolio moves in line with the market; values above 1.0 indicate higher sensitivity.
+
+### 2.7 Information Ratio
+
+```
+IR = annualized_excess_return / tracking_error
+```
+
+Where `tracking_error = std(portfolio_returns - benchmark_returns) * sqrt(252)`. Measures how consistently the portfolio generates excess returns relative to the benchmark.
+
+### 2.8 Profit Factor
+
+```
+PF = sum(winning_returns) / abs(sum(losing_returns))
+```
+
+A profit factor above 1.0 indicates that total gains exceed total losses. Values above 1.5 are generally considered strong.
+
+### 2.9 Win Rate
+
+```
+WR = positive_days / total_days
+```
+
+The fraction of trading days (or periods) with positive returns.
+
+### 2.10 Kelly Criterion (Fractional)
+
+```
+f* = (p * b - q) / b
+fractional_kelly = f* * 0.25
+```
+
+Where `p` = win rate, `q` = 1 - p, `b` = win/loss ratio. The full Kelly fraction maximizes long-term growth but is aggressive; fractional Kelly (typically 25% of full Kelly) provides a more conservative allocation.
+
+### 2.11 VaR Parametric
+
+```
+VaR = mean + Z(confidence) * std
+```
+
+Where `Z(confidence)` is the z-score for the desired confidence level (e.g., -1.645 for 95%). This assumes returns are normally distributed.
 
 ---
 

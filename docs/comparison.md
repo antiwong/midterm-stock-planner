@@ -1,5 +1,7 @@
 # Feature Comparison: Stockbot vs Mid-term Stock Planner
 
+> [← Back to Documentation Index](README.md)
+
 This document provides a detailed comparison between **Stockbot** and **Mid-term Stock Planner**, two complementary stock analysis and trading systems.
 
 ## Executive Summary
@@ -664,3 +666,10 @@ export GEMINI_API_KEY="your_key"
 10. **Automated Rebalancing**: Use Mid-term Planner portfolios as Stockbot trading signals
 11. **Analysis Export**: Export comprehensive analysis to PDF/Excel for reporting
 12. **Monte Carlo Simulation**: Add forward-looking risk scenarios (planned)
+
+---
+
+## See Also
+
+- [System architecture overview](design.md)
+- [QuantaAlpha feature proposals](quantaalpha-feature-proposal.md)

@@ -1,5 +1,7 @@
 # QuantaAlpha-Inspired Feature Proposals
 
+> [← Back to Documentation Index](README.md)
+
 **Source**: QuantaAlpha: An Evolutionary Framework for LLM-Driven Alpha Mining (arXiv:2602.07085v1, Feb 2026)
 
 **Context**: This document extracts ideas from the QuantaAlpha paper and adapts them for the Mid-term Stock Planner, respecting the project's constraint: **deterministic, numeric pipeline only—no LLM override of tickers, weights, or metrics**.
@@ -201,3 +203,13 @@ Identified from gap analysis of the QuantaAlpha paper vs current implementation.
   - Section 4.4: Transfer to S&P 500 (137% excess return) → `transfer_report.py`
 - GitHub: https://github.com/QuantaAlpha/QuantaAlpha
 - Implementation guide: [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md)
+
+---
+
+## See Also
+
+- [Concrete implementation details](quantaalpha-implementation-guide.md)
+- [Academic paper summary](quantaalpha-paper-summary.md)
+- [Integration analysis](quantaalpha-integration-analysis.md)
+- [Backtesting framework](backtesting.md)
+- [Technical indicator definitions](technical-indicators.md)

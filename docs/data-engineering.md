@@ -1,5 +1,6 @@
 # Data & Feature Engineering
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers data loading, feature engineering, and dataset assembly.
@@ -10,6 +11,60 @@
 - [model-training.md](model-training.md) - Uses the datasets created here
 - [technical-indicators.md](technical-indicators.md) - Extended technical features
 - [fundamental-data.md](fundamental-data.md) - SEC filings and fundamental data
+
+---
+
+## Feature Engineering Data Flow
+
+The following diagram shows the sequential feature engineering pipeline from raw CSV through the final training DataFrame.
+
+```mermaid
+flowchart TD
+    subgraph Input["Raw Data"]
+        PriceCSV["prices.csv<br/>(date, ticker, OHLCV)"]
+        FundCSV["fundamentals.csv<br/>(date, ticker, PE, PB, EPS)"]
+        BenchCSV["benchmark.csv<br/>(date, close)"]
+    end
+
+    Loader["Data Loader<br/>loader.py<br/>Validate, parse dates,<br/>handle missing"]
+
+    subgraph Pipeline["compute_all_features() Pipeline"]
+        direction TB
+        Step1["add_return_features()<br/>return_1m, return_3m,<br/>return_6m, return_12m"]
+        Step2["add_volatility_features()<br/>vol_20d, vol_60d, vol_ratio"]
+        Step3["add_volume_features()<br/>dollar_volume_20d,<br/>volume_ratio, turnover_20d"]
+        Step4["add_valuation_features()<br/>pe_ratio, pb_ratio,<br/>earnings_yield"]
+
+        Step1 --> Step2 --> Step3 --> Step4
+    end
+
+    FeatureDF["Feature DataFrame<br/>(date, ticker, all features)"]
+
+    subgraph TargetCalc["make_training_dataset()"]
+        FwdStock["+ Forward stock return<br/>(3-month future price)"]
+        FwdBench["+ Forward benchmark return<br/>(3-month future bench)"]
+        ExcessRet["= Excess return (target)<br/>stock_ret - bench_ret"]
+        DropNaN["Drop rows with NaN<br/>target or missing features"]
+
+        FwdStock --> FwdBench --> ExcessRet --> DropNaN
+    end
+
+    TrainingDF["Training DataFrame<br/>(features + target)"]
+
+    PriceCSV --> Loader
+    FundCSV --> Loader
+    BenchCSV --> Loader
+    Loader --> Step1
+    Step4 --> FeatureDF
+    FeatureDF --> FwdStock
+    BenchCSV -.->|benchmark returns| FwdBench
+    DropNaN --> TrainingDF
+
+    style Input fill:#e1f5fe
+    style Pipeline fill:#e8f5e9
+    style TargetCalc fill:#fff3e0
+    style TrainingDF fill:#f3e5f5
+```
 
 ---
 
@@ -257,6 +312,26 @@ def add_return_features(df: pd.DataFrame) -> pd.DataFrame:
 | `return_6m` | 126 days | `close / close.shift(126) - 1` |
 | `return_12m` | 252 days | `close / close.shift(252) - 1` |
 
+### 3.1.1 bars_per_day Scaling
+
+When using intraday data (e.g., hourly bars), lookback windows expressed in trading days must be scaled by the number of bars per day. The `bars_per_day` parameter adjusts all rolling window lengths accordingly:
+
+```
+effective_window = window_in_days * bars_per_day
+```
+
+For example, with hourly data (`bars_per_day = 7`), a 21-day return lookback becomes `21 * 7 = 147` bars. This ensures features computed on intraday data represent the same calendar duration as daily features.
+
+### 3.1.2 min_periods for Rolling Windows
+
+All rolling window calculations use a minimum number of observations before producing a value, to avoid unreliable estimates from too few data points:
+
+```
+min_periods = window / 2
+```
+
+For a 20-day rolling window, at least 10 observations are required before the first non-NaN value is emitted.
+
 ### 3.2 Volatility Features
 
 ```python
@@ -283,8 +358,16 @@ def add_volume_features(
     # Features created:
     # - dollar_volume_20d: Average dollar volume
     # - volume_ratio: Current volume / 20d avg
-    # - turnover_20d: Volume / shares outstanding
+    # - turnover_20d: Volume coefficient of variation (see formula below)
 ```
+
+**Turnover feature formula:**
+
+```
+turnover_20d = std(volume[20d]) / mean(volume[20d])
+```
+
+This is the coefficient of variation of volume over a 20-day window, capturing how erratic trading activity is. Higher values indicate more variable (potentially event-driven) volume patterns.
 
 ### 3.4 Valuation Features
 
@@ -295,10 +378,26 @@ def add_valuation_features(
 ) -> pd.DataFrame:
     """Add valuation features from fundamentals."""
     # Features created:
-    # - pe_ratio: Forward-filled PE
-    # - pb_ratio: Forward-filled PB
+    # - pe_ratio: Forward-filled PE (point-in-time via merge_asof)
+    # - pb_ratio: Forward-filled PB (point-in-time via merge_asof)
     # - earnings_yield: 1/PE
 ```
+
+**Point-in-time join with `merge_asof`:**
+
+Valuation data (PE, PB, etc.) is reported periodically (quarterly filings) and arrives with a lag. To prevent look-ahead bias, the pipeline uses `pd.merge_asof` to join fundamental data to price data by the most recent available report date that is on or before each trading date:
+
+```python
+merged = pd.merge_asof(
+    price_df.sort_values("date"),
+    fundamental_df.sort_values("date"),
+    on="date",
+    by="ticker",
+    direction="backward"   # use most recent report <= current date
+)
+```
+
+This ensures each row only sees fundamental data that was actually available at that point in time, preventing future information from leaking into features.
 
 ---
 
@@ -604,7 +703,7 @@ def prepare_inference_data(
 | | `vol_ratio` | - | vol_20d / vol_60d |
 | **Volume** | `dollar_volume_20d` | 20d | Average dollar volume |
 | | `volume_ratio` | 20d | Volume vs average |
-| | `turnover_20d` | 20d | Volume / shares |
+| | `turnover_20d` | 20d | `std(volume) / mean(volume)` |
 | **Valuation** | `pe_ratio` | - | Price/Earnings |
 | | `pb_ratio` | - | Price/Book |
 | | `earnings_yield` | - | 1/PE |

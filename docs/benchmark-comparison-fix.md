@@ -1,5 +1,7 @@
 # Benchmark Comparison Fix
 
+> [← Back to Documentation Index](README.md)
+
 ## Issue
 Benchmark comparison was being skipped with error:
 ```
@@ -50,3 +52,9 @@ The fix has been verified:
 - `src/analytics/data_completeness.py`: Removed BENCHMARK_DATA requirement, updated check logic
 - `src/analytics/comprehensive_analysis.py`: Removed conditional check, always runs benchmark comparison
 
+---
+
+## See Also
+
+- [Backtesting framework](backtesting.md)
+- [Analysis system](comprehensive-analysis-system.md)

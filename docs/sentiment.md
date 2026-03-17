@@ -1,5 +1,7 @@
 # Sentiment Modelling
 
+> [← Back to Documentation Index](README.md)
+
 This document describes the sentiment analysis module for the Mid-term Stock Planner.
 
 ## Overview
@@ -421,3 +423,12 @@ sentiment:
 ```
 
 The CLI `--news-data` flag overrides both config values.
+
+---
+
+## See Also
+
+- [AI-powered analysis](ai-insights.md)
+- [Fundamental data](fundamental-data.md)
+- [API key setup for Gemini](api-configuration.md)
+- [Feature engineering pipeline](data-engineering.md)

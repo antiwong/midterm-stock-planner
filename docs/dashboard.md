@@ -1,5 +1,7 @@
 # Dashboard Guide
 
+> [← Back to Documentation Index](README.md)
+
 The Streamlit dashboard provides a comprehensive web interface for running analyses, building portfolios, and viewing results.
 
 ## Launching the Dashboard
@@ -481,3 +483,12 @@ See [Risk Analysis Guide](risk-analysis-guide.md) for full documentation.
 - [Portfolio Builder](portfolio-builder.md)
 - [AI Insights](ai-insights.md)
 - [Risk Analysis Guide](risk-analysis-guide.md)
+
+---
+
+## See Also
+
+- [Complete user workflows](user-guide.md)
+- [Charts and visualizations](visualization-analytics.md)
+- [Alert notifications](alert-system-guide.md)
+- [Configuration options](configuration-cli.md)

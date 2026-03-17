@@ -1,5 +1,7 @@
 # Frequently Asked Questions (FAQ)
 
+> [← Back to Documentation Index](README.md)
+
 ## General Questions
 
 ### What is the Mid-term Stock Planner?
@@ -368,3 +370,12 @@ Yes! Contributions are welcome. Please:
 ---
 
 **Still have questions?** Check the [User Guide](user-guide.md), [Quick Start](quick-start-guide.md), or [Documentation Index](README.md) for all 64+ docs. Open an issue on GitHub for bugs.
+
+---
+
+## See Also
+
+- [5-minute setup](quick-start-guide.md)
+- [Complete workflows](user-guide.md)
+- [Configuration and CLI reference](configuration-cli.md)
+- [Troubleshooting Guide](troubleshooting.md)

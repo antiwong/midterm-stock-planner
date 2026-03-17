@@ -1,5 +1,7 @@
 # Analysis Validation Results
 
+> [← Back to Documentation Index](README.md)
+
 **Date:** 2026-01-15  
 **Run ID:** 20260115_185037_e08e49ae  
 **Run Name:** jan 2026 - Backtest 2026-01-15 18:50
@@ -144,3 +146,10 @@ The analysis system is functioning correctly, but requires additional data sourc
 **Validation Scripts:**
 - `scripts/validate_analysis_reasonableness.py` - Automated reasonableness checks
 - `scripts/analysis_reasonableness_report.py` - Comprehensive report generator
+
+---
+
+## See Also
+
+- [General validation results](validation-results.md)
+- [Analysis system](comprehensive-analysis-system.md)

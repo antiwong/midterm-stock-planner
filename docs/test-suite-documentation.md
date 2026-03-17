@@ -1,5 +1,7 @@
 # Comprehensive Test Suite Documentation
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 The test suite provides comprehensive coverage for all major components of the mid-term stock planner application. It includes unit tests, integration tests, and end-to-end tests.
@@ -334,3 +336,11 @@ For detailed test execution results, see [Test Execution Results](test-execution
 - [ ] Add property-based tests (hypothesis)
 - [ ] Add mutation testing
 - [ ] Add visual regression tests for charts
+
+---
+
+## See Also
+
+- [Test execution results](test-results-summary.md)
+- [Regression testing workflow](regression-testing-guide.md)
+- [Validation strategy](validation-test-plan.md)

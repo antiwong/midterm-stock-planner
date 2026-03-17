@@ -1,5 +1,7 @@
 # Decision Log — QuantaAlpha Midterm Stock Planner
 
+> [← Back to Documentation Index](README.md)
+
 ## Decision 001: Feature Selection Strategy
 
 **Date**: 2026-03-14
@@ -369,3 +371,11 @@ The original data setup (9 tickers, 22 months hourly, 65.7% benchmark overlap) s
 ### In Progress
 
 - **15-minute data**: Downloading 6yr of 15m bars for 13 tickers via Alpaca. Will enable intraday signal generation and finer-grained entry/exit timing.
+
+---
+
+## See Also
+
+- [System architecture](design.md)
+- [Backtesting framework](backtesting.md)
+- [Risk management](risk-management.md)

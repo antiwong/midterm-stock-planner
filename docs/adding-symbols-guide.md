@@ -1,5 +1,7 @@
 # Adding Symbols to Watchlist Guide
 
+> [← Back to Documentation Index](README.md)
+
 This guide shows you how to add symbols to your watchlists, including special cases like Singapore stocks (e.g., ME8U.SI).
 
 ## Quick Answer: Adding ME8U.SI
@@ -105,3 +107,12 @@ asia_pacific:
 ## Related
 
 - **Per-ticker config** (RSI, MACD, VIX, volume/OBV filters for trigger backtest): [config/tickers/README.md](../config/tickers/README.md)
+
+---
+
+## See Also
+
+- [Validating watchlist symbols](watchlist-validation-guide.md)
+- [Downloading fundamental data](download-fundamentals-guide.md)
+- [Handling failed downloads](failed-symbols-guide.md)
+- [Full user workflows](user-guide.md)

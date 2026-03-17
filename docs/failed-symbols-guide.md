@@ -1,5 +1,7 @@
 # Failed Symbols Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Failed Symbols from Price Download
 
 The following symbols failed to download:
@@ -102,3 +104,11 @@ To prevent this in the future:
 - Some symbols may have been temporarily unavailable during download
 - If a symbol is valid but failed, try downloading again
 - Always validate symbols before adding to watchlists
+
+---
+
+## See Also
+
+- [Adding new symbols](adding-symbols-guide.md)
+- [Validating symbols](watchlist-validation-guide.md)
+- [Data provider options](data-providers-guide.md)

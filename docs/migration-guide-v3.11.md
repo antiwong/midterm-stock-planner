@@ -1,5 +1,7 @@
 # Migration Guide: v3.11
 
+> [← Back to Documentation Index](README.md)
+
 **Upgrading from v3.10.x to v3.11.x**
 
 ## Overview
@@ -218,3 +220,11 @@ After migration:
 
 **Last Updated:** 2026-01-17  
 **Version:** 3.11.2
+
+---
+
+## See Also
+
+- [Full v3.11 release notes](v3.11-complete-summary.md)
+- [Post-v3.11 priorities](next-steps-v3.11.md)
+- [Configuration reference](configuration-cli.md)

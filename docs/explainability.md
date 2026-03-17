@@ -1,5 +1,6 @@
 # Explainability & Interpretability
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers SHAP explanations, feature importance, and model interpretability.

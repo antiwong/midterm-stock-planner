@@ -1,5 +1,7 @@
 # Fundamentals Data Sources Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 The Mid-term Stock Planner supports multiple data sources for fundamental data to maximize completeness and reliability. The system automatically tries multiple sources and merges results.
@@ -243,3 +245,12 @@ For issues or questions:
 - Check `docs/api-configuration.md` for API setup
 - Review `docs/fundamentals-data.md` for data format
 - See `scripts/download_fundamentals.py` for implementation
+
+---
+
+## See Also
+
+- [Fundamental data overview](fundamental-data.md)
+- [Download guide](download-fundamentals-guide.md)
+- [All data providers](data-providers-guide.md)
+- [API key setup](api-configuration.md)

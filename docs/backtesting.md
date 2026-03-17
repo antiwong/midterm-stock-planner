@@ -1,5 +1,6 @@
 # Backtesting & Performance Evaluation
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers walk-forward backtesting, performance metrics, and overfitting control.
@@ -10,6 +11,35 @@
 - [model-training.md](model-training.md) - Model training for each window
 - [risk-management.md](risk-management.md) - Risk metrics details
 - [visualization-analytics.md](visualization-analytics.md) - Performance visualization
+
+---
+
+## Walk-Forward Window Visualization
+
+```mermaid
+gantt
+    title Walk-Forward Rolling Train/Test Split
+    dateFormat YYYY
+    axisFormat %Y
+
+    section Step 1
+    Train (5 years)       :active, t1, 2015, 2020
+    Test (1 year)         :crit,   s1, 2020, 2021
+
+    section Step 2
+    Train (5 years)       :active, t2, 2016, 2021
+    Test (1 year)         :crit,   s2, 2021, 2022
+
+    section Step 3
+    Train (5 years)       :active, t3, 2017, 2022
+    Test (1 year)         :crit,   s3, 2022, 2023
+
+    section Step 4
+    Train (5 years)       :active, t4, 2018, 2023
+    Test (1 year)         :crit,   s4, 2023, 2024
+```
+
+Each step rolls the window forward by `step_value` (default: 1 year). The model is trained only on the training window, then scored on the test window. Test results from all steps are concatenated to produce the final backtest equity curve.
 
 ---
 
@@ -122,7 +152,14 @@ class BacktestConfig:
 
 ### 2.3 IC (Information Coefficient) per window
 
-For each walk-forward window, the pipeline computes the **Information Coefficient** (Pearson correlation of model predictions with actual excess return) and **Rank IC** (Spearman). These are stored in `window_results[].ic` and `window_results[].rank_ic`. Aggregate metrics added when IC is computed:
+For each walk-forward window, the pipeline computes the **Information Coefficient** and **Rank IC**:
+
+```
+IC      = Pearson(predictions, actual_excess_returns)
+Rank IC = Spearman(rank(predictions), rank(actual_returns))
+```
+
+These are stored in `window_results[].ic` and `window_results[].rank_ic`. Aggregate metrics added when IC is computed:
 
 - **mean_ic** — Mean IC across windows (in `backtest_results.metrics` and `run_info.json` / `backtest_metrics.json`).
 - **mean_rank_ic** — Mean Rank IC across windows.
@@ -139,7 +176,36 @@ For each walk-forward window, the pipeline computes **train-period** and **test-
 
 Optional config (e.g. in `config/config.yaml` under `backtest` or per-ticker): `overfit_sharpe_ratio_threshold: 2.0`. See [quantaalpha-implementation-guide.md](quantaalpha-implementation-guide.md) §8.
 
-### 2.5 Global vs Per-Ticker Config
+### 2.5 VIX-Based Exposure Scaling
+
+When enabled, the backtest dynamically scales portfolio exposure based on realized benchmark volatility, reducing position sizes during high-volatility regimes.
+
+```
+realized_vol = std(benchmark_returns[-21:]) * sqrt(252) * 100
+
+if vol >= vix_extreme_threshold (40) -> scale = vix_extreme_scale (0.3)
+elif vol >= vix_high_threshold (30)  -> scale = vix_high_scale (0.6)
+else                                 -> scale = 1.0
+```
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `vix_scale_enabled` | `false` | Enable VIX-based exposure scaling |
+| `vix_high_threshold` | 30 | Realized vol level for high-vol regime |
+| `vix_extreme_threshold` | 40 | Realized vol level for extreme-vol regime |
+| `vix_high_scale` | 0.6 | Exposure multiplier during high-vol regime |
+| `vix_extreme_scale` | 0.3 | Exposure multiplier during extreme-vol regime |
+
+### 2.6 Stop-Loss Logic
+
+Positions are monitored for cumulative drawdown from entry price. When a position's cumulative return breaches the stop-loss threshold, it is excluded from the portfolio until the next rebalance date.
+
+```
+cumulative_return = (current_price - entry_price) / entry_price
+if cumulative_return <= stop_loss_pct -> exclude from portfolio until next rebalance
+```
+
+### 2.7 Global vs Per-Ticker Config
 
 Backtest parameters can be set globally in `config/config.yaml` or **per ticker** in `config/tickers/{TICKER}.yaml`. When running analysis for a single ticker, the pipeline uses per-ticker overrides when present. See [Section 11: Per-Ticker Configuration](#11-per-ticker-configuration).
 

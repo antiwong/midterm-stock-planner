@@ -1,5 +1,7 @@
 # Filter Optimization Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 This guide helps you optimize filter thresholds to achieve the right balance between quality and diversification.
@@ -180,3 +182,11 @@ filters:
 - [Purchase Triggers Guide](purchase-triggers.md)
 - [Configuration Guide](configuration-cli.md)
 - [Download Fundamentals Guide](download-fundamentals-guide.md)
+
+---
+
+## See Also
+
+- [Trigger logic](purchase-triggers.md)
+- [Backtesting framework](backtesting.md)
+- [Indicator parameters](technical-indicators.md)

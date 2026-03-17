@@ -1,5 +1,7 @@
 # Validation Report - v3.9.0
 
+> [← Back to Documentation Index](README.md)
+
 **Date:** 2026-01-15  
 **Version:** 3.9.0  
 **Status:** ✅ **ALL VALIDATION CHECKS PASSED**
@@ -227,3 +229,10 @@ The system is fully functional with:
 **Validation Date:** 2026-01-15  
 **Validated By:** Automated Test Suite + Manual Validation  
 **Next Review:** After any major changes
+
+---
+
+## See Also
+
+- [Validation test plan](validation-test-plan.md)
+- [General validation results](validation-results.md)

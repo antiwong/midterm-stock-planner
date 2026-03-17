@@ -1,5 +1,7 @@
 # Portfolio Generation Methods Comparison
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 This document compares two different portfolio generation approaches in the Mid-term Stock Planner:
@@ -243,3 +245,11 @@ Combine the best of both:
 2. Apply **Portfolio Builder optimization** for weight allocation (better risk management)
 3. Fix data quality issues in both systems (fundamental data, score normalization)
 4. Consider a hybrid approach that combines both methodologies
+
+---
+
+## See Also
+
+- [Portfolio construction details](portfolio-builder.md)
+- [Trigger-based entry points](purchase-triggers.md)
+- [Risk metrics](risk-management.md)

@@ -1,5 +1,6 @@
 # Fundamental Data
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers SEC filings, fundamental data fetching, and financial metrics.

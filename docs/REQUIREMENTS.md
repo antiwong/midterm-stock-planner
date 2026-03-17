@@ -1,5 +1,7 @@
 # Requirements
 
+> [← Back to Documentation Index](README.md)
+
 ## Functional requirements
 
 1. Data ingestion
@@ -88,3 +90,11 @@
 - Universe and benchmark can be configured via a config file or environment variables.
 - News data (if used) follows expected schema: timestamp, ticker, headline, optional body/source.
 - Sentiment models can be swapped (lexicon → FinBERT) without changing the pipeline.
+
+---
+
+## See Also
+
+- [System architecture](design.md)
+- [Quick start setup](quick-start-guide.md)
+- [Configuration reference](configuration-cli.md)

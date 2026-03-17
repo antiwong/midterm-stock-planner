@@ -1,5 +1,7 @@
 # Purchase Triggers Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 The Purchase Triggers system displays **why stocks were selected or excluded** from portfolios. You can access this information through:
@@ -679,3 +681,58 @@ After analyzing purchase triggers:
 - [Portfolio Builder](portfolio-builder.md) - Personalized portfolios
 - [config/tickers/README.md](../config/tickers/README.md) - Per-ticker YAML
 - [Documentation Index](README.md)
+
+---
+
+## Recent Improvements
+
+The following improvements were made to the purchase triggers system based on AI analysis recommendations, addressing issues with filter effectiveness, score differentiation, and portfolio diversification.
+
+### Issues Fixed
+
+1. **Filter Effectiveness**: All stocks were passing filters (100% pass rate) because filters were set to 0.0 (too lenient). No quality screening was being applied.
+
+2. **Score Distribution**: Value and Quality scores were all stuck at 50.0 (no differentiation) due to column name mismatches (`fundamentals.csv` uses `pe`/`pb`, but code expected `pe_ratio`/`pb_ratio`) and missing fundamental data (ROE, margins).
+
+3. **Model Dominance**: Model score weight was too high at 50%, causing selection to be driven primarily by ML predictions while ignoring value/quality.
+
+4. **Sector Concentration**: Technology and Consumer Cyclical were overrepresented, lacking diversification.
+
+### Changes Implemented
+
+- **Enhanced Column Name Handling** (`src/analysis/domain_analysis.py`): Added `_normalize_column_names()` method supporting multiple naming conventions for PE, PB, ROE, and margin columns.
+
+- **Improved Value/Quality Score Calculation** (`src/analysis/domain_analysis.py`): Better handling of missing data, outlier filtering (PE < 1000, PB < 100, ROE between -100% and 1000%), and requires at least 2 valid values for meaningful ranks.
+
+- **Stricter Default Filters** (`config/config.yaml`): Changed from `min_roe: 0.0` to `0.05`, `min_net_margin: 0.0` to `0.03`, and `max_debt_to_equity: 2.0` to `1.5`.
+
+- **Balanced Score Weights** (`config/config.yaml`): Changed from 50/30/20 (model/value/quality) to 40/35/25, giving fundamentals 60% total influence.
+
+- **Column Name Mapping in GUI** (`src/app/dashboard/pages/purchase_triggers.py`): Automatically maps `pe` to `pe_ratio`, `pb` to `pb_ratio` when loading fundamentals.
+
+- **Configuration Improvement Script** (`scripts/improve_purchase_triggers.py`): Analyzes current configuration, identifies issues, provides recommendations, and can apply improvements automatically via `--apply` flag.
+
+### Expected Results
+
+| Metric | Before | After |
+|--------|--------|-------|
+| Filter Pass Rate | 100% (all stocks pass) | ~30-70% (realistic screening) |
+| Value Scores | All 50.0 (no differentiation) | 0-100 range (meaningful differentiation) |
+| Quality Scores | All 50.0 (no differentiation) | 0-100 range (meaningful differentiation) |
+| Selection Balance | Effectively 100% model-driven | 40% model, 35% value, 25% quality |
+
+### Verification Steps
+
+1. Run a new analysis and check the Purchase Triggers page to verify pass rate is 30-70%
+2. View Sector Rankings to verify Value and Quality scores vary (not all 50.0)
+3. View Configuration section to verify weights are 40%/35%/25%
+4. View Portfolio Estimate to verify multiple sectors are represented and no single sector exceeds 35%
+
+---
+
+## See Also
+
+- [Portfolio construction](portfolio-builder.md)
+- [Methods comparison](portfolio-comparison.md)
+- [Trigger backtester](backtesting.md)
+- [Macro filters for triggers](macro-indicators.md)

@@ -1,5 +1,7 @@
 # Cross-Asset Capital Rotation Features
 
+> [← Back to Documentation Index](README.md)
+
 ## Motivation
 Inspired by capital rotation thesis: when gold/silver rallies exhaust, capital rotates into equities/crypto. These features capture this as systematic, testable signals.
 
@@ -41,3 +43,12 @@ GLD and SPY are already in prices_daily.csv. TIP, UUP, and BTC-USD need to be do
 - `src/features/cross_asset.py` — `add_rotation_features()` and sub-functions
 - `src/regression/feature_registry.py` — Registered as `"rotation"` FeatureSpec
 - Tunable parameter: `rotation_lookback` (10-42, default 20)
+
+---
+
+## See Also
+
+- [Macro indicators](macro-indicators.md)
+- [Technical indicators](technical-indicators.md)
+- [Daily trading pipeline](daily-run.md)
+- [Paper trading execution](alpaca-paper-trading.md)

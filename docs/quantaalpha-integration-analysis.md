@@ -1,5 +1,7 @@
 # QuantaAlpha Integration Analysis
 
+> [← Back to Documentation Index](README.md)
+
 **Date**: 2026-03-15
 **Status**: Proposal
 **Related**: `docs/quantaalpha-feature-proposal.md`, `docs/quantaalpha-implementation-guide.md`
@@ -222,3 +224,11 @@ These can be adopted independently, without installing QuantaAlpha as a dependen
 | Optimal feature set from regression | **DONE** | `config/config.yaml` regression.recommended_features |
 | LLM-guided feature selection | Planned | Phase 3 |
 | Custom factor expression engine | Planned | Phase 4 |
+
+---
+
+## See Also
+
+- [Feature proposals](quantaalpha-feature-proposal.md)
+- [Implementation guide](quantaalpha-implementation-guide.md)
+- [Paper summary](quantaalpha-paper-summary.md)

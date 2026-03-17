@@ -1,5 +1,7 @@
 # User Guide
 
+> [← Back to Documentation Index](README.md)
+
 **Complete guide to using the Mid-term Stock Planner v3.11.2 application.**
 
 ## Table of Contents
@@ -554,3 +556,16 @@ The application uses SQLite database (`data/analysis.db`) for persistence:
 ---
 
 **For more help**: See [FAQ](faq.md) or [Quick Start Guide](quick-start-guide.md)
+
+---
+
+## See Also
+
+- [5-minute setup](quick-start-guide.md)
+- [Configuration options and CLI commands](configuration-cli.md)
+- [Streamlit web interface](dashboard.md)
+- [Daily paper trading pipeline](daily-run.md)
+- [Common questions and answers](faq.md)
+- [Common Workflows](common-workflows.md)
+- [Developer Guide](developer-guide.md)
+- [Troubleshooting Guide](troubleshooting.md)

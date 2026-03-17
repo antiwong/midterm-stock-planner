@@ -1,5 +1,7 @@
 # Next Steps & Roadmap
 
+> [← Back to Documentation Index](README.md)
+
 **Last Updated:** 2026-01-15  
 **Current Status:** ✅ System fully functional, 148/148 tests passing (100% pass rate), 12 analysis modules (6 core + 6 advanced) with full GUI integration
 
@@ -245,3 +247,11 @@ These can be implemented quickly for immediate impact:
 
 **Last Updated:** 2026-01-15  
 **Next Review:** After completing immediate actions
+
+---
+
+## See Also
+
+- [v3.11+ priorities](next-steps-v3.11.md)
+- [Analysis roadmap](analysis-improvements.md)
+- [v3.11 roadmap](roadmap-v3.11.md)

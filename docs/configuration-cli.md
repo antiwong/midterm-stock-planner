@@ -1,5 +1,6 @@
 # Configuration & CLI
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers configuration management, CLI commands, and run tracking.
@@ -526,4 +527,5 @@ python -m src.app.cli compare-runs \
 - **Macro Indicators**: [macro-indicators.md](macro-indicators.md) - DXY, VIX, GSR for Trigger Backtester
 - **QuantaAlpha Scripts**: [quantaalpha-feature-proposal.md](quantaalpha-feature-proposal.md) - evolutionary_backtest, diversified_backtest, lineage_report
 - **Per-Ticker Config**: [config/tickers/README.md](../config/tickers/README.md) - YAML schema
+- **Configuration Reference**: [configuration-reference.md](configuration-reference.md) - Complete YAML config keys and defaults
 - **Full Index**: [README.md](README.md)

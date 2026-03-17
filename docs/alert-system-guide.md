@@ -1,5 +1,7 @@
 # Alert System User Guide
 
+> [← Back to Documentation Index](README.md)
+
 ## Overview
 
 The Alert System provides automated notifications for important portfolio events, helping you stay informed about significant changes without constantly monitoring the dashboard.
@@ -221,3 +223,11 @@ For issues or questions:
 - Check the [FAQ](faq.md)
 - Review [User Guide](user-guide.md)
 - Check alert history for delivery status
+
+---
+
+## See Also
+
+- [Dashboard interface](dashboard.md)
+- [Configuration options](configuration-cli.md)
+- [Daily pipeline automation](daily-run.md)

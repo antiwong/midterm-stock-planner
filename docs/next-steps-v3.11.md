@@ -1,5 +1,7 @@
 # Next Steps - Version 3.11+
 
+> [← Back to Documentation Index](README.md)
+
 **Last Updated:** 2026-01-17  
 **Current Status:** ✅ v3.11.0 Complete - All major features implemented
 
@@ -206,3 +208,12 @@ Show parallel processing status in download/analysis pages
 ---
 
 **Last Updated:** 2026-01-17
+
+---
+
+## See Also
+
+- [v3.11 release notes](v3.11-complete-summary.md)
+- [v3.11 roadmap](roadmap-v3.11.md)
+- [General priorities](next-steps.md)
+- [Analysis roadmap](analysis-improvements.md)

@@ -1,5 +1,6 @@
 # Model Training & Prediction
 
+> [← Back to Documentation Index](README.md)
 > **Part of**: [Mid-term Stock Planner Design](design.md)
 > 
 > This document covers model training, prediction, and persistence.
@@ -83,15 +84,16 @@ class ModelConfig:
     
     # LightGBM hyperparameters
     params: Dict[str, Any] = field(default_factory=lambda: {
-        "n_estimators": 300,
-        "learning_rate": 0.05,
-        "num_leaves": 31,
-        "max_depth": -1,
-        "min_child_samples": 20,
-        "reg_alpha": 0.1,
-        "reg_lambda": 0.1,
-        "subsample": 0.8,
-        "colsample_bytree": 0.8,
+        "n_estimators": 200,
+        "learning_rate": 0.03,
+        "num_leaves": 15,
+        "max_depth": 6,
+        "min_child_samples": 50,
+        "reg_alpha": 0.3,
+        "reg_lambda": 0.5,
+        "subsample": 0.7,
+        "colsample_bytree": 0.7,
+        "early_stopping_rounds": 30,
         "random_state": 42,
         "n_jobs": -1,
         "verbose": -1
@@ -102,15 +104,16 @@ class ModelConfig:
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
-| `n_estimators` | 300 | Number of boosting rounds |
-| `learning_rate` | 0.05 | Step size shrinkage |
-| `num_leaves` | 31 | Max leaves per tree |
-| `max_depth` | -1 | Max tree depth (-1 = no limit) |
-| `min_child_samples` | 20 | Min samples in leaf |
-| `reg_alpha` | 0.1 | L1 regularization |
-| `reg_lambda` | 0.1 | L2 regularization |
-| `subsample` | 0.8 | Row subsampling ratio |
-| `colsample_bytree` | 0.8 | Feature subsampling ratio |
+| `n_estimators` | 200 | Number of boosting rounds |
+| `learning_rate` | 0.03 | Step size shrinkage |
+| `num_leaves` | 15 | Max leaves per tree |
+| `max_depth` | 6 | Max tree depth (-1 = no limit) |
+| `min_child_samples` | 50 | Min samples in leaf |
+| `reg_alpha` | 0.3 | L1 regularization |
+| `reg_lambda` | 0.5 | L2 regularization |
+| `subsample` | 0.7 | Row subsampling ratio |
+| `colsample_bytree` | 0.7 | Feature subsampling ratio |
+| `early_stopping_rounds` | 30 | Stop training if validation metric does not improve for this many rounds |
 
 ---
 
@@ -345,9 +348,11 @@ models/
   "feature_names": ["return_1m", "return_3m", "vol_20d", "..."],
   "target_col": "target",
   "hyperparameters": {
-    "n_estimators": 300,
-    "learning_rate": 0.05,
-    "num_leaves": 31
+    "n_estimators": 200,
+    "learning_rate": 0.03,
+    "num_leaves": 15,
+    "max_depth": 6,
+    "early_stopping_rounds": 30
   },
   "training_period": {
     "start": "2019-01-01",
