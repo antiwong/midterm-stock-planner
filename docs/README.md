@@ -141,6 +141,8 @@ The [`docs/daily-run/`](daily-run/README.md) folder contains detailed technique 
 | [Risk Controls](daily-run/risk-controls.md) | [Reference] Drawdown close, stop-loss, VIX scaling, daily loss limit |
 | [Alpaca Execution](daily-run/alpaca-execution.md) | [Reference] Rebalancing algorithm, order types, state sync |
 | [Accuracy Calibration](daily-run/accuracy-calibration.md) | [Reference] Adaptive exposure from signal hit rate |
+| [Daily Routine Orchestrator](daily-run/orchestrator.md) | [Reference] Single script managing all 4 portfolios, data downloads, notifications |
+| [Forward Testing Journal](daily-run/forward-testing.md) | [Reference] Prediction logging, 5d/63d horizon evaluation, accuracy tracking |
 
 ## Trading & Execution [Guide]
 
