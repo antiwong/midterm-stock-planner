@@ -1,5 +1,5 @@
 # Per-ticker configuration for TEL
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.264, Return=59.8%, MaxDD=-17.5%, Trades=151
 
 ticker: TEL

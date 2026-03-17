@@ -1,5 +1,5 @@
 # Per-ticker configuration for OR
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.435, Return=247.5%, MaxDD=-23.3%, Trades=298
 
 ticker: OR

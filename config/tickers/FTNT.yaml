@@ -1,5 +1,5 @@
 # Per-ticker configuration for FTNT
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.971, Return=116.4%, MaxDD=-23.9%, Trades=17
 
 ticker: FTNT

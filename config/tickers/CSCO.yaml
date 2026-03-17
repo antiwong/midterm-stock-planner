@@ -1,5 +1,5 @@
 # Per-ticker configuration for CSCO
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.051, Return=5.7%, MaxDD=-18.2%, Trades=187
 
 ticker: CSCO

@@ -1,5 +1,5 @@
 # Per-ticker configuration for WPM
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.376, Return=188.3%, MaxDD=-30.9%, Trades=185
 
 ticker: WPM

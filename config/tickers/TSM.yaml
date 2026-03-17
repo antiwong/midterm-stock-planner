@@ -1,15 +1,15 @@
 # Per-ticker configuration for TSM
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=2.012, Return=263.8%, MaxDD=-29.1%, Trades=32
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=1.982, Return=239.6%, MaxDD=-22.8%, Trades=30
 
 ticker: TSM
 trigger:
   rsi_period: 7
-  rsi_oversold: 34
+  rsi_oversold: 32
   rsi_overbought: 80
-  macd_fast: 20
-  macd_slow: 36
-  macd_signal: 5
+  macd_fast: 10
+  macd_slow: 20
+  macd_signal: 20
   bb_period: 20
   bb_std: 2.0
 horizon_days: 63

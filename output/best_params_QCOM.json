@@ -7,13 +7,13 @@
     "rsi_overbought": 80,
     "rsi_oversold": 22
   },
-  "best_score": 0.5572859754190496,
+  "best_score": 0.5572859754190495,
   "metric": "sharpe",
   "tickers": [
     "QCOM"
   ],
-  "sharpe_ratio": 0.5572859754190496,
+  "sharpe_ratio": 0.5572859754190495,
   "total_return": 2.8250034439119975,
-  "max_drawdown": -0.3812451127063182,
+  "max_drawdown": -0.3812451127063183,
   "num_trades": 115
 }

@@ -1,14 +1,14 @@
 # Per-ticker configuration for SAND
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=0.322, Return=160.6%, MaxDD=-23.9%, Trades=227
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.301, Return=145.7%, MaxDD=-25.4%, Trades=171
 
 ticker: SAND
 trigger:
-  rsi_period: 12
+  rsi_period: 16
   rsi_oversold: 40
-  rsi_overbought: 80
-  macd_fast: 15
-  macd_slow: 26
+  rsi_overbought: 78
+  macd_fast: 20
+  macd_slow: 37
   macd_signal: 20
   bb_period: 20
   bb_std: 2.0

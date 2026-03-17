@@ -1,5 +1,5 @@
 # Per-ticker configuration for MAG
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.358, Return=188.2%, MaxDD=-29.1%, Trades=16
 
 ticker: MAG

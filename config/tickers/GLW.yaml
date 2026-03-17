@@ -1,5 +1,5 @@
 # Per-ticker configuration for GLW
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.475, Return=330.4%, MaxDD=-30.9%, Trades=39
 
 ticker: GLW

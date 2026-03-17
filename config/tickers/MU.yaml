@@ -1,5 +1,5 @@
 # Per-ticker configuration for MU
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.737, Return=1008.4%, MaxDD=-55.9%, Trades=142
 
 ticker: MU

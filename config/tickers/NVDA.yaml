@@ -1,5 +1,5 @@
 # Per-ticker configuration for NVDA
-# Optimized via Bayesian optimization on 2026-03-16
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.126, Return=7350.0%, MaxDD=-60.5%, Trades=130
 
 ticker: NVDA

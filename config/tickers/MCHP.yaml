@@ -1,5 +1,5 @@
 # Per-ticker configuration for MCHP
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.120, Return=28.1%, MaxDD=-52.6%, Trades=195
 
 ticker: MCHP

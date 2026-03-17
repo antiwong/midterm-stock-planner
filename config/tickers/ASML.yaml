@@ -1,15 +1,15 @@
 # Per-ticker configuration for ASML
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=1.368, Return=156.0%, MaxDD=-22.7%, Trades=29
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=1.211, Return=116.4%, MaxDD=-16.3%, Trades=42
 
 ticker: ASML
 trigger:
-  rsi_period: 12
+  rsi_period: 7
   rsi_oversold: 40
-  rsi_overbought: 60
-  macd_fast: 19
-  macd_slow: 29
-  macd_signal: 18
+  rsi_overbought: 63
+  macd_fast: 18
+  macd_slow: 59
+  macd_signal: 11
   bb_period: 20
   bb_std: 2.0
 horizon_days: 63

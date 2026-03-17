@@ -1,5 +1,5 @@
 # Per-ticker configuration for ETN
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.240, Return=55.3%, MaxDD=-35.6%, Trades=179
 
 ticker: ETN

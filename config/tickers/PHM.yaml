@@ -1,5 +1,5 @@
 # Per-ticker configuration for PHM
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.405, Return=119.0%, MaxDD=-20.2%, Trades=111
 
 ticker: PHM

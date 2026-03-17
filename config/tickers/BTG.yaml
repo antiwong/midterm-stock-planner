@@ -1,5 +1,5 @@
 # Per-ticker configuration for BTG
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.082, Return=15.2%, MaxDD=-41.9%, Trades=267
 
 ticker: BTG

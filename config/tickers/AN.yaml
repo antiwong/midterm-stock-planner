@@ -1,5 +1,5 @@
 # Per-ticker configuration for AN
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.262, Return=70.0%, MaxDD=-26.6%, Trades=178
 
 ticker: AN

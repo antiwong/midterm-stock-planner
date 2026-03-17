@@ -1,5 +1,5 @@
 # Per-ticker configuration for EGO
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.287, Return=107.7%, MaxDD=-24.2%, Trades=246
 
 ticker: EGO

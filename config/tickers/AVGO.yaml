@@ -1,5 +1,5 @@
 # Per-ticker configuration for AVGO
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.151, Return=4629.8%, MaxDD=-43.0%, Trades=79
 
 ticker: AVGO

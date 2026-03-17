@@ -1,5 +1,5 @@
 # Per-ticker configuration for QCOM
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.557, Return=282.5%, MaxDD=-38.1%, Trades=115
 
 ticker: QCOM

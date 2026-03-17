@@ -7,12 +7,12 @@
     "rsi_overbought": 80,
     "rsi_oversold": 38
   },
-  "best_score": 0.48184091965382697,
+  "best_score": 0.48184091965382675,
   "metric": "sharpe",
   "tickers": [
     "WDC"
   ],
-  "sharpe_ratio": 0.48184091965382697,
+  "sharpe_ratio": 0.48184091965382675,
   "total_return": 7.820024456933215,
   "max_drawdown": -0.5935239565867187,
   "num_trades": 44

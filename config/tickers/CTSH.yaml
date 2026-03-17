@@ -1,5 +1,5 @@
 # Per-ticker configuration for CTSH
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.225, Return=27.5%, MaxDD=-13.7%, Trades=57
 
 ticker: CTSH

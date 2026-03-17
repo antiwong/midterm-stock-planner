@@ -1,5 +1,5 @@
 # Per-ticker configuration for BWA
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.168, Return=31.2%, MaxDD=-20.6%, Trades=245
 
 ticker: BWA

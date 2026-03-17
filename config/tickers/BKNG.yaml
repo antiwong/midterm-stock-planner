@@ -1,5 +1,5 @@
 # Per-ticker configuration for BKNG
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.293, Return=72.9%, MaxDD=-20.5%, Trades=198
 
 ticker: BKNG

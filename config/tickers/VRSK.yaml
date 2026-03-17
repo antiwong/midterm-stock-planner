@@ -1,15 +1,15 @@
 # Per-ticker configuration for VRSK
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=0.443, Return=19.2%, MaxDD=-34.5%, Trades=28
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.791, Return=34.6%, MaxDD=-23.9%, Trades=15
 
 ticker: VRSK
 trigger:
-  rsi_period: 18
-  rsi_oversold: 28
-  rsi_overbought: 73
-  macd_fast: 9
-  macd_slow: 37
-  macd_signal: 11
+  rsi_period: 15
+  rsi_oversold: 22
+  rsi_overbought: 60
+  macd_fast: 20
+  macd_slow: 22
+  macd_signal: 19
   bb_period: 20
   bb_std: 2.0
 horizon_days: 63

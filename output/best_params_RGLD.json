@@ -1,19 +1,19 @@
 {
   "best_params": {
-    "macd_fast": 13,
-    "macd_slow": 42,
-    "macd_signal": 20,
-    "rsi_period": 12,
-    "rsi_overbought": 79,
-    "rsi_oversold": 20
+    "macd_fast": 12,
+    "macd_slow": 20,
+    "macd_signal": 7,
+    "rsi_period": 15,
+    "rsi_overbought": 78,
+    "rsi_oversold": 24
   },
-  "best_score": 1.5464351100349738,
+  "best_score": 1.2576817837231105,
   "metric": "sharpe",
   "tickers": [
     "RGLD"
   ],
-  "sharpe_ratio": 1.5464351100349738,
-  "total_return": 1.1455951222284328,
-  "max_drawdown": -0.193921660748414,
-  "num_trades": 20
+  "sharpe_ratio": 1.2576817837231105,
+  "total_return": 0.9123720849328769,
+  "max_drawdown": -0.15502282392183664,
+  "num_trades": 30
 }

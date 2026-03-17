@@ -1,5 +1,5 @@
 # Per-ticker configuration for ON
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.787, Return=76.7%, MaxDD=-26.0%, Trades=27
 
 ticker: 'ON'

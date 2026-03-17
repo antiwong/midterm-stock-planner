@@ -1,5 +1,5 @@
 # Per-ticker configuration for FTV
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.231, Return=47.0%, MaxDD=-22.4%, Trades=136
 
 ticker: FTV

@@ -1,5 +1,5 @@
 # Per-ticker configuration for WDC
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.482, Return=782.0%, MaxDD=-59.4%, Trades=44
 
 ticker: WDC

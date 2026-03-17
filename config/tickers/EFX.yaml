@@ -1,5 +1,5 @@
 # Per-ticker configuration for EFX
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.137, Return=24.9%, MaxDD=-30.0%, Trades=230
 
 ticker: EFX

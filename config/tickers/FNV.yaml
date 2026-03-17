@@ -1,5 +1,5 @@
 # Per-ticker configuration for FNV
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.728, Return=137.0%, MaxDD=-14.5%, Trades=27
 
 ticker: FNV

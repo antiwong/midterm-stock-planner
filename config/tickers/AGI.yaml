@@ -1,5 +1,5 @@
 # Per-ticker configuration for AGI
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.988, Return=292.7%, MaxDD=-16.4%, Trades=22
 
 ticker: AGI

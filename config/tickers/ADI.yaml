@@ -1,5 +1,5 @@
 # Per-ticker configuration for ADI
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.136, Return=28.4%, MaxDD=-31.6%, Trades=264
 
 ticker: ADI

@@ -1,5 +1,5 @@
 # Per-ticker configuration for COST
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.632, Return=111.2%, MaxDD=-19.3%, Trades=4
 
 ticker: COST

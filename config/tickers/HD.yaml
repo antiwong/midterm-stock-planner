@@ -1,14 +1,14 @@
 # Per-ticker configuration for HD
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=-0.019, Return=-6.4%, MaxDD=-19.1%, Trades=173
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.055, Return=5.4%, MaxDD=-28.5%, Trades=69
 
 ticker: HD
 trigger:
   rsi_period: 17
-  rsi_oversold: 22
-  rsi_overbought: 72
-  macd_fast: 19
-  macd_slow: 54
+  rsi_oversold: 33
+  rsi_overbought: 77
+  macd_fast: 20
+  macd_slow: 20
   macd_signal: 20
   bb_period: 20
   bb_std: 2.0

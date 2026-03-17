@@ -7,13 +7,13 @@
     "rsi_overbought": 78,
     "rsi_oversold": 20
   },
-  "best_score": 2.4519014202889307,
+  "best_score": 2.4519014202889324,
   "metric": "sharpe",
   "tickers": [
     "AU"
   ],
-  "sharpe_ratio": 2.4519014202889307,
-  "total_return": 7.614783562240472,
+  "sharpe_ratio": 2.4519014202889324,
+  "total_return": 7.614783562240475,
   "max_drawdown": -0.30483825724800906,
   "num_trades": 32
 }

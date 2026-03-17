@@ -1,5 +1,5 @@
 # Per-ticker configuration for LRCX
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.232, Return=87.5%, MaxDD=-32.5%, Trades=250
 
 ticker: LRCX

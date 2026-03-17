@@ -7,12 +7,12 @@
     "rsi_overbought": 80,
     "rsi_oversold": 40
   },
-  "best_score": 0.33787058107003554,
+  "best_score": 0.33787058107003565,
   "metric": "sharpe",
   "tickers": [
     "TXN"
   ],
-  "sharpe_ratio": 0.33787058107003554,
+  "sharpe_ratio": 0.33787058107003565,
   "total_return": 10.646106778063999,
   "max_drawdown": -0.3834806993817784,
   "num_trades": 714

@@ -1,5 +1,5 @@
 # Per-ticker configuration for NEM
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.181, Return=64.6%, MaxDD=-40.8%, Trades=217
 
 ticker: NEM

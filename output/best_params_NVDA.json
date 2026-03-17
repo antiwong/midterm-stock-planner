@@ -7,13 +7,13 @@
     "rsi_overbought": 80,
     "rsi_oversold": 40
   },
-  "best_score": 1.1264192970171023,
+  "best_score": 1.1264192970171019,
   "metric": "sharpe",
   "tickers": [
     "NVDA"
   ],
-  "sharpe_ratio": 1.1264192970171023,
+  "sharpe_ratio": 1.1264192970171019,
   "total_return": 73.50033409545492,
-  "max_drawdown": -0.6047572592928815,
+  "max_drawdown": -0.6047572592928816,
   "num_trades": 130
 }

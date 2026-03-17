@@ -1,5 +1,5 @@
 # Per-ticker configuration for MRVL
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.817, Return=1181.0%, MaxDD=-50.1%, Trades=159
 
 ticker: MRVL

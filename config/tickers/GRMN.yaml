@@ -1,5 +1,5 @@
 # Per-ticker configuration for GRMN
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.143, Return=25.3%, MaxDD=-29.9%, Trades=132
 
 ticker: GRMN

@@ -1,5 +1,5 @@
 # Per-ticker configuration for KLAC
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.334, Return=133.4%, MaxDD=-29.5%, Trades=181
 
 ticker: KLAC

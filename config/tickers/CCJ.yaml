@@ -1,14 +1,14 @@
 # Per-ticker configuration for CCJ
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=0.216, Return=145.7%, MaxDD=-28.1%, Trades=255
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.236, Return=219.6%, MaxDD=-40.1%, Trades=65
 
 ticker: CCJ
 trigger:
-  rsi_period: 21
-  rsi_oversold: 25
+  rsi_period: 15
+  rsi_oversold: 40
   rsi_overbought: 80
-  macd_fast: 19
-  macd_slow: 57
+  macd_fast: 20
+  macd_slow: 20
   macd_signal: 17
   bb_period: 20
   bb_std: 2.0

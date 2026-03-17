@@ -1,5 +1,5 @@
 # Per-ticker configuration for TRI
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=-0.038, Return=-14.3%, MaxDD=-50.0%, Trades=117
 
 ticker: TRI

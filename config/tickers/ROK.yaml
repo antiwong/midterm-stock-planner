@@ -1,5 +1,5 @@
 # Per-ticker configuration for ROK
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.863, Return=59.7%, MaxDD=-23.7%, Trades=16
 
 ticker: ROK

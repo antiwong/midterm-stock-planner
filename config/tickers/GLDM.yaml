@@ -1,5 +1,5 @@
 # Per-ticker configuration for GLDM
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.929, Return=78.4%, MaxDD=-9.1%, Trades=23
 
 ticker: GLDM

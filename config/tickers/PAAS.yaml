@@ -1,5 +1,5 @@
 # Per-ticker configuration for PAAS
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.323, Return=209.3%, MaxDD=-28.8%, Trades=263
 
 ticker: PAAS

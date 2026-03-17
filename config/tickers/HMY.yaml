@@ -1,5 +1,5 @@
 # Per-ticker configuration for HMY
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=2.816, Return=1172.5%, MaxDD=-19.0%, Trades=27
 
 ticker: HMY

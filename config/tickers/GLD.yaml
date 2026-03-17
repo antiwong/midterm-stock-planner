@@ -1,5 +1,5 @@
 # Per-ticker configuration for GLD
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.037, Return=159.5%, MaxDD=-10.2%, Trades=69
 
 ticker: GLD

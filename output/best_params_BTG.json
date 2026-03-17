@@ -7,12 +7,12 @@
     "rsi_overbought": 70,
     "rsi_oversold": 20
   },
-  "best_score": 0.08151500608353696,
+  "best_score": 0.08151500608353694,
   "metric": "sharpe",
   "tickers": [
     "BTG"
   ],
-  "sharpe_ratio": 0.08151500608353696,
+  "sharpe_ratio": 0.08151500608353694,
   "total_return": 0.1521544191180401,
   "max_drawdown": -0.41864670511865004,
   "num_trades": 267

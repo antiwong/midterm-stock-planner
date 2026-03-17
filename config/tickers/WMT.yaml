@@ -1,5 +1,5 @@
 # Per-ticker configuration for WMT
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.978, Return=113.3%, MaxDD=-7.3%, Trades=30
 
 ticker: WMT

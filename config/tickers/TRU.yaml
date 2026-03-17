@@ -1,5 +1,5 @@
 # Per-ticker configuration for TRU
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.226, Return=63.9%, MaxDD=-34.6%, Trades=138
 
 ticker: TRU

@@ -1,5 +1,5 @@
 # Per-ticker configuration for INTC
-# Optimized via Bayesian optimization on 2026-03-16
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.868, Return=1102.9%, MaxDD=-58.7%, Trades=109
 
 ticker: INTC

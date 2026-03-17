@@ -7,13 +7,13 @@
     "rsi_overbought": 71,
     "rsi_oversold": 21
   },
-  "best_score": 1.0367965116780808,
+  "best_score": 1.03679651167808,
   "metric": "sharpe",
   "tickers": [
     "GLD"
   ],
-  "sharpe_ratio": 1.0367965116780808,
-  "total_return": 1.5947643943201886,
+  "sharpe_ratio": 1.03679651167808,
+  "total_return": 1.5947643943201881,
   "max_drawdown": -0.10237420330286319,
   "num_trades": 69
 }

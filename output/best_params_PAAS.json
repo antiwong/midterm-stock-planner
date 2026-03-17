@@ -7,12 +7,12 @@
     "rsi_overbought": 60,
     "rsi_oversold": 40
   },
-  "best_score": 0.32290412104381755,
+  "best_score": 0.3229041210438175,
   "metric": "sharpe",
   "tickers": [
     "PAAS"
   ],
-  "sharpe_ratio": 0.32290412104381755,
+  "sharpe_ratio": 0.3229041210438175,
   "total_return": 2.0928714827478427,
   "max_drawdown": -0.28759958782093537,
   "num_trades": 263

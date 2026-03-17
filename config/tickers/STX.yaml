@@ -1,5 +1,5 @@
 # Per-ticker configuration for STX
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.379, Return=196.8%, MaxDD=-32.3%, Trades=159
 
 ticker: STX

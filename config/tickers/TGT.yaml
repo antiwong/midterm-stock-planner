@@ -1,5 +1,5 @@
 # Per-ticker configuration for TGT
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.106, Return=20.6%, MaxDD=-26.6%, Trades=68
 
 ticker: TGT

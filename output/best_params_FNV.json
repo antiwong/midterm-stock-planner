@@ -7,12 +7,12 @@
     "rsi_overbought": 61,
     "rsi_oversold": 34
   },
-  "best_score": 1.727866987440929,
+  "best_score": 1.7278669874409283,
   "metric": "sharpe",
   "tickers": [
     "FNV"
   ],
-  "sharpe_ratio": 1.727866987440929,
+  "sharpe_ratio": 1.7278669874409283,
   "total_return": 1.3703028310965852,
   "max_drawdown": -0.14461577433859038,
   "num_trades": 27

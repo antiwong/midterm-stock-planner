@@ -7,13 +7,13 @@
     "rsi_overbought": 69,
     "rsi_oversold": 34
   },
-  "best_score": 2.816237864176144,
+  "best_score": 2.816237864176145,
   "metric": "sharpe",
   "tickers": [
     "HMY"
   ],
-  "sharpe_ratio": 2.816237864176144,
-  "total_return": 11.724662149698203,
+  "sharpe_ratio": 2.816237864176145,
+  "total_return": 11.724662149698208,
   "max_drawdown": -0.18997905890677813,
   "num_trades": 27
 }

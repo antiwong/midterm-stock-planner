@@ -1,15 +1,15 @@
 # Per-ticker configuration for KMX
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=0.034, Return=-4.8%, MaxDD=-39.8%, Trades=206
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.067, Return=4.5%, MaxDD=-44.4%, Trades=194
 
 ticker: KMX
 trigger:
   rsi_period: 18
   rsi_oversold: 40
-  rsi_overbought: 60
-  macd_fast: 17
-  macd_slow: 60
-  macd_signal: 15
+  rsi_overbought: 61
+  macd_fast: 20
+  macd_slow: 56
+  macd_signal: 14
   bb_period: 20
   bb_std: 2.0
 horizon_days: 63

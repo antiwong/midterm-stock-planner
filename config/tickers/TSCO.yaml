@@ -1,5 +1,5 @@
 # Per-ticker configuration for TSCO
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=-0.071, Return=-72.5%, MaxDD=-83.2%, Trades=30
 
 ticker: TSCO

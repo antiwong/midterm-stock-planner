@@ -1,5 +1,5 @@
 # Per-ticker configuration for CHKP
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.202, Return=38.3%, MaxDD=-17.5%, Trades=211
 
 ticker: CHKP

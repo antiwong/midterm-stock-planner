@@ -7,12 +7,12 @@
     "rsi_overbought": 74,
     "rsi_oversold": 40
   },
-  "best_score": 0.05061138478929441,
+  "best_score": 0.050611384789294424,
   "metric": "sharpe",
   "tickers": [
     "CSCO"
   ],
-  "sharpe_ratio": 0.05061138478929441,
+  "sharpe_ratio": 0.050611384789294424,
   "total_return": 0.05746709495071973,
   "max_drawdown": -0.1818118182216239,
   "num_trades": 187

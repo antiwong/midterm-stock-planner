@@ -1,5 +1,5 @@
 # Per-ticker configuration for PWR
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.549, Return=235.4%, MaxDD=-25.8%, Trades=229
 
 ticker: PWR

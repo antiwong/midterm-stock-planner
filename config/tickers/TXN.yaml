@@ -1,5 +1,5 @@
 # Per-ticker configuration for TXN
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.338, Return=1064.6%, MaxDD=-38.3%, Trades=714
 
 ticker: TXN

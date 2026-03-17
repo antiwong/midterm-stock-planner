@@ -1,5 +1,5 @@
 # Per-ticker configuration for GOLD
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.207, Return=61.2%, MaxDD=-55.3%, Trades=204
 
 ticker: GOLD

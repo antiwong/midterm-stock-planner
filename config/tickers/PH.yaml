@@ -1,5 +1,5 @@
 # Per-ticker configuration for PH
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=1.696, Return=175.9%, MaxDD=-17.8%, Trades=45
 
 ticker: PH

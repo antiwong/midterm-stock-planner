@@ -1,5 +1,5 @@
 # Per-ticker configuration for PAYX
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.155, Return=21.0%, MaxDD=-27.3%, Trades=15
 
 ticker: PAYX

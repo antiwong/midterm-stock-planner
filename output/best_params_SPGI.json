@@ -7,13 +7,13 @@
     "rsi_overbought": 72,
     "rsi_oversold": 20
   },
-  "best_score": 1.0002782419461393,
+  "best_score": 1.0002782419461416,
   "metric": "sharpe",
   "tickers": [
     "SPGI"
   ],
-  "sharpe_ratio": 1.0002782419461393,
-  "total_return": 0.40574135047490745,
-  "max_drawdown": -0.13919353826304662,
+  "sharpe_ratio": 1.0002782419461416,
+  "total_return": 0.40574135047490784,
+  "max_drawdown": -0.13919353826304656,
   "num_trades": 20
 }

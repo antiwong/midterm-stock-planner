@@ -1,5 +1,5 @@
 # Per-ticker configuration for ORLY
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.212, Return=18.3%, MaxDD=-6.6%, Trades=21
 
 ticker: ORLY

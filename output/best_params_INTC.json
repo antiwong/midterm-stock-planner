@@ -7,12 +7,12 @@
     "rsi_overbought": 63,
     "rsi_oversold": 32
   },
-  "best_score": 0.8682135232325108,
+  "best_score": 0.8682135232325118,
   "metric": "sharpe",
   "tickers": [
     "INTC"
   ],
-  "sharpe_ratio": 0.8682135232325108,
+  "sharpe_ratio": 0.8682135232325118,
   "total_return": 11.02858399878452,
   "max_drawdown": -0.5874670631384479,
   "num_trades": 109

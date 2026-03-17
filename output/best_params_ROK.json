@@ -7,13 +7,13 @@
     "rsi_overbought": 60,
     "rsi_oversold": 40
   },
-  "best_score": 0.8628139823775315,
+  "best_score": 0.8628139823775341,
   "metric": "sharpe",
   "tickers": [
     "ROK"
   ],
-  "sharpe_ratio": 0.8628139823775315,
-  "total_return": 0.5972096073576518,
-  "max_drawdown": -0.2374369756740265,
+  "sharpe_ratio": 0.8628139823775341,
+  "total_return": 0.5972096073576532,
+  "max_drawdown": -0.23743697567402652,
   "num_trades": 16
 }

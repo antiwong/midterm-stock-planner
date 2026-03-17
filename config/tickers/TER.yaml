@@ -1,5 +1,5 @@
 # Per-ticker configuration for TER
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.263, Return=118.6%, MaxDD=-46.1%, Trades=305
 
 ticker: TER

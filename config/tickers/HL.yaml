@@ -1,5 +1,5 @@
 # Per-ticker configuration for HL
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.253, Return=217.2%, MaxDD=-45.4%, Trades=76
 
 ticker: HL

@@ -1,5 +1,5 @@
 # Per-ticker configuration for AG
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.228, Return=160.8%, MaxDD=-48.7%, Trades=397
 
 ticker: AG

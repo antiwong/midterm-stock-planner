@@ -1,5 +1,5 @@
 # Per-ticker configuration for GDXJ
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.402, Return=206.1%, MaxDD=-17.9%, Trades=42
 
 ticker: GDXJ

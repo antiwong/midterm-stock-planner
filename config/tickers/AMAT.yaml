@@ -1,15 +1,15 @@
 # Per-ticker configuration for AMAT
-# Optimized via Bayesian optimization on 2026-03-17
-# Sharpe=0.187, Return=68.8%, MaxDD=-38.4%, Trades=229
+# Optimized via Bayesian optimization on 2026-03-18
+# Sharpe=0.284, Return=133.2%, MaxDD=-26.5%, Trades=227
 
 ticker: AMAT
 trigger:
-  rsi_period: 21
-  rsi_oversold: 40
-  rsi_overbought: 68
-  macd_fast: 14
+  rsi_period: 18
+  rsi_oversold: 37
+  rsi_overbought: 67
+  macd_fast: 20
   macd_slow: 60
-  macd_signal: 16
+  macd_signal: 20
   bb_period: 20
   bb_std: 2.0
 horizon_days: 63

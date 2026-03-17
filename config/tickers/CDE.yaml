@@ -1,5 +1,5 @@
 # Per-ticker configuration for CDE
-# Optimized via Bayesian optimization on 2026-03-17
+# Optimized via Bayesian optimization on 2026-03-18
 # Sharpe=0.439, Return=582.7%, MaxDD=-27.0%, Trades=480
 
 ticker: CDE
