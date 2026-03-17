@@ -95,6 +95,27 @@ class MobyEmailParser:
                 "4. export MOBY_APP_PASSWORD=your_16_char_password"
             )
 
+    _known_tickers_cache: set = None  # type: ignore[assignment]
+
+    @classmethod
+    def _get_known_tickers(cls) -> set:
+        """Load all known tickers from watchlists.yaml (cached)."""
+        if cls._known_tickers_cache is not None:
+            return cls._known_tickers_cache
+        try:
+            import yaml
+            config_path = Path(__file__).parent.parent / "config" / "watchlists.yaml"
+            with open(config_path) as f:
+                wl_config = yaml.safe_load(f)
+            tickers = set()
+            for wl in wl_config.get("watchlists", {}).values():
+                for s in wl.get("symbols", []):
+                    tickers.add(str(s).upper())
+            cls._known_tickers_cache = tickers
+        except Exception:
+            cls._known_tickers_cache = set()
+        return cls._known_tickers_cache
+
     def connect(self) -> imaplib.IMAP4_SSL:
         """Connect to Gmail IMAP."""
         mail = imaplib.IMAP4_SSL(self.IMAP_SERVER, self.IMAP_PORT)
@@ -209,8 +230,11 @@ class MobyEmailParser:
 
             # Find potential tickers (1-5 uppercase letters)
             potential_tickers = set(self.TICKER_PATTERN.findall(text))
-            # Filter out common words
-            tickers = [t for t in potential_tickers if t not in self.COMMON_WORDS and len(t) >= 2]
+            # Filter out common words and validate against known universe
+            tickers = [t for t in potential_tickers
+                       if t not in self.COMMON_WORDS
+                       and len(t) >= 2
+                       and t in self._get_known_tickers()]
 
             # Compute overall sentiment of the email
             bullish_count = sum(1 for kw in self.BULLISH_KEYWORDS if kw in text_lower)

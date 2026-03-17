@@ -161,8 +161,9 @@ def post_webhook(url: Optional[str], message: str, logger: logging.Logger):
 class DailyRoutine:
     """Orchestrates all daily, weekly, and monthly tasks."""
 
-    def __init__(self, dry_run: bool = False):
+    def __init__(self, dry_run: bool = False, skip_sentiment: bool = False):
         self.dry_run = dry_run
+        self.skip_sentiment = skip_sentiment
         self.logger = setup_logging("daily")
         self.slack_url = (os.environ.get("SLACK_WEBHOOK_URL")
                           or os.environ.get("slack_webhook"))
@@ -190,7 +191,11 @@ class DailyRoutine:
         results["data_refresh"] = self._refresh_all_data()
 
         # 2. Sentiment pipeline
-        results["sentiment"] = self._run_sentiment_pipeline()
+        if self.skip_sentiment:
+            self.logger.info("--- Sentiment Pipeline (SKIPPED) ---")
+            results["sentiment"] = {"status": "skipped", "reason": "skip_sentiment flag"}
+        else:
+            results["sentiment"] = self._run_sentiment_pipeline()
 
         # 3. Moby email parsing
         results["moby_parse"] = self._run_moby_parser()
@@ -561,7 +566,7 @@ class DailyRoutine:
         try:
             price_df = pd.read_csv(DATA_DIR / "prices_daily.csv")
             if "date" in price_df.columns:
-                price_df["date"] = pd.to_datetime(price_df["date"])
+                price_df["date"] = pd.to_datetime(price_df["date"], format="mixed")
         except Exception as e:
             self.logger.error(f"Cannot load prices for evaluation: {e}")
             journal.close()
@@ -743,7 +748,7 @@ class DailyRoutine:
             self.logger.info(f"Downloading fundamentals for {len(tickers)} tickers")
 
             from scripts.download_fundamentals import download_fundamentals
-            download_fundamentals(tickers=tickers, output=str(DATA_DIR / "fundamentals.csv"))
+            download_fundamentals(tickers=tickers, output_path=DATA_DIR / "fundamentals.csv")
             self.logger.info("Fundamentals download complete")
             return {"status": "success", "tickers": len(tickers)}
         except Exception as e:
@@ -882,9 +887,14 @@ def main():
         action="store_true",
         help="Log what would happen without executing trades or downloading data",
     )
+    parser.add_argument(
+        "--skip-sentiment",
+        action="store_true",
+        help="Skip Finnhub sentiment download (saves ~18 min on re-runs)",
+    )
     args = parser.parse_args()
 
-    routine = DailyRoutine(dry_run=args.dry_run)
+    routine = DailyRoutine(dry_run=args.dry_run, skip_sentiment=args.skip_sentiment)
 
     if args.mode == "daily":
         routine.run_daily()
