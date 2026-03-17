@@ -15,6 +15,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import streamlit as st
 
 from ..components.sidebar import render_page_header, render_section_header
@@ -84,21 +85,167 @@ def render_forward_testing():
     col4.metric("Awaiting Eval", f"{s['pending']:,}")
 
     # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Hit Rates", "Accuracy Trend", "Active Predictions", "Full History"
+    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        "Signal Charts", "Hit Rates", "Accuracy Trend", "Active Predictions", "Full History"
     ])
 
     with tab1:
-        _render_hit_rates()
+        _render_signal_charts()
 
     with tab2:
-        _render_accuracy_trend()
+        _render_hit_rates()
 
     with tab3:
-        _render_active_predictions()
+        _render_accuracy_trend()
 
     with tab4:
+        _render_active_predictions()
+
+    with tab5:
         _render_full_history()
+
+
+def _render_signal_charts():
+    """BUY/SELL entry point charts with price history."""
+    render_section_header("Signal Entry Points", "")
+
+    PRICE_PATH = Path(__file__).parent.parent.parent.parent.parent / "data" / "prices_daily.csv"
+
+    # Watchlist selector
+    wl_options = _query("SELECT DISTINCT watchlist FROM predictions ORDER BY watchlist")
+    if not wl_options:
+        st.info("No predictions yet.")
+        return
+
+    wl_list = [r["watchlist"] for r in wl_options]
+    selected_wl = st.selectbox("Portfolio", wl_list, key="signal_wl")
+
+    # Load predictions for this watchlist (5-day horizon)
+    preds = _query("""
+        SELECT ticker, predicted_action, predicted_rank, predicted_score,
+               entry_price, prediction_date, maturity_date
+        FROM predictions
+        WHERE watchlist = ? AND horizon_days = 5
+        ORDER BY predicted_rank
+    """, (selected_wl,))
+
+    if not preds:
+        st.info(f"No 5-day predictions for {selected_wl}.")
+        return
+
+    pred_df = pd.DataFrame(preds)
+    buys = pred_df[pred_df["predicted_action"] == "BUY"].head(5)
+    sells = pred_df[pred_df["predicted_action"] == "SELL"].head(5)
+    tickers_to_plot = pd.concat([buys, sells])
+
+    if len(tickers_to_plot) == 0:
+        st.info("No BUY/SELL signals.")
+        return
+
+    # Load price data
+    try:
+        prices = pd.read_csv(PRICE_PATH)
+        prices["date"] = pd.to_datetime(prices["date"], format="mixed")
+        prices = prices[prices["date"] >= pd.Timestamp.now() - pd.Timedelta(days=180)]
+    except Exception as e:
+        st.error(f"Cannot load price data: {e}")
+        return
+
+    # Summary metrics
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("**Top 5 BUY**")
+        for _, p in buys.iterrows():
+            st.markdown(
+                f"#{p['predicted_rank']} **{p['ticker']}** "
+                f"— score {p['predicted_score']:.4f} @ ${p['entry_price']:,.2f}"
+            )
+    with col2:
+        st.markdown("**Top 5 SELL**")
+        for _, p in sells.iterrows():
+            st.markdown(
+                f"#{p['predicted_rank']} **{p['ticker']}** "
+                f"— score {p['predicted_score']:.4f} @ ${p['entry_price']:,.2f}"
+            )
+
+    st.divider()
+
+    # Generate subplots
+    n = len(tickers_to_plot)
+    cols_per_row = min(5, n)
+    n_rows = (n + cols_per_row - 1) // cols_per_row
+
+    titles = []
+    for _, p in tickers_to_plot.iterrows():
+        titles.append(f"{p['ticker']} ({p['predicted_action']} #{p['predicted_rank']})")
+
+    fig = make_subplots(
+        rows=n_rows, cols=cols_per_row,
+        subplot_titles=titles,
+        vertical_spacing=0.12,
+        horizontal_spacing=0.04,
+    )
+
+    for i, (_, pred) in enumerate(tickers_to_plot.iterrows()):
+        row = i // cols_per_row + 1
+        col = i % cols_per_row + 1
+        ticker = pred["ticker"]
+        action = pred["predicted_action"]
+        entry_price = pred["entry_price"]
+        pred_date = pd.to_datetime(pred["prediction_date"])
+        maturity_date = pd.to_datetime(pred["maturity_date"])
+
+        tp = prices[prices["ticker"] == ticker].sort_values("date")
+        if len(tp) == 0:
+            continue
+
+        line_color = "#10b981" if action == "BUY" else "#ef4444"
+        marker_symbol = "triangle-up" if action == "BUY" else "triangle-down"
+
+        # Price line
+        fig.add_trace(go.Scatter(
+            x=tp["date"], y=tp["close"],
+            mode="lines", line=dict(color="#94a3b8", width=1),
+            showlegend=False,
+        ), row=row, col=col)
+
+        # Entry point marker
+        fig.add_trace(go.Scatter(
+            x=[pred_date], y=[entry_price],
+            mode="markers",
+            marker=dict(size=14, color=line_color, symbol=marker_symbol,
+                        line=dict(width=2, color="white")),
+            showlegend=False,
+            hovertemplate=(
+                f"<b>{ticker}</b><br>{action} @ ${entry_price:,.2f}<br>"
+                f"Rank #{pred['predicted_rank']}<br>"
+                f"Score: {pred['predicted_score']:.4f}<br>"
+                f"Matures: {maturity_date.strftime('%Y-%m-%d')}<extra></extra>"
+            ),
+        ), row=row, col=col)
+
+        # Maturity zone (shaded)
+        fig.add_vrect(
+            x0=pred_date, x1=maturity_date,
+            fillcolor=line_color, opacity=0.07,
+            line_width=0,
+            row=row, col=col,
+        )
+
+        # Entry price line
+        fig.add_hline(
+            y=entry_price, line_dash="dot",
+            line_color=line_color, opacity=0.4,
+            row=row, col=col,
+        )
+
+    fig.update_layout(
+        height=350 * n_rows,
+        template="plotly_white",
+        margin=dict(t=60, b=40, l=50, r=30),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
 
 
 def _render_hit_rates():
