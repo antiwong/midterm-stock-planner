@@ -74,5 +74,8 @@ htmlcov/
 *.bak
 *~
 
+# Node.js
+node_modules/
+
 # Dolt database files (added by bd init)
 .dolt/
