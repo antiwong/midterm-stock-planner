@@ -31,6 +31,7 @@ The system is managed by a **single orchestrator** (`scripts/daily_routine.py`) 
 | 9. Accuracy Calibration | Track signal accuracy, adjust exposure | [accuracy-calibration.md](accuracy-calibration.md) |
 | 10. Forward Testing | Log predictions, evaluate at 5d/63d horizons | [forward-testing.md](forward-testing.md) |
 | 11. Orchestrator | Single entry point for daily/weekly/monthly routines | [orchestrator.md](orchestrator.md) |
+| 12. React Dashboard | Trading SPA at port 5000 with FastAPI backend | [react-dashboard.md](react-dashboard.md) |
 
 ---
 

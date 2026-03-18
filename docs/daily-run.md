@@ -687,6 +687,7 @@ For detailed documentation of every technique used in the pipeline, see the **[D
 
 - [Orchestrator](daily-run/orchestrator.md) — consolidated daily/weekly/monthly entry point
 - [Forward Testing](daily-run/forward-testing.md) — prediction journal, hit rates, evaluation
+- [React Trading Dashboard](daily-run/react-dashboard.md) — React SPA (port 5000) + FastAPI (port 9000)
 - [Pipeline Overview](daily-run/pipeline-overview.md) — end-to-end execution flow
 - [Feature Engineering](daily-run/feature-engineering.md) — MACD, Bollinger, ATR, ADX formulas and rationale
 - [Walk-Forward Backtest](daily-run/walk-forward-backtest.md) — rolling window methodology, IC, overfitting detection

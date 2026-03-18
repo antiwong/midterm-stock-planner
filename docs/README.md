@@ -143,6 +143,7 @@ The [`docs/daily-run/`](daily-run/README.md) folder contains detailed technique 
 | [Accuracy Calibration](daily-run/accuracy-calibration.md) | [Reference] Adaptive exposure from signal hit rate |
 | [Daily Routine Orchestrator](daily-run/orchestrator.md) | [Reference] Single script managing all 4 portfolios, data downloads, notifications |
 | [Forward Testing Journal](daily-run/forward-testing.md) | [Reference] Prediction logging, 5d/63d horizon evaluation, accuracy tracking |
+| [React Trading Dashboard](daily-run/react-dashboard.md) | [Reference] React SPA (port 5000) + FastAPI (port 9000) for daily trading |
 
 ## Trading & Execution [Guide]
 
