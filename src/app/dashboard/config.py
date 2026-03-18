@@ -737,6 +737,15 @@ MAIN_WORKFLOW = [
     ("AI Insights", "ai_insights"),
 ]
 
+# Trading — daily use pages grouped for quick access
+TRADING = [
+    ("Paper Trading", "paper_trading"),
+    ("Forward Testing", "forward_testing"),
+    ("Multi-Portfolio", "multi_portfolio"),
+    ("Purchase Triggers", "purchase_triggers"),
+    ("Real-Time Monitoring", "realtime_monitoring"),
+]
+
 # Standalone tools
 STANDALONE_TOOLS = [
     ("Watchlist Manager", "watchlist_manager"),
@@ -744,9 +753,6 @@ STANDALONE_TOOLS = [
     ("Trigger Backtester", "trigger_backtester"),
     ("Strategy Optimizer", "strategy_optimizer"),
     ("Regression Testing", "regression_testing"),
-    ("Paper Trading", "paper_trading"),
-    ("Forward Testing", "forward_testing"),
-    ("Multi-Portfolio", "multi_portfolio"),
     ("Watchlist Comparison", "watchlist_comparison"),
     ("Compare Runs", "compare_runs"),
     ("Advanced Comparison", "advanced_comparison"),
@@ -775,11 +781,25 @@ UTILITIES = [
 ]
 
 # Combined list for backward compatibility
-PAGES = MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES
+PAGES = TRADING + MAIN_WORKFLOW + STANDALONE_TOOLS + ADVANCED_ANALYTICS + UTILITIES
 
 # Process-flow navigation phases
 # Each phase groups related pages and has a hub page
 PROCESS_PHASES = [
+    {
+        "id": "trading",
+        "label": "Trading",
+        "icon": "💹",
+        "description": "Paper trading, forward testing, and portfolio monitoring",
+        "page": "Paper Trading",
+        "children": [
+            ("Paper Trading", "paper_trading", "Alpaca paper trading P&L, positions, signals"),
+            ("Forward Testing", "forward_testing", "Prediction accuracy, signal charts, hit rates"),
+            ("Multi-Portfolio", "multi_portfolio", "Compare 4 portfolios side-by-side"),
+            ("Purchase Triggers", "purchase_triggers", "Actionable buy/sell signals"),
+            ("Real-Time Monitoring", "realtime_monitoring", "Live portfolio and market tracking"),
+        ],
+    },
     {
         "id": "dashboard",
         "label": "Dashboard",

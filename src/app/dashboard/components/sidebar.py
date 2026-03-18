@@ -10,7 +10,7 @@ from typing import Optional
 import base64
 from pathlib import Path
 
-from ..config import PAGES, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS, PROCESS_PHASES
+from ..config import PAGES, TRADING, MAIN_WORKFLOW, STANDALONE_TOOLS, ADVANCED_ANALYTICS, UTILITIES, COLORS, PROCESS_PHASES
 from ..data import load_runs, get_available_run_folders
 from ..utils import get_project_root, get_version
 from .search import render_global_search
