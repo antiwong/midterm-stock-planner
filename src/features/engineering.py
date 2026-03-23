@@ -549,24 +549,10 @@ def compute_all_features_with_sentiment(
         bars_per_day=bars_per_day,
     )
 
-    # Load sentiment features from DuckDB
-    try:
-        from ..sentiment.sentiment_adapter import load_sentimentpulse_features
-
-        sentiment_features = load_sentimentpulse_features(
-            days=sentiment_days,
-            lookbacks=sentiment_lookbacks,
-        )
-
-        if not sentiment_features.empty:
-            df = add_sentiment_features(
-                df,
-                sentiment_features,
-                fillna_value=sentiment_fillna,
-            )
-    except Exception as e:
-        import warnings
-        warnings.warn(f"Failed to add sentiment features from DuckDB: {e}")
+    # NOTE: Sentiment signals belong in the trigger layer, NOT the ML model.
+    # use_sentiment stays false permanently. The cross-sectional ranker answers
+    # "which stocks are relatively better?" — sentiment answers "is now the
+    # right moment?" (timing). See docs/sentiment-duckdb-integration-proposal.md.
 
     return df
 

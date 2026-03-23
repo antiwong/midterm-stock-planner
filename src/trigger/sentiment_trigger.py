@@ -62,33 +62,22 @@ class SentimentTrigger:
 
     def load_latest_sentiment(self, ticker: str,
                                lookback_days: int = 30) -> pd.DataFrame:
-        """Load most recent sentiment CSV rows for a ticker."""
-        files = sorted(self.sentiment_dir.glob("sentimentpulse_*.csv"))
-        dfs = []
-        for f in files[-lookback_days:]:
-            try:
-                df = pd.read_csv(f, low_memory=False)
-
+        """Load most recent sentiment rows for a ticker from DuckDB."""
+        try:
+            from src.sentiment.sentiment_adapter import load_sentimentpulse_for_trigger
+            df = load_sentimentpulse_for_trigger(ticker, lookback_days=lookback_days)
+            if not df.empty:
                 # Gap 2: Hard assertion — no feedback columns allowed
                 contamination = FORBIDDEN_COLS & set(df.columns)
                 if contamination:
                     raise ValueError(
-                        f"Look-ahead contamination in {f.name}: {contamination}"
+                        f"Look-ahead contamination for {ticker}: {contamination}"
                     )
-
-                df = df[df['ticker'] == ticker].copy()
-                if not df.empty:
-                    dfs.append(df)
-            except ValueError:
-                raise
-            except Exception:
-                continue
-        if not dfs:
+                return df.sort_values('date')
             return pd.DataFrame()
-        combined = pd.concat(dfs).sort_values('crawled_at').drop_duplicates(
-            subset=['ticker', 'date'], keep='last'
-        )
-        return combined
+        except Exception as e:
+            logger.warning("Failed to load sentiment for %s: %s", ticker, e)
+            return pd.DataFrame()
 
     def evaluate(self, ticker: str, ranker_rank: int,
                  watchlist: str) -> TriggerResult:
@@ -153,31 +142,77 @@ class SentimentTrigger:
         sentiment_momentum = ema_short - ema_long
         latest = df.iloc[-1]
 
+        def _bool(v, default=False):
+            """Safe bool conversion handling pandas NA."""
+            try:
+                if pd.isna(v):
+                    return default
+                return bool(v)
+            except (TypeError, ValueError):
+                return default
+
+        def _float(v, default=0.0):
+            """Safe float conversion handling pandas NA."""
+            try:
+                if pd.isna(v):
+                    return default
+                return float(v)
+            except (TypeError, ValueError):
+                return default
+
+        def _int(v, default=0):
+            try:
+                if pd.isna(v):
+                    return default
+                return int(v)
+            except (TypeError, ValueError):
+                return default
+
+        def _str(v, default=''):
+            try:
+                if pd.isna(v):
+                    return default
+                return str(v)
+            except (TypeError, ValueError):
+                return default
+
         return {
             'data_sufficient': True,
-            'composite_latest': float(latest.get('composite_score', 0) or 0),
+            'composite_latest': _float(latest.get('composite_score', 0) or 0),
             'ema_short': ema_short,
             'ema_long': ema_long,
             'sentiment_momentum': sentiment_momentum,
-            'buzz_ratio': float(latest.get('buzz_ratio', 1.0) or 1.0),
-            'buzz_zscore': float(latest.get('buzz_zscore', 0.0) or 0.0),
-            'source_agreement': float(latest.get('source_agreement', 0.2) or 0.2),
-            'conviction_asymmetry': float(latest.get('conviction_asymmetry', 0.0) or 0.0),
-            'options_signal': float(latest.get('options_sentiment_signal', 0.0) or 0.0),
-            'options_pcr': float(latest.get('options_pcr', 1.0) or 1.0),
-            'iv_percentile': float(latest.get('iv_percentile', 50.0) or 50.0),
-            'unusual_options_flag': bool(latest.get('unusual_options_flag', False)),
-            'unusual_options_direction': str(latest.get('unusual_options_direction', 'neutral')),
-            'trends_spike': bool(latest.get('trends_spike_flag', False)),
-            'divergence': bool(latest.get('price_divergence', False)),
-            'divergence_direction': str(latest.get('divergence_direction', 'none')),
-            'regime': str(latest.get('sentiment_regime', 'NOISE')),
-            'forward_event_detected': bool(latest.get('forward_event_detected', False)),
+            'buzz_ratio': _float(latest.get('buzz_ratio', 1.0) or 1.0),
+            'buzz_zscore': _float(latest.get('buzz_zscore', 0.0) or 0.0),
+            'source_agreement': _float(latest.get('source_agreement', 0.2) or 0.2),
+            'conviction_asymmetry': _float(latest.get('conviction_asymmetry', 0.0) or 0.0),
+            'options_signal': _float(latest.get('options_sentiment_signal', 0.0) or 0.0),
+            'options_pcr': _float(latest.get('options_pcr', 1.0) or 1.0),
+            'iv_percentile': _float(latest.get('iv_percentile', 50.0) or 50.0),
+            'unusual_options_flag': _bool(latest.get('unusual_options_flag', False)),
+            'unusual_options_direction': _str(latest.get('unusual_options_direction', 'neutral')),
+            'trends_spike': _bool(latest.get('trends_spike_flag', False)),
+            'divergence': _bool(latest.get('price_divergence', False)),
+            'divergence_direction': _str(latest.get('divergence_direction', 'none')),
+            'regime': _str(latest.get('sentiment_regime', 'NOISE')),
+            'forward_event_detected': _bool(latest.get('forward_event_detected', False)),
             'forward_event_type': latest.get('forward_event_type'),
             'days_to_event': latest.get('days_to_event'),
-            'insider_cluster_flag': bool(latest.get('insider_cluster_flag', False)),
-            'insider_signal': float(latest.get('insider_signal', 0.0) or 0.0),
-            'propagation_flag': bool(latest.get('propagation_flag', False)),
+            'insider_cluster_flag': _bool(latest.get('insider_cluster_flag', False)),
+            'insider_signal': _float(latest.get('insider_signal', 0.0) or 0.0),
+            'insider_net_30d': _float(latest.get('insider_net_30d', 0.0) or 0.0),
+            'insider_buy_count_30d': _int(latest.get('insider_buy_count_30d', 0) or 0),
+            'propagation_flag': _bool(latest.get('propagation_flag', False)),
+            'has_primary_source': _bool(latest.get('has_primary_source', False)),
+            'organic_score': _float(latest.get('organic_score', 0.0) or 0.0),
+            'headline_count': _int(latest.get('headline_count', 0) or 0),
+            'options_data_available': _bool(latest.get('options_data_available', False)),
+            'analyst_action_detected': _bool(latest.get('analyst_action_detected', False)),
+            'analyst_firm': _str(latest.get('analyst_firm', '') or ''),
+            'analyst_action_type': _str(latest.get('analyst_action_type', '') or ''),
+            'earnings_days_to': latest.get('earnings_days_to'),
+            'earnings_season_flag': _str(latest.get('earnings_season_flag', '') or ''),
+            'forward_event_date': _str(latest.get('forward_event_date', '') or ''),
         }
 
     def _evaluate_signal(self, ticker: str, f: Dict) -> TriggerResult:
@@ -191,9 +226,33 @@ class SentimentTrigger:
         ema = f['ema_short']
         reasons = []
 
+        # GATE: Block propagated signals without organic corroboration
+        if f.get('propagation_flag') and not f.get('has_primary_source'):
+            organic_count = f.get('headline_count', 0)
+            if organic_count < 2:
+                reasons.append("Propagated signal — insufficient organic corroboration")
+                return TriggerResult(
+                    ticker=ticker, signal=TriggerSignal.HOLD,
+                    confidence=0.3, composite_score=score,
+                    options_signal=f['options_signal'], trends_spike=f['trends_spike'],
+                    regime=f['regime'], forward_event=f.get('forward_event_type'),
+                    days_to_event=f.get('days_to_event'),
+                    reasoning=" | ".join(reasons),
+                )
+
+        # FLAG: Earnings proximity — add to reasons
+        earnings_days = f.get('earnings_days_to')
+        if earnings_days is not None and 0 < earnings_days <= 7:
+            reasons.append(f"Earnings in {int(earnings_days)}d — elevated uncertainty")
+
+        # FLAG: Analyst action
+        if f.get('analyst_action_detected') and f.get('analyst_firm'):
+            reasons.append(f"Analyst: {f['analyst_firm']} {f.get('analyst_action_type', '')}")
+
         # Options veto
         veto = (
-            f['options_pcr'] > options_veto_pcr
+            f.get('options_data_available', False)
+            and f['options_pcr'] > options_veto_pcr
             and f['iv_percentile'] > options_veto_iv
             and f['options_signal'] < -0.3
         )
@@ -258,8 +317,13 @@ class SentimentTrigger:
                 conf += 0.05
             if f['options_signal'] > 0.1:
                 conf += 0.07
+            # Source agreement: high agreement = reliable signal (boost)
+            # source_agreement is std dev of source scores — lower = more agreement
             if f['source_agreement'] < 0.15:
                 conf += 0.05
+            elif f['source_agreement'] > 0.30:
+                conf -= 0.10
+                reasons.append(f"Source disagreement (std={f['source_agreement']:.2f})")
             # Gap 8: Insider cluster buy upgrade
             if f.get('insider_cluster_flag'):
                 conf += 0.10
@@ -273,6 +337,35 @@ class SentimentTrigger:
             return TriggerResult(
                 ticker=ticker, signal=TriggerSignal.BUY,
                 confidence=conf, composite_score=score,
+                options_signal=f['options_signal'], trends_spike=f['trends_spike'],
+                regime=f['regime'], forward_event=f.get('forward_event_type'),
+                days_to_event=f.get('days_to_event'),
+                reasoning=" | ".join(reasons),
+            )
+
+        # MODIFIER: Conviction asymmetry — upgrade HOLD to BUY
+        conviction_asym = f.get('conviction_asymmetry', 0)
+        if conviction_asym and conviction_asym > 0.4 and score > 0.10:
+            reasons.append(f"Conviction asymmetry {conviction_asym:.2f} — bullish evidence dominant")
+            conf = 0.55
+            if f.get('insider_cluster_flag'):
+                conf += 0.10
+            return TriggerResult(
+                ticker=ticker, signal=TriggerSignal.BUY,
+                confidence=min(conf, 1.0), composite_score=score,
+                options_signal=f['options_signal'], trends_spike=f['trends_spike'],
+                regime=f['regime'], forward_event=f.get('forward_event_type'),
+                days_to_event=f.get('days_to_event'),
+                reasoning=" | ".join(reasons),
+            )
+
+        # MODIFIER: Insider cluster buy upgrade from HOLD
+        if f.get('insider_cluster_flag') and score > 0.10:
+            reasons.append(f"Insider cluster buy ({f.get('insider_buy_count_30d', '?')} buyers, "
+                           f"net ${f.get('insider_net_30d', 0):,.0f})")
+            return TriggerResult(
+                ticker=ticker, signal=TriggerSignal.BUY,
+                confidence=0.55, composite_score=score,
                 options_signal=f['options_signal'], trends_spike=f['trends_spike'],
                 regime=f['regime'], forward_event=f.get('forward_event_type'),
                 days_to_event=f.get('days_to_event'),
