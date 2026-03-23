@@ -85,8 +85,13 @@ features:
   include_momentum: false     # Momentum hurts cross-sectional model (-0.24 Sharpe)
   include_mean_reversion: false  # Mean reversion adds noise
   horizon_days: 63
-  use_sentiment: false
-  sentiment_source: news
+  # ── SENTIMENT IN RANKER ─────────────────────────────────────────────────
+  # DO NOT SET TO TRUE. Sentiment in the cross-sectional ranker degrades
+  # Sharpe by -0.18 to -0.28. Sentiment is consumed ONLY by the Sentiment
+  # Trigger Layer (sentiment_trigger.*), which is architecturally separate.
+  # See sentimental_blogs/docs/10-improvement-suggestions.md for root cause.
+  use_sentiment: false        # PERMANENTLY FALSE — do not change
+  sentiment_source: news      # Legacy — superseded by SentimentPulse
   sentiment_lookbacks:
   - 1
   - 7
@@ -105,6 +110,9 @@ features:
     rotation_lookback: 20     # Capital rotation feature lookback (days, tunable 10-42)
     include_btc: true         # Include BTC-USD rotation features
 sentiment:
+  # Legacy sentiment config — superseded by SentimentPulse + Trigger Layer.
+  # Kept for backward compatibility during transition. Will be removed after
+  # 90 days of stable SentimentPulse operation. See Gap 6 in gap analysis.
   news_data_path: null
   model_type: lexicon
   text_column: headline
@@ -117,7 +125,33 @@ sentiment:
   min_daily_count: 1
   include_volume_features: true
   include_trend_features: true
-  fillna_value: 0.0
+  ranker_fillna_value: 0.0    # Renamed from fillna_value (Gap 5: only applies to ranker)
+  fillna_value: 0.0           # Keep old key for compat
+
+# ── SENTIMENT TRIGGER LAYER (NEW ARCHITECTURE) ────────────────────────────
+# Operates AFTER the cross-sectional ranker. The ranker produces candidates;
+# the trigger layer gates entry timing using SentimentPulse data.
+# Set enabled=true when SentimentPulse has ≥30 days of data.
+sentiment_trigger:
+  enabled: false              # Set true after SentimentPulse is stable
+  source: "sentimentpulse"
+  data_dir: "data/sentiment/"
+  feedback_dir: "data/sentiment/feedback/"
+  no_data_behavior: skip      # skip | hold | noise (Gap 5)
+  entry_confirmation_threshold: 0.20
+  divergence_boost: true
+  options_veto_pcr: 1.8
+  options_veto_iv_pct: 85
+  unusual_options_override: true
+  ema_spans: [3, 7]
+  decay_halflife_by_category:
+    earnings: 12
+    management: 30
+    product: 6
+    macro: 2
+    policy: 17
+    competition: 5
+    other: 4
 cli:
   output_format: table
   verbose: true
