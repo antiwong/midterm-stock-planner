@@ -35,6 +35,7 @@ Cron (SGT timezone — Tue-Sat 6:30 AM = Mon-Fri 5:30 PM ET):
 """
 
 import argparse
+import fcntl
 import json
 import logging
 import os
@@ -57,6 +58,8 @@ try:
 except ImportError:
     pass
 
+LOCK_DIR = PROJECT_ROOT / "logs"
+
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -67,6 +70,12 @@ PORTFOLIOS = [
     {"watchlist": "tech_giants", "local": True, "capital": 100000},
     {"watchlist": "semiconductors", "local": True, "capital": 100000},
     {"watchlist": "precious_metals", "local": True, "capital": 100000},
+    {"watchlist": "sg_reits", "local": True, "capital": 100000},
+    {"watchlist": "sg_blue_chips", "local": True, "capital": 100000},
+    {"watchlist": "anthony_watchlist", "local": True, "capital": 13100},  # Real portfolio ~$13.1k
+    {"watchlist": "sp500", "local": True, "capital": 100000},
+    {"watchlist": "clean_energy", "local": True, "capital": 100000},
+    {"watchlist": "etfs", "local": True, "capital": 100000},
 ]
 
 PREDICTION_HORIZONS = [5, 63]  # days
@@ -140,6 +149,51 @@ def get_all_tickers(watchlists: List[str]) -> List[str]:
     return sorted(all_tickers)
 
 
+def _run_single_portfolio(p: Dict) -> Dict:
+    """Run a single portfolio engine. Module-level for ProcessPoolExecutor."""
+    import sqlite3
+    from datetime import datetime as _dt
+    wl = p["watchlist"]
+    today = _dt.now().strftime("%Y-%m-%d")
+    try:
+        from scripts.paper_trading import PaperTradingEngine
+        engine = PaperTradingEngine(
+            watchlist=wl,
+            initial_capital=p["capital"],
+            force_local=p["local"],
+        )
+        engine.run_daily(skip_refresh=True)
+
+        # Read status from DB
+        db_path = DATA_DIR / f"paper_trading_{wl}.db"
+        if not db_path.exists():
+            return {"status": "success"}
+        conn = sqlite3.connect(str(db_path))
+        conn.row_factory = sqlite3.Row
+        snap = conn.execute(
+            "SELECT portfolio_value, daily_return, cumulative_return "
+            "FROM daily_snapshots ORDER BY date DESC LIMIT 1"
+        ).fetchone()
+
+        # Get today's trades (rebalancing)
+        trades = conn.execute(
+            "SELECT ticker, action, shares, price, value "
+            "FROM trades WHERE date LIKE ? ORDER BY action, ticker",
+            (f"{today}%",),
+        ).fetchall()
+        trades_list = [dict(t) for t in trades]
+
+        conn.close()
+        result = {"status": "success", "trades": trades_list}
+        if snap:
+            result["portfolio_value"] = snap["portfolio_value"]
+            result["daily_return"] = snap["daily_return"]
+            result["cumulative_return"] = snap["cumulative_return"]
+        return result
+    except Exception as e:
+        return {"status": "error", "error": str(e)}
+
+
 def post_webhook(url: Optional[str], message: str, logger: logging.Logger):
     """Post message to a webhook URL (Slack or Google Chat)."""
     if not url:
@@ -152,6 +206,64 @@ def post_webhook(url: Optional[str], message: str, logger: logging.Logger):
             logger.warning(f"Webhook returned {resp.status_code}: {resp.text[:100]}")
     except Exception as e:
         logger.warning(f"Webhook failed: {e}")
+
+
+def acquire_daily_lock(mode: str, logger: logging.Logger) -> Optional[int]:
+    """Acquire a lock file to ensure the routine runs only once per day.
+
+    Returns the file descriptor if the lock was acquired, None if already ran today.
+    The lock file contains the date; if the date matches today, we skip.
+    The file lock (flock) prevents concurrent runs.
+    """
+    LOCK_DIR.mkdir(exist_ok=True)
+    lock_path = LOCK_DIR / f".{mode}_routine.lock"
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Check if already ran today
+    if lock_path.exists():
+        try:
+            content = lock_path.read_text().strip()
+            if content == today_str:
+                logger.info(f"{mode} routine already ran today ({today_str}) — skipping.")
+                return None
+        except Exception:
+            pass
+
+    # Acquire exclusive file lock to prevent concurrent runs
+    fd = os.open(str(lock_path), os.O_RDWR | os.O_CREAT)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        logger.info(f"{mode} routine is already running — skipping.")
+        return None
+
+    # Double-check date after acquiring lock (race condition guard)
+    try:
+        content = os.read(fd, 64).decode().strip()
+        if content == today_str:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+            os.close(fd)
+            logger.info(f"{mode} routine already ran today ({today_str}) — skipping.")
+            return None
+    except Exception:
+        pass
+
+    return fd
+
+
+def stamp_daily_lock(mode: str, fd: int):
+    """Write today's date to the lock file and release it."""
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    lock_path = LOCK_DIR / f".{mode}_routine.lock"
+    try:
+        os.lseek(fd, 0, os.SEEK_SET)
+        os.ftruncate(fd, 0)
+        os.write(fd, today_str.encode())
+        fcntl.flock(fd, fcntl.LOCK_UN)
+        os.close(fd)
+    except Exception:
+        pass
 
 
 # ---------------------------------------------------------------------------
@@ -182,40 +294,88 @@ class DailyRoutine:
 
         if not is_us_trading_day():
             self.logger.info("Not a US trading day — skipping.")
-            self._notify("Daily routine skipped — US market closed today.")
+            self._notify(":moon: Daily routine skipped — US market closed today.")
             return {"skipped": True, "reason": "not_trading_day"}
 
+        self._notify(":rocket: Daily routine STARTED (8 steps)")
+        start_time = datetime.now()
+
         results: Dict[str, Any] = {}
+        step_statuses: list[str] = []
 
-        # 1. Shared data refresh
-        results["data_refresh"] = self._refresh_all_data()
+        def _run_step(step_num: int, name: str, fn, **kwargs):
+            """Run a step with start/complete Slack notifications."""
+            self._notify(f":hourglass_flowing_sand: [{step_num}/8] {name} — starting...")
+            step_start = datetime.now()
+            try:
+                result = fn(**kwargs) if kwargs else fn()
+                elapsed_s = (datetime.now() - step_start).total_seconds()
+                status_line = self._step_status(name, result)
+                step_statuses.append(f"[{step_num}/8] {status_line} ({elapsed_s:.0f}s)")
+                self._notify(f"{status_line} ({elapsed_s:.0f}s)")
+                return result
+            except Exception as e:
+                elapsed_s = (datetime.now() - step_start).total_seconds()
+                err_line = f":x: [{step_num}/8] {name}: FAILED — {str(e)[:150]} ({elapsed_s:.0f}s)"
+                step_statuses.append(err_line)
+                self._notify(err_line)
+                raise
 
-        # 2. Sentiment pipeline
-        if self.skip_sentiment:
-            self.logger.info("--- Sentiment Pipeline (SKIPPED) ---")
-            results["sentiment"] = {"status": "skipped", "reason": "skip_sentiment flag"}
-        else:
-            results["sentiment"] = self._run_sentiment_pipeline()
+        try:
+            # 1. Shared data refresh
+            results["data_refresh"] = _run_step(1, "Data Refresh", self._refresh_all_data)
 
-        # 3. Moby email parsing
-        results["moby_parse"] = self._run_moby_parser()
+            # 2. Sentiment pipeline
+            if self.skip_sentiment:
+                self.logger.info("--- Sentiment Pipeline (SKIPPED) ---")
+                results["sentiment"] = {"status": "skipped", "reason": "skip_sentiment flag"}
+                step_statuses.append("[2/8] :fast_forward: Sentiment: skipped")
+                self._notify(":fast_forward: [2/8] Sentiment — skipped (flag)")
+            else:
+                results["sentiment"] = _run_step(2, "Sentiment", self._run_sentiment_pipeline)
 
-        # 4. Portfolio runs (error-isolated)
-        results["portfolios"] = self._run_all_portfolios()
+            # 3. Moby email parsing
+            results["moby_parse"] = _run_step(3, "Moby Parsing", self._run_moby_parser)
 
-        # 5. Forward prediction journal
-        results["predictions"] = self._log_forward_predictions()
+            # 4. Portfolio runs (error-isolated)
+            results["portfolios"] = _run_step(4, "Portfolio Runs", self._run_all_portfolios)
 
-        # 6. Evaluate matured predictions
-        results["evaluations"] = self._evaluate_matured_predictions()
+            # 5. Personal portfolio alerts
+            results["personal_alerts"] = _run_step(5, "Personal Alerts", self._check_personal_portfolio_alerts, results=results)
 
-        # 7. Summary + notify
-        summary = self._format_daily_summary(results)
-        self.logger.info("\n" + summary)
-        self._notify(summary)
+            # 6. Forward prediction journal
+            results["predictions"] = _run_step(6, "Forward Predictions", self._log_forward_predictions)
 
-        self.logger.info("DAILY ROUTINE COMPLETE")
-        return results
+            # 7. Evaluate matured predictions
+            results["evaluations"] = _run_step(7, "Evaluate Predictions", self._evaluate_matured_predictions)
+
+            # 8. Generate recommendations
+            results["recommendations"] = _run_step(8, "Recommendations", self._generate_recommendations)
+
+            # Final summary
+            elapsed = datetime.now() - start_time
+            summary = self._format_daily_summary(results)
+            self.logger.info("\n" + summary)
+
+            recap = "\n".join(step_statuses)
+            self._notify(
+                f":white_check_mark: Daily routine COMPLETED in {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\n"
+                f"Step recap:\n{recap}\n\n{summary}"
+            )
+
+            self.logger.info("DAILY ROUTINE COMPLETE")
+            return results
+
+        except Exception as e:
+            elapsed = datetime.now() - start_time
+            recap = "\n".join(step_statuses) if step_statuses else "(failed before any step completed)"
+            error_msg = (
+                f":x: Daily routine FAILED after {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\n"
+                f"Step recap:\n{recap}\n\nError: {e}\n\n{traceback.format_exc()[-500:]}"
+            )
+            self.logger.error(f"DAILY ROUTINE FAILED: {e}\n{traceback.format_exc()}")
+            self._notify(error_msg)
+            raise
 
     # ------------------------------------------------------------------
     # WEEKLY
@@ -228,17 +388,29 @@ class DailyRoutine:
         self.logger.info("WEEKLY ROUTINE START")
         self.logger.info("=" * 60)
 
-        results: Dict[str, Any] = {}
-        results["weekly_report"] = self._generate_weekly_report()
-        results["drift_check"] = self._check_portfolio_drift()
-        results["forward_review"] = self._forward_test_weekly_review()
+        self._notify(":chart_with_upwards_trend: Weekly routine STARTED")
+        start_time = datetime.now()
 
-        summary = self._format_weekly_summary(results)
-        self.logger.info("\n" + summary)
-        self._notify(summary)
+        try:
+            results: Dict[str, Any] = {}
+            results["weekly_report"] = self._generate_weekly_report()
+            results["drift_check"] = self._check_portfolio_drift()
+            results["forward_review"] = self._forward_test_weekly_review()
 
-        self.logger.info("WEEKLY ROUTINE COMPLETE")
-        return results
+            elapsed = datetime.now() - start_time
+            summary = self._format_weekly_summary(results)
+            self.logger.info("\n" + summary)
+            self._notify(f":white_check_mark: Weekly routine COMPLETED in {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\n{summary}")
+
+            self.logger.info("WEEKLY ROUTINE COMPLETE")
+            return results
+
+        except Exception as e:
+            elapsed = datetime.now() - start_time
+            error_msg = f":x: Weekly routine FAILED after {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\nError: {e}\n\n{traceback.format_exc()[-500:]}"
+            self.logger.error(f"WEEKLY ROUTINE FAILED: {e}\n{traceback.format_exc()}")
+            self._notify(error_msg)
+            raise
 
     # ------------------------------------------------------------------
     # MONTHLY
@@ -251,63 +423,129 @@ class DailyRoutine:
         self.logger.info("MONTHLY ROUTINE START")
         self.logger.info("=" * 60)
 
-        results: Dict[str, Any] = {}
-        results["fundamentals"] = self._download_fundamentals()
-        results["forward_63d"] = self._evaluate_63day_predictions()
+        self._notify(":wrench: Monthly routine STARTED")
+        start_time = datetime.now()
 
-        summary = self._format_monthly_summary(results)
-        self.logger.info("\n" + summary)
-        self._notify(summary)
+        try:
+            results: Dict[str, Any] = {}
+            results["fundamentals"] = self._download_fundamentals()
+            results["forward_63d"] = self._evaluate_63day_predictions()
 
-        self.logger.info("MONTHLY ROUTINE COMPLETE")
-        return results
+            elapsed = datetime.now() - start_time
+            summary = self._format_monthly_summary(results)
+            self.logger.info("\n" + summary)
+            self._notify(f":white_check_mark: Monthly routine COMPLETED in {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\n{summary}")
+
+            self.logger.info("MONTHLY ROUTINE COMPLETE")
+            return results
+
+        except Exception as e:
+            elapsed = datetime.now() - start_time
+            error_msg = f":x: Monthly routine FAILED after {elapsed.seconds // 60}m {elapsed.seconds % 60}s\n\nError: {e}\n\n{traceback.format_exc()[-500:]}"
+            self.logger.error(f"MONTHLY ROUTINE FAILED: {e}\n{traceback.format_exc()}")
+            self._notify(error_msg)
+            raise
 
     # ------------------------------------------------------------------
     # Data Refresh
     # ------------------------------------------------------------------
 
     def _refresh_all_data(self) -> Dict:
-        """Download prices for union of all 4 watchlists (deduplicated)."""
+        """Download prices for union of all watchlists (deduplicated).
+        Uses Alpaca for US tickers and yfinance for SGX (.SI) tickers."""
         self.logger.info("--- Data Refresh ---")
         watchlist_names = [p["watchlist"] for p in PORTFOLIOS]
         all_tickers = get_all_tickers(watchlist_names)
-        self.logger.info(f"Refreshing prices for {len(all_tickers)} unique tickers "
-                         f"across {len(watchlist_names)} watchlists")
+
+        # Split into US (Alpaca) and SGX (yfinance)
+        sgx_tickers = [t for t in all_tickers if t.endswith(".SI")]
+        us_tickers = [t for t in all_tickers if not t.endswith(".SI")]
+        self.logger.info(f"Refreshing prices: {len(us_tickers)} US (Alpaca) + {len(sgx_tickers)} SGX (yfinance)")
 
         if self.dry_run:
             return {"status": "dry_run", "tickers": len(all_tickers)}
 
-        try:
-            from src.data.alpaca_client import AlpacaClient
-            client = AlpacaClient()
-            end_date = datetime.now().strftime("%Y-%m-%d")
-            start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-            df = client.download(
-                tickers=all_tickers,
-                start_date=start_date,
-                end_date=end_date,
-                interval="1d",
-            )
-            # Append to existing prices_daily.csv
-            output_path = DATA_DIR / "prices_daily.csv"
-            if output_path.exists() and df is not None and len(df) > 0:
+        output_path = DATA_DIR / "prices_daily.csv"
+        end_date = datetime.now().strftime("%Y-%m-%d")
+        start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        all_dfs = []
+
+        # US tickers via Alpaca
+        if us_tickers:
+            try:
+                from src.data.alpaca_client import AlpacaClient
+                client = AlpacaClient()
+                df = client.download(
+                    tickers=us_tickers,
+                    start_date=start_date,
+                    end_date=end_date,
+                    interval="1d",
+                )
+                if df is not None and len(df) > 0:
+                    all_dfs.append(df)
+                    self.logger.info(f"  Alpaca: {len(df)} rows for {len(us_tickers)} US tickers")
+            except Exception as e:
+                self.logger.error(f"  Alpaca download failed: {e}")
+
+        # SGX tickers via yfinance
+        if sgx_tickers:
+            try:
+                import yfinance as yf
+                self.logger.info(f"  Downloading {len(sgx_tickers)} SGX tickers via yfinance...")
+                yf_data = yf.download(
+                    sgx_tickers,
+                    start=start_date,
+                    end=end_date,
+                    group_by="ticker",
+                    auto_adjust=True,
+                    threads=True,
+                )
+                rows = []
+                for ticker in sgx_tickers:
+                    try:
+                        if len(sgx_tickers) == 1:
+                            t_df = yf_data
+                        else:
+                            t_df = yf_data[ticker] if ticker in yf_data.columns.get_level_values(0) else None
+                        if t_df is None or t_df.empty:
+                            continue
+                        t_df = t_df.dropna(subset=["Close"])
+                        for idx, row in t_df.iterrows():
+                            rows.append({
+                                "date": idx.strftime("%Y-%m-%d"),
+                                "ticker": ticker,
+                                "open": round(float(row.get("Open", 0)), 4),
+                                "high": round(float(row.get("High", 0)), 4),
+                                "low": round(float(row.get("Low", 0)), 4),
+                                "close": round(float(row.get("Close", 0)), 4),
+                                "volume": int(row.get("Volume", 0)),
+                            })
+                    except Exception as e:
+                        self.logger.warning(f"  yfinance {ticker} failed: {e}")
+                if rows:
+                    sgx_df = pd.DataFrame(rows)
+                    all_dfs.append(sgx_df)
+                    self.logger.info(f"  yfinance: {len(rows)} rows for {len(sgx_tickers)} SGX tickers")
+            except Exception as e:
+                self.logger.error(f"  yfinance download failed: {e}")
+
+        # Merge and save
+        if all_dfs:
+            new_data = pd.concat(all_dfs, ignore_index=True)
+            if output_path.exists():
                 existing = pd.read_csv(output_path)
-                combined = pd.concat([existing, df], ignore_index=True).drop_duplicates(
+                combined = pd.concat([existing, new_data], ignore_index=True).drop_duplicates(
                     subset=["date", "ticker"]
                 )
                 combined.to_csv(output_path, index=False)
-                self.logger.info(f"Data refresh complete: {len(all_tickers)} tickers, "
-                                 f"{len(df)} new rows appended")
-            elif df is not None and len(df) > 0:
-                df.to_csv(output_path, index=False)
-                self.logger.info(f"Data refresh complete: {len(all_tickers)} tickers, "
-                                 f"{len(df)} rows (fresh)")
+                self.logger.info(f"Data refresh complete: {len(new_data)} new rows appended")
             else:
-                self.logger.warning("Data refresh returned no data")
-            return {"status": "success", "tickers": len(all_tickers)}
-        except Exception as e:
-            self.logger.error(f"Data refresh failed: {e}")
-            return {"status": "error", "error": str(e)}
+                new_data.to_csv(output_path, index=False)
+                self.logger.info(f"Data refresh complete: {len(new_data)} rows (fresh)")
+        else:
+            self.logger.warning("Data refresh returned no data")
+
+        return {"status": "success", "tickers": len(all_tickers), "us": len(us_tickers), "sgx": len(sgx_tickers)}
 
     # ------------------------------------------------------------------
     # Sentiment
@@ -411,32 +649,51 @@ class DailyRoutine:
     # ------------------------------------------------------------------
 
     def _run_all_portfolios(self) -> Dict:
-        """Run 4 portfolio engines with error isolation."""
-        self.logger.info("--- Portfolio Runs ---")
+        """Run portfolio engines in parallel with error isolation."""
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+
+        self.logger.info("--- Portfolio Runs (parallel) ---")
+
+        if self.dry_run:
+            return {p["watchlist"]: {"status": "dry_run"} for p in PORTFOLIOS}
+
+        # Alpaca (non-local) must run alone to avoid API rate limits
+        alpaca_portfolios = [p for p in PORTFOLIOS if not p["local"]]
+        local_portfolios = [p for p in PORTFOLIOS if p["local"]]
+
         results = {}
 
-        for p in PORTFOLIOS:
+        # Run Alpaca portfolios sequentially (API rate limits)
+        for p in alpaca_portfolios:
             wl = p["watchlist"]
-            self.logger.info(f"Running {wl} ({'local' if p['local'] else 'Alpaca'})...")
-
-            if self.dry_run:
-                results[wl] = {"status": "dry_run"}
-                continue
-
+            self.logger.info(f"Running {wl} (Alpaca)...")
             try:
-                from scripts.paper_trading import PaperTradingEngine
-                engine = PaperTradingEngine(
-                    watchlist=wl,
-                    initial_capital=p["capital"],
-                    force_local=p["local"],
-                )
-                engine.run_daily(skip_refresh=True)  # Data already refreshed
-                results[wl] = self._get_portfolio_status(wl)
-                results[wl]["status"] = "success"
-                self.logger.info(f"  {wl}: OK")
+                result = _run_single_portfolio(p)
+                results[wl] = result
+                self.logger.info(f"  {wl}: {result['status']}")
             except Exception as e:
-                self.logger.error(f"  {wl} FAILED: {e}\n{traceback.format_exc()}")
+                self.logger.error(f"  {wl} FAILED: {e}")
                 results[wl] = {"status": "error", "error": str(e)}
+
+        # Run local portfolios in parallel
+        if local_portfolios:
+            max_workers = min(len(local_portfolios), 4)
+            self.logger.info(f"Running {len(local_portfolios)} local portfolios in parallel (workers={max_workers})...")
+
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                future_to_wl = {
+                    executor.submit(_run_single_portfolio, p): p["watchlist"]
+                    for p in local_portfolios
+                }
+                for future in as_completed(future_to_wl):
+                    wl = future_to_wl[future]
+                    try:
+                        result = future.result(timeout=600)
+                        results[wl] = result
+                        self.logger.info(f"  {wl}: {result['status']}")
+                    except Exception as e:
+                        self.logger.error(f"  {wl} FAILED: {e}")
+                        results[wl] = {"status": "error", "error": str(e)}
 
         return results
 
@@ -482,6 +739,142 @@ class DailyRoutine:
             }
         except Exception:
             return {}
+
+    # ------------------------------------------------------------------
+    # Personal Portfolio Alerts
+    # ------------------------------------------------------------------
+
+    def _check_personal_portfolio_alerts(self, results: Dict) -> Dict:
+        """Check for signal contradictions and P&L thresholds on personal portfolios."""
+        import sqlite3
+        alerts = []
+
+        for p in PORTFOLIOS:
+            wl = p["watchlist"]
+            # Load personal config for this watchlist
+            personal_dir = PROJECT_ROOT / "config" / "personal"
+            if not personal_dir.exists():
+                continue
+
+            personal_cfg = None
+            try:
+                import yaml
+                for yaml_file in personal_dir.glob("*.yaml"):
+                    with open(yaml_file) as f:
+                        cfg = yaml.safe_load(f)
+                    if not cfg or "portfolio" not in cfg:
+                        continue
+                    # Collect tickers from personal config
+                    p_tickers = set()
+                    for pos in cfg["portfolio"].get("us_positions", []):
+                        p_tickers.add(pos["ticker"])
+                    for pos in cfg["portfolio"].get("sgx_positions", []):
+                        p_tickers.add(pos["ticker"])
+                    # Match against watchlist
+                    wl_cfg_path = PROJECT_ROOT / "config" / "watchlists.yaml"
+                    with open(wl_cfg_path) as f:
+                        wl_cfg = yaml.safe_load(f)
+                    wl_symbols = set(
+                        wl_cfg.get("watchlists", {}).get(wl, {}).get("symbols", [])
+                    )
+                    if wl_symbols and p_tickers == wl_symbols:
+                        personal_cfg = cfg
+                        break
+            except Exception:
+                continue
+
+            if not personal_cfg:
+                continue
+
+            alert_cfg = personal_cfg.get("alerts", {})
+            all_positions = (
+                personal_cfg["portfolio"].get("us_positions", [])
+                + personal_cfg["portfolio"].get("sgx_positions", [])
+            )
+            holdings = {pos["ticker"]: pos for pos in all_positions}
+
+            # Read today's signals from the paper trading DB
+            db_path = DATA_DIR / f"paper_trading_{wl}.db"
+            if not db_path.exists():
+                continue
+
+            try:
+                conn = sqlite3.connect(str(db_path))
+                conn.row_factory = sqlite3.Row
+                today = datetime.now().strftime("%Y-%m-%d")
+                signals = conn.execute(
+                    "SELECT ticker, action, prediction, rank FROM signals WHERE date = ?",
+                    (today,)
+                ).fetchall()
+                conn.close()
+            except Exception:
+                continue
+
+            if not signals:
+                continue
+
+            # Check signal contradictions (SELL on a stock you hold)
+            if alert_cfg.get("signal_contradiction", True):
+                for sig in signals:
+                    ticker = sig["ticker"]
+                    action = sig["action"]
+                    if ticker in holdings and action == "SELL":
+                        pos = holdings[ticker]
+                        alerts.append(
+                            f"SIGNAL CONFLICT: Model says SELL {ticker} "
+                            f"(rank={sig['rank']}, score={sig['prediction']:.3f}) "
+                            f"— you hold {pos['shares']:.2f} shares @ ${pos['cost_basis']:.2f}"
+                        )
+                    elif ticker in holdings and action == "BUY":
+                        pos = holdings[ticker]
+                        alerts.append(
+                            f"SIGNAL CONFIRM: Model says BUY {ticker} "
+                            f"(rank={sig['rank']}, score={sig['prediction']:.3f}) "
+                            f"— you hold {pos['shares']:.2f} shares @ ${pos['cost_basis']:.2f}"
+                        )
+
+            # Check P&L thresholds against current prices
+            pnl_cfg = alert_cfg.get("pnl_thresholds", {})
+            loss_pct = pnl_cfg.get("loss_pct", -10.0)
+            gain_pct = pnl_cfg.get("gain_pct", 20.0)
+
+            try:
+                price_path = DATA_DIR / "prices_daily.csv"
+                price_df = pd.read_csv(price_path, parse_dates=["date"])
+                latest_prices = (
+                    price_df.sort_values("date")
+                    .groupby("ticker")
+                    .last()["close"]
+                    .to_dict()
+                )
+
+                for ticker, pos in holdings.items():
+                    current = latest_prices.get(ticker)
+                    if current is None:
+                        continue
+                    pnl_pct = ((current - pos["cost_basis"]) / pos["cost_basis"]) * 100
+                    if pnl_pct <= loss_pct:
+                        alerts.append(
+                            f"P&L ALERT: {ticker} down {pnl_pct:.1f}% "
+                            f"(${pos['cost_basis']:.2f} -> ${current:.2f}, "
+                            f"threshold: {loss_pct}%)"
+                        )
+                    elif pnl_pct >= gain_pct:
+                        alerts.append(
+                            f"P&L ALERT: {ticker} up {pnl_pct:.1f}% "
+                            f"(${pos['cost_basis']:.2f} -> ${current:.2f}, "
+                            f"threshold: +{gain_pct}%)"
+                        )
+            except Exception as e:
+                self.logger.warning(f"P&L threshold check failed: {e}")
+
+        if alerts:
+            self.logger.info("--- Personal Portfolio Alerts ---")
+            alert_msg = "PERSONAL PORTFOLIO ALERTS\n" + "\n".join(f"  {a}" for a in alerts)
+            self.logger.info(alert_msg)
+            self._notify(alert_msg)
+
+        return {"alerts": alerts}
 
     # ------------------------------------------------------------------
     # Forward Prediction Journal
@@ -793,14 +1186,253 @@ class DailyRoutine:
     # Notifications
     # ------------------------------------------------------------------
 
+    def _step_status(self, name: str, result: dict) -> str:
+        """Format a one-line status string for a step result."""
+        status = result.get("status", "unknown")
+        if status == "error":
+            return f":x: {name}: FAILED — {result.get('error', 'unknown error')[:100]}"
+        if status == "skipped":
+            reason = result.get("reason", "")
+            return f":fast_forward: {name}: skipped ({reason})"
+        if status == "dry_run":
+            return f":test_tube: {name}: dry run"
+
+        # Build detail string from known keys
+        parts = []
+        for key in ("tickers", "logged", "evaluated", "hits", "total", "count",
+                     "picks", "stocks", "recommendations"):
+            if key in result:
+                parts.append(f"{key}={result[key]}")
+        # Portfolio results (nested dict of watchlist -> result)
+        if isinstance(result, dict) and all(isinstance(v, dict) for v in result.values()):
+            ok = sum(1 for v in result.values() if v.get("status") == "success")
+            fail = sum(1 for v in result.values() if v.get("status") == "error")
+            parts = [f"{ok} ok, {fail} failed"]
+
+        detail = ", ".join(parts) if parts else "ok"
+        return f":white_check_mark: {name}: {detail}"
+
     def _notify(self, message: str):
         """Send notification to Slack + Google Chat."""
-        post_webhook(self.slack_url, message, self.logger)
-        post_webhook(self.gchat_url, message, self.logger)
+        tag = os.environ.get("SP_INSTANCE", "SP")
+        tagged = f"[{tag}] {message}"
+        post_webhook(self.slack_url, tagged, self.logger)
+        post_webhook(self.gchat_url, tagged, self.logger)
 
     # ------------------------------------------------------------------
     # Summary Formatters
     # ------------------------------------------------------------------
+
+
+    def _generate_recommendations(self) -> Dict:
+        """Generate fresh recommendations from today's top signals across all portfolios."""
+        self.logger.info("--- Generate Recommendations ---")
+        if self.dry_run:
+            return {"status": "dry_run"}
+
+        import sqlite3
+        import json
+
+        today = datetime.now().strftime("%Y-%m-%d")
+        run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Load sector mapping
+        sector_map = {}
+        sectors_path = DATA_DIR / "sectors.json"
+        if sectors_path.exists():
+            try:
+                with open(sectors_path) as f:
+                    raw = json.load(f)
+                    sector_map = {k: v for k, v in raw.items() if isinstance(v, str)}
+            except Exception:
+                pass
+
+        # Load latest prices
+        price_map = {}
+        prices_path = DATA_DIR / "prices_daily.csv"
+        if prices_path.exists():
+            try:
+                pdf = pd.read_csv(prices_path)
+                if "date" in pdf.columns:
+                    pdf["date"] = pd.to_datetime(pdf["date"], format="mixed")
+                ticker_col = "ticker" if "ticker" in pdf.columns else "symbol"
+                for ticker in pdf[ticker_col].unique():
+                    tdf = pdf[pdf[ticker_col] == ticker].sort_values("date")
+                    if len(tdf) > 0 and "close" in tdf.columns:
+                        price_map[ticker] = float(tdf.iloc[-1]["close"])
+            except Exception as e:
+                self.logger.warning(f"Could not load prices: {e}")
+
+        # Collect top signals from all watchlists
+        all_signals = []
+        for p in PORTFOLIOS:
+            wl = p["watchlist"]
+            db_path = DATA_DIR / f"paper_trading_{wl}.db"
+            if not db_path.exists():
+                continue
+            try:
+                conn = sqlite3.connect(str(db_path))
+                conn.row_factory = sqlite3.Row
+                # Get most recent signals
+                rows = conn.execute(
+                    "SELECT ticker, prediction, rank, percentile, action, date "
+                    "FROM signals ORDER BY date DESC LIMIT 50"
+                ).fetchall()
+                conn.close()
+                if not rows:
+                    continue
+                latest_date = rows[0]["date"]
+                for r in rows:
+                    if r["date"] != latest_date:
+                        break
+                    all_signals.append({
+                        "ticker": r["ticker"],
+                        "prediction": r["prediction"],
+                        "rank": r["rank"],
+                        "action": r["action"],
+                        "watchlist": wl,
+                        "date": latest_date,
+                    })
+            except Exception as e:
+                self.logger.warning(f"  {wl}: could not read signals: {e}")
+
+        if not all_signals:
+            self.logger.info("  No signals found — skipping recommendations")
+            return {"status": "no_signals", "count": 0}
+
+        # Deduplicate: keep the signal with highest prediction score per ticker
+        best_by_ticker = {}
+        for sig in all_signals:
+            t = sig["ticker"]
+            if t not in best_by_ticker or sig["prediction"] > best_by_ticker[t]["prediction"]:
+                best_by_ticker[t] = sig
+
+        # Take top BUYs (rank 1-5 by score) and top SELLs (lowest scores)
+        sorted_sigs = sorted(best_by_ticker.values(), key=lambda s: s["prediction"], reverse=True)
+        top_buys = [s for s in sorted_sigs if s["action"] == "BUY"][:10]
+        top_sells = [s for s in sorted_sigs if s["action"] == "SELL"][:5]
+        recs = top_buys + top_sells
+
+        if not recs:
+            self.logger.info("  No actionable signals — skipping")
+            return {"status": "no_actionable", "count": 0}
+
+        # Write to analysis.db recommendations table
+        analysis_db = DATA_DIR / "analysis.db"
+        conn = sqlite3.connect(str(analysis_db))
+
+        inserted = 0
+        for sig in recs:
+            ticker = sig["ticker"]
+            price = price_map.get(ticker, 0.0)
+            sector = sector_map.get(ticker, "Unknown")
+            action = sig["action"]
+            score = sig["prediction"]
+
+            # Confidence based on how extreme the score is
+            if score > 0.8 or score < 0.2:
+                confidence = 0.8
+            elif score > 0.7 or score < 0.3:
+                confidence = 0.7
+            else:
+                confidence = 0.5
+
+            # Set target/stop based on action
+            if action == "BUY" and price > 0:
+                target_price = round(price * 1.10, 2)   # +10% target
+                stop_loss = round(price * 0.95, 2)       # -5% stop
+            elif action == "SELL" and price > 0:
+                target_price = round(price * 0.90, 2)    # -10% target
+                stop_loss = round(price * 1.05, 2)       # +5% stop
+            else:
+                target_price = None
+                stop_loss = None
+
+            reason = f"Score: {score:.3f}, Rank #{sig['rank']} in {sig['watchlist'].replace('_', ' ')}"
+
+            # Skip if already recommended today
+            existing = conn.execute(
+                "SELECT 1 FROM recommendations WHERE ticker = ? AND recommendation_date = ?",
+                (ticker, today)
+            ).fetchone()
+            if existing:
+                continue
+            try:
+                conn.execute(
+                    """INSERT INTO recommendations
+                       (run_id, ticker, action, recommendation_date, reason,
+                        confidence, target_price, stop_loss, time_horizon,
+                        current_price, score, sector, source, created_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (run_id, ticker, action, today, reason,
+                     confidence, target_price, stop_loss, "medium",
+                     price, score, sector, "daily_routine", datetime.now().isoformat()),
+                )
+                inserted += 1
+            except Exception as e:
+                self.logger.warning(f"  Failed to insert {ticker}: {e}")
+
+        conn.commit()
+        conn.close()
+
+        self.logger.info(f"  Generated {inserted} recommendations ({len(top_buys)} BUY, {len(top_sells)} SELL)")
+
+        # Update tracking for past recommendations
+        updated = self._update_recommendation_tracking(price_map)
+
+        return {"status": "success", "count": inserted, "buys": len(top_buys), "sells": len(top_sells), "tracking_updated": updated}
+
+    def _update_recommendation_tracking(self, price_map: Dict) -> int:
+        """Update actual_return, hit_target, hit_stop_loss for past recommendations."""
+        import sqlite3
+
+        analysis_db = DATA_DIR / "analysis.db"
+        conn = sqlite3.connect(str(analysis_db))
+        conn.row_factory = sqlite3.Row
+
+        # Get recommendations that need tracking updates
+        rows = conn.execute(
+            """SELECT id, ticker, action, current_price, target_price, stop_loss
+               FROM recommendations
+               WHERE current_price > 0"""
+        ).fetchall()
+
+        updated = 0
+        now = datetime.now().isoformat()
+        for row in rows:
+            ticker = row["ticker"]
+            entry_price = row["current_price"]
+            current_price = price_map.get(ticker)
+            if current_price is None or entry_price <= 0:
+                continue
+
+            actual_return = (current_price / entry_price) - 1.0
+
+            # For SELL recommendations, return is inverted (we profit when price drops)
+            if row["action"] == "SELL":
+                actual_return = -actual_return
+
+            hit_target = 0
+            hit_stop = 0
+            if row["target_price"] and row["action"] == "BUY":
+                hit_target = 1 if current_price >= row["target_price"] else 0
+                hit_stop = 1 if row["stop_loss"] and current_price <= row["stop_loss"] else 0
+            elif row["target_price"] and row["action"] == "SELL":
+                hit_target = 1 if current_price <= row["target_price"] else 0
+                hit_stop = 1 if row["stop_loss"] and current_price >= row["stop_loss"] else 0
+
+            conn.execute(
+                """UPDATE recommendations
+                   SET actual_return = ?, hit_target = ?, hit_stop_loss = ?, tracking_updated_at = ?
+                   WHERE id = ?""",
+                (round(actual_return, 6), hit_target, hit_stop, now, row["id"]),
+            )
+            updated += 1
+
+        conn.commit()
+        conn.close()
+        self.logger.info(f"  Updated tracking for {updated} recommendations")
+        return updated
 
     def _format_daily_summary(self, results: Dict) -> str:
         """Format daily results into notification message."""
@@ -824,6 +1456,27 @@ class DailyRoutine:
                 lines.append(f"  {wl:20s} FAILED: {info.get('error', '')[:50]} -- {mode}")
             else:
                 lines.append(f"  {wl:20s} {status} -- {mode}")
+
+        # Rebalancing trades
+        has_trades = False
+        for p in PORTFOLIOS:
+            wl = p["watchlist"]
+            info = portfolios.get(wl, {})
+            trades = info.get("trades", [])
+            if trades:
+                if not has_trades:
+                    lines.append("")
+                    lines.append("REBALANCING")
+                    has_trades = True
+                buys = [t for t in trades if t["action"] == "BUY"]
+                sells = [t for t in trades if t["action"] == "SELL"]
+                lines.append(f"  {wl}:")
+                if buys:
+                    buy_tickers = ", ".join(f"{t['ticker']}(${t['value']:,.0f})" for t in buys)
+                    lines.append(f"    BUY:  {buy_tickers}")
+                if sells:
+                    sell_tickers = ", ".join(f"{t['ticker']}(${t['value']:,.0f})" for t in sells)
+                    lines.append(f"    SELL: {sell_tickers}")
 
         # Forward predictions
         pred_info = results.get("predictions", {})
@@ -921,16 +1574,45 @@ def main():
         action="store_true",
         help="Skip Finnhub sentiment download (saves ~18 min on re-runs)",
     )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Run even if already ran today (bypass once-per-day lock)",
+    )
     args = parser.parse_args()
+
+    logger = setup_logging(args.mode)
+
+    # Once-per-day lock (unless --force or --dry-run)
+    fd = None
+    if not args.force and not args.dry_run:
+        fd = acquire_daily_lock(args.mode, logger)
+        if fd is None:
+            return  # Already ran today or another instance is running
 
     routine = DailyRoutine(dry_run=args.dry_run, skip_sentiment=args.skip_sentiment)
 
-    if args.mode == "daily":
-        routine.run_daily()
-    elif args.mode == "weekly":
-        routine.run_weekly()
-    elif args.mode == "monthly":
-        routine.run_monthly()
+    try:
+        if args.mode == "daily":
+            routine.run_daily()
+        elif args.mode == "weekly":
+            routine.run_weekly()
+        elif args.mode == "monthly":
+            routine.run_monthly()
+
+        # Mark as completed for today
+        if fd is not None:
+            stamp_daily_lock(args.mode, fd)
+            fd = None
+    except Exception:
+        # Notification already sent in run_* methods; just ensure lock is released
+        if fd is not None:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_UN)
+                os.close(fd)
+            except Exception:
+                pass
+        sys.exit(1)
 
 
 if __name__ == "__main__":
