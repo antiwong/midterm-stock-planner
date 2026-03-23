@@ -1,7 +1,8 @@
 # Sentiment DuckDB Integration Proposal
 
-> **Date**: 2026-03-23
-> **Context**: The SentimentPulse crawler (Mac) writes to `sentimentpulse.db` (DuckDB) which syncs to the Hetzner server. The midterm-stock-planner reads this DB for sentiment data. Currently only ~20% of the available data is being used.
+> **Date**: 2026-03-24 (updated)
+> **Status**: Phase 0-3, 5-6 COMPLETE. Phase 4 deferred.
+> **Context**: The SentimentPulse crawler (Mac) writes to `sentimentpulse.db` (DuckDB) which syncs to the Hetzner server. The midterm-stock-planner reads this DB for sentiment data.
 
 ---
 
@@ -216,31 +217,160 @@ This would expand the feature set from ~20 price/technical features to ~30 with 
 
 ---
 
-## Questions for Discussion
+## Decisions Made
 
-1. **Feature engineering**: Should we add sentiment features to the ML model, or keep sentiment in the trigger layer only? The regression tests showed sentiment had zero Sharpe impact previously — but that was with the old CSV data (limited to composite_score). Options flow and insider data are fundamentally different signals.
+1. **Feature engineering**: DECIDED — Sentiment stays in trigger layer ONLY. `use_sentiment: false` is permanent. Regression tests proved sentiment degrades cross-sectional Sharpe (-0.18 to -0.28). The ranker answers "which stocks?" while sentiment answers "is now the right time?" — different questions.
 
-2. **Deep analysis rendering**: Should deep_analysis HTML be shown as a dedicated tab, or inline within the ticker detail page? The HTML is styled for WordPress — may need CSS adaptation.
+2. **Deep analysis rendering**: DECIDED — Dedicated tab + expandable panel link. CSS scoping handled by prose classes.
 
-3. **Social data reliability**: ApeWisdom/StockTwits/X data can be noisy. Should we use it as features directly, or only as confirmation signals in the trigger layer?
+3. **Social data reliability**: DECIDED — ApeWisdom is in trigger layer as confirmation signal (spike flag). StockTwits/X have 0% coverage — hidden until data flows.
 
-4. **Earnings proximity**: The `earnings_days_to` field enables pre-earnings strategies (drift detection, vol expansion). Is this something the model should learn, or should it be a separate trading rule?
+4. **Earnings proximity**: DECIDED — Flagged in trigger reasoning only (not a gate). `earnings_days_to` shown in events section when within 7 days.
 
-5. **Crawl quality gates**: Should we surface crawl health prominently (quality degradation alerts), or keep it as a background monitoring metric?
+5. **Crawl quality gates**: DECIDED — Status bar at top of Sentiment page (green/yellow/red).
 
 ---
 
-## Files That Would Change
+## Implementation Status (2026-03-24)
+
+| Phase | Status | Details |
+|-------|--------|---------|
+| Phase 0: Validation | DONE | 29 BUILD, 4 STUB, 23 HIDE columns |
+| Phase 1: Trigger | DONE | DuckDB reader, propagation gate, conviction asymmetry, insider cluster, earnings flag |
+| Phase 2: API | DONE | 4 new endpoints: full ticker, deep analysis (recent + single), crawl health |
+| Phase 3: Overview | DONE | Expandable detail panels with all signal categories |
+| Phase 4: News | DEFERRED | Current news tab works; credibility badges P2 |
+| Phase 5: Deep Analysis | DONE | Tab with 20 Gemini narrative cards |
+| Phase 6: Crawl Health | DONE | Status bar with tickers/articles/failures/regime |
+
+---
+
+## DuckDB Usage Audit (2026-03-24)
+
+### Reads from DuckDB (10 endpoints)
+
+| Endpoint / Component | DuckDB Table(s) | What It Shows |
+|---------------------|-----------------|---------------|
+| `GET /sentiment/overview` | `sentiment_features` | Per-ticker composite, breadth, conviction, regime |
+| `GET /sentiment/overview/full/{ticker}` | `sentiment_features` + `deep_analysis` + `moby_picks` | All 86 columns grouped by category |
+| `GET /sentiment/blog` (SentimentPulse tab) | `sentiment_features` | Full daily feature set per ticker |
+| `GET /sentiment/trend` | `sentiment_features` | Historical composite_score time series |
+| `GET /sentiment/trend/multi` | `sentiment_features` | Multi-ticker trend comparison |
+| `GET /sentiment/news` | `articles` | 24K articles with LLM scores |
+| `GET /sentiment/deep-analysis/recent` | `deep_analysis` | 20 most recent Gemini narratives |
+| `GET /sentiment/deep-analysis/{ticker}` | `deep_analysis` | Full HTML analysis for one ticker |
+| `GET /sentiment/crawl-health` | `crawl_runs` | Last 5 crawl run quality metrics |
+| `GET /moby/analysis` | `moby_picks` | Moby weekly picks with thesis |
+| `GET /moby/news` | `moby_news` | Moby weekly news articles |
+| Trigger layer (`sentiment_trigger.py`) | `sentiment_features` (via adapter) | Entry timing signals |
+
+### Still reads from CSV (5 endpoints) — Migration Plan
+
+| Endpoint | CSV File | Rows | Why CSV | Migration Owner |
+|----------|----------|------|---------|----------------|
+| `GET /sentiment/analyst` | `analyst_recommendations.csv` | 388 (97 tickers) | Downloaded by daily routine from Finnhub API | **midterm-stock-planner** |
+| `GET /sentiment/insiders` | `insider_transactions.csv` | 49,698 (262 tickers) | Downloaded by daily routine from Finnhub API | **midterm-stock-planner** |
+| `GET /sentiment/earnings` | `earnings_surprises.csv` | 388 (97 tickers) | Downloaded by daily routine from Finnhub API | **midterm-stock-planner** |
+| `GET /ticker/{ticker}` (detail page) | `news.csv`, `analyst_recommendations.csv`, `earnings_surprises.csv` | Various | Ticker detail page reads multiple CSVs | **midterm-stock-planner** |
+| `GET /earnings/` (calendar) | `earnings_surprises.csv` | 388 | Earnings calendar page | **midterm-stock-planner** |
+
+**Migration approach**: The daily routine's `_refresh_all_data()` step downloads these CSVs from Finnhub. Add a step to also write them into DuckDB tables (new tables: `analyst_recommendations`, `insider_transactions`, `earnings_surprises`). Then update the API routers to read from DuckDB. Beads task: `midterm-stock-planner-p5i`.
+
+### Known data gaps
+
+| Column | Coverage | Issue | Owner |
+|--------|----------|-------|-------|
+| `eodhd_score` | 0% (all null) | Crawler fetches EODHD but doesn't write score to DuckDB | **sentimental_blogs** (beads: `midterm-stock-planner-ahy`) |
+| `finnhub_score` | 0% | Same issue — individual source scores not populated | **sentimental_blogs** |
+| `finnhub_social_score` | 0% | Social score not populated | **sentimental_blogs** |
+| `stocktwits_bullish_pct` | 0% | StockTwits source not writing to DuckDB | **sentimental_blogs** |
+| `x_social_score` | 0% | X/Twitter not configured (needs xAI API) | **sentimental_blogs** |
+| `trends_*` | 0% | Google Trends not writing to DuckDB | **sentimental_blogs** |
+| `dark_pool_volume` | 0% | Not implemented | Future |
+| `iv_percentile` | 0% | Options IV percentile not populated (iv_skew IS populated at 94%) | **sentimental_blogs** |
+
+---
+
+## Column Definitions
+
+### Core Metrics
+
+| Column | Range | What It Means |
+|--------|-------|---------------|
+| **Composite Score** | -1.0 to +1.0 | Credibility-weighted blend of ALL sentiment sources. Positive = bullish consensus, negative = bearish. Computed by weighting each source by its credibility tier (Reuters=1.0, Reddit=0.4). |
+| **Signal Breadth** | 0.0 to 1.0 | Fraction of data sources that had data for this ticker. 0.5 = half the sources contributed. Higher = more reliable signal. |
+| **Signal Conviction** | -1.0 to +1.0 | `composite_score × signal_breadth`. Penalizes thin coverage. A +0.4 score from 3/14 sources has lower conviction than +0.3 from 12/14 sources. This is the primary trigger metric. |
+| **Sentiment Regime** | MOMENTUM / CONTRARIAN / UNCERTAINTY / NOISE | Classified based on score consistency, buzz volume, and price action. MOMENTUM = sentiment and price agree. CONTRARIAN = they disagree (potential reversal). |
+| **Confidence** | high / medium / low | LLM's self-assessed confidence in the composite score. Based on article quality and consistency. |
+
+### Source Scores
+
+| Column | Range | What It Means |
+|--------|-------|---------------|
+| **LLM Score** | -1.0 to +1.0 | Gemini Flash's article-level sentiment scoring, aggregated. The "smartest" source — reads article body, not just headline. |
+| **Finnhub Score** | -1.0 to +1.0 | Finnhub's built-in sentiment API. Currently 0% populated — needs sentimental_blogs fix. |
+| **EODHD Score** | -1.0 to +1.0 | EODHD's alternative sentiment. Currently 0% populated — needs sentimental_blogs fix. |
+| **Massive/AV/MarketAux** | -1.0 to +1.0 | Other news API sentiment scores. Massive has 37% coverage. |
+
+### Options Flow
+
+| Column | What It Means |
+|--------|---------------|
+| **Options PCR** | Put/Call ratio. >1.0 = more puts (bearish), <1.0 = more calls (bullish). 60% coverage. |
+| **IV Skew** | Implied volatility skew. Negative = puts more expensive (market hedging). 94% coverage. |
+| **Unusual Options** | Flag for unusual sweep orders detected. Currently 0% — needs fix. |
+
+### Social / Retail
+
+| Column | What It Means |
+|--------|---------------|
+| **ApeWisdom Mentions** | Reddit mention count across WallStreetBets, stocks, investing. 100% coverage. |
+| **ApeWisdom Rank** | Rank by mention count. #1 = most discussed ticker on Reddit. |
+| **ApeWisdom Spike** | Flag when mentions spike >2σ above 30-day average. 98% coverage. |
+
+### Insider Activity
+
+| Column | What It Means |
+|--------|---------------|
+| **Insider Cluster Flag** | 3+ insiders buying within a 30-day window. Historically one of the strongest mid-term signals. 52% coverage. |
+| **Insider Net 30d** | Net dollar value of insider buys minus sells over 30 days. Negative = more selling. 70% coverage. |
+| **Insider Buy Count** | Number of distinct insider buyers in 30 days. |
+
+### Signal Quality
+
+| Column | What It Means |
+|--------|---------------|
+| **Source Agreement** | Standard deviation of source scores. Low (< 0.15) = sources agree. High (> 0.30) = sources disagree — less reliable. 90% coverage. |
+| **Conviction Asymmetry** | Whether bullish or bearish evidence dominates. High positive = mostly bullish articles. 36% coverage. |
+| **Organic Score** | Composite excluding propagated/supply-chain signals. Only articles directly about this ticker. 90% coverage. |
+
+### Analyst
+
+| Column | What It Means |
+|--------|---------------|
+| **Analyst Action Detected** | Whether a named analyst firm issued an upgrade/downgrade/initiation. 33% coverage. |
+| **Analyst Consensus** | Aggregated consensus: strong_buy, buy, hold, sell, strong_sell. |
+| **Analyst Consensus Score** | Numeric score from consensus. Higher = more bullish. |
+
+---
+
+## Files Changed (Final)
 
 ### Backend (API)
-- `src/api/routers/sentiment.py` — overview, news, new deep_analysis endpoint
-- `src/sentiment/sentiment_adapter.py` — expose more columns for feature pipeline
-- `src/features/engineering.py` — add options/insider/social features
-- `src/trigger/sentiment_trigger.py` — additional gates
+- `src/api/routers/sentiment.py` — 4 new DuckDB endpoints + overview reads DuckDB
+- `src/api/routers/moby.py` — reads from DuckDB moby_picks/moby_news
+- `src/sentiment/sentiment_adapter.py` — DuckDB-only reader (no CSV fallback)
+- `src/sentiment/duckdb_reader.py` — low-level DuckDB reader
+- `src/trigger/sentiment_trigger.py` — enriched with DuckDB signals
+- `src/features/engineering.py` — sentiment REMOVED from ML model (Rule 1)
+- `scripts/daily_routine.py` — recommendation generation step added
+- `scripts/moby_to_duckdb.py` — Moby MD report parser
 
 ### Frontend
-- `myfuture/src/pages/Sentiment.tsx` — overview expansion, new Deep Analysis tab, enhanced news tab
-- `myfuture/src/api/client.ts` — new types for expanded data
-
-### Config
-- `config/config.yaml` — new feature flags for sentiment features in ML model
+- `myfuture/src/pages/Sentiment.tsx` — expandable detail panels, Deep Analysis tab, crawl health bar
+- `myfuture/src/components/MarkdownContent.tsx` — markdown rendering with keyword highlights
+- `myfuture/src/components/PortfolioCard.tsx` — sp500/clean_energy/etfs support
+- `myfuture/src/hooks/useActiveWatchlists.ts` — dynamic watchlist hook
+- `myfuture/src/pages/RealtimeMonitoring.tsx` — crash fix
+- `myfuture/src/pages/RecommendationTracking.tsx` — filter fix
+- 5 pages updated to use dynamic watchlists
