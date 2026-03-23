@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { apiFetch, type PortfolioSummary, type Snapshot, type Position } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
+import ApiError from '../components/ApiError';
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine } from 'recharts';
 
 const WLS = ['moby_picks', 'tech_giants', 'semiconductors', 'precious_metals'];
@@ -38,20 +39,20 @@ export default function MultiPortfolio() {
   const snaps = usePolling(fetchAllSnaps);
   const positions = usePolling(fetchAllPositions);
 
+  const anyError = summary.error || snaps.error || positions.error;
+
   // Build overlay chart data
   const chartData: Record<string, number | string>[] = [];
   if (snaps.data) {
-    // Collect all dates
     const dateSet = new Set<string>();
     Object.values(snaps.data).forEach((arr) => arr.forEach((s) => dateSet.add(s.date)));
     const dates = Array.from(dateSet).sort();
 
-    // Build normalized values by date
     const bases: Record<string, number> = {};
     dates.forEach((date) => {
       const row: Record<string, number | string> = { date };
       WLS.forEach((wl) => {
-        const snap = snaps.data![wl]?.find((s) => s.date === date);
+        const snap = snaps.data?.[wl]?.find((s) => s.date === date);
         if (snap) {
           if (!bases[wl]) bases[wl] = snap.portfolio_value;
           row[wl] = (snap.portfolio_value / bases[wl]) * 100;
@@ -78,6 +79,12 @@ export default function MultiPortfolio() {
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-6">Multi-Portfolio Comparison</h1>
+
+      {anyError && (
+        <div className="mb-4">
+          <ApiError error={anyError} onRetry={() => { summary.refresh(); snaps.refresh(); positions.refresh(); }} />
+        </div>
+      )}
 
       {/* Overlay equity curves */}
       <div className="bg-surface-light rounded-xl p-5 border border-surface-lighter mb-4">

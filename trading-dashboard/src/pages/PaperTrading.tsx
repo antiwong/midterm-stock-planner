@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { apiFetch, type Position, type Trade, type Snapshot, type Signal } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
 import EquityCurve from '../components/EquityCurve';
+import ApiError from '../components/ApiError';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const WLS = ['moby_picks', 'tech_giants', 'semiconductors', 'precious_metals'];
@@ -21,6 +22,8 @@ export default function PaperTrading() {
   const snaps = usePolling(fetchSnapshots);
   const sigs = usePolling(fetchSignals);
 
+  const anyError = pos.error || trades.error || snaps.error || sigs.error;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -33,6 +36,12 @@ export default function PaperTrading() {
           {WLS.map((w) => <option key={w} value={w}>{w.replace(/_/g, ' ')}</option>)}
         </select>
       </div>
+
+      {anyError && (
+        <div className="mb-4">
+          <ApiError error={anyError} onRetry={() => { pos.refresh(); trades.refresh(); snaps.refresh(); sigs.refresh(); }} />
+        </div>
+      )}
 
       {/* Equity Curve */}
       <div className="bg-surface-light rounded-xl p-5 border border-surface-lighter mb-4">

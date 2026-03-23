@@ -2,10 +2,11 @@ import { useCallback } from 'react';
 import { apiFetch, type PortfolioSummary } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
 import PortfolioCard from '../components/PortfolioCard';
+import ApiError from '../components/ApiError';
 
 export default function Dashboard() {
   const fetch = useCallback(() => apiFetch<{ portfolios: PortfolioSummary[] }>('/portfolios/summary'), []);
-  const { data, loading, lastUpdated } = usePolling(fetch);
+  const { data, loading, error, lastUpdated, refresh } = usePolling(fetch);
 
   return (
     <div>
@@ -15,6 +16,8 @@ export default function Dashboard() {
           <span className="text-xs text-muted">Updated {lastUpdated.toLocaleTimeString()}</span>
         )}
       </div>
+
+      {error && <div className="mb-4"><ApiError error={error} onRetry={refresh} /></div>}
 
       {loading && !data ? (
         <div className="text-muted">Loading...</div>

@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { apiFetch, type Prediction } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
+import ApiError from '../components/ApiError';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function ForwardTesting() {
@@ -20,6 +21,7 @@ export default function ForwardTesting() {
   const accuracy = usePolling(fetchAccuracy);
 
   const stats = accuracy.data?.stats;
+  const anyError = preds.error || accuracy.error;
 
   // Group predictions by watchlist for the signal summary
   const byWatchlist: Record<string, Prediction[]> = {};
@@ -27,6 +29,8 @@ export default function ForwardTesting() {
     if (!byWatchlist[p.watchlist]) byWatchlist[p.watchlist] = [];
     byWatchlist[p.watchlist].push(p);
   });
+
+  const byWatchlistData = accuracy.data?.by_watchlist || [];
 
   return (
     <div>
@@ -47,6 +51,12 @@ export default function ForwardTesting() {
         </div>
       </div>
 
+      {anyError && (
+        <div className="mb-4">
+          <ApiError error={anyError} onRetry={() => { preds.refresh(); accuracy.refresh(); }} />
+        </div>
+      )}
+
       {/* Stats cards */}
       <div className="grid grid-cols-4 gap-4 mb-6">
         {[
@@ -63,11 +73,11 @@ export default function ForwardTesting() {
       </div>
 
       {/* Hit rates by watchlist */}
-      {(accuracy.data?.by_watchlist || []).length > 0 && (
+      {byWatchlistData.length > 0 && (
         <div className="bg-surface-light rounded-xl p-5 border border-surface-lighter mb-4">
           <h2 className="text-sm font-semibold text-white mb-3">Hit Rates by Portfolio</h2>
           <ResponsiveContainer width="100%" height={250}>
-            <BarChart data={accuracy.data!.by_watchlist.map((r) => ({
+            <BarChart data={byWatchlistData.map((r) => ({
               name: `${r.watchlist} (${r.horizon_days}d)`,
               hit_rate: r.total > 0 ? (r.hits / r.total) * 100 : 0,
               total: r.total,
@@ -76,7 +86,7 @@ export default function ForwardTesting() {
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} tickLine={false} domain={[0, 100]} />
               <Tooltip contentStyle={{ background: '#22232d', border: '1px solid #2a2b37', borderRadius: 8, color: '#e2e8f0' }} />
               <Bar dataKey="hit_rate" name="Hit Rate %">
-                {(accuracy.data?.by_watchlist || []).map((r, i) => (
+                {byWatchlistData.map((r, i) => (
                   <Cell key={i} fill={r.total > 0 && r.hits / r.total >= 0.5 ? '#10b981' : '#ef4444'} />
                 ))}
               </Bar>

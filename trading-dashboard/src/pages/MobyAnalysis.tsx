@@ -1,6 +1,7 @@
 import { useCallback } from 'react';
 import { apiFetch, type MobyPick, type MobyPerformance } from '../api/client';
 import { usePolling } from '../hooks/usePolling';
+import ApiError from '../components/ApiError';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 export default function MobyAnalysis() {
@@ -10,9 +11,17 @@ export default function MobyAnalysis() {
   const picks = usePolling(fetchPicks);
   const perf = usePolling(fetchPerf);
 
+  const anyError = picks.error || perf.error;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-white mb-6">Moby Analysis</h1>
+
+      {anyError && (
+        <div className="mb-4">
+          <ApiError error={anyError} onRetry={() => { picks.refresh(); perf.refresh(); }} />
+        </div>
+      )}
 
       {/* Pick cards */}
       <div className="grid grid-cols-3 gap-4 mb-6">
