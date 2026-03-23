@@ -289,6 +289,52 @@ This would expand the feature set from ~20 price/technical features to ~30 with 
 | `dark_pool_volume` | 0% | Not implemented | Future |
 | `iv_percentile` | 0% | Options IV percentile not populated (iv_skew IS populated at 94%) | **sentimental_blogs** |
 
+### Signal Breadth Problem — Root Cause & Fix (sentimental_blogs)
+
+**Problem**: Signal breadth is stuck at ~50% (0.36–0.57) across all tickers. This limits conviction scores and reduces trigger layer effectiveness.
+
+**Root cause**: Of the 14 source score columns in `sentiment_features`, only 5 are populated. The crawler fetches data from all sources but doesn't write the per-source scores to DuckDB.
+
+**Current state (877 rows)**:
+
+| Source Column | Fill Rate | Status |
+|--------------|-----------|--------|
+| `llm_score` | 89% | Working |
+| `massive_score` | 37% | Working |
+| `apewisdom_mentions` | 100% | Working |
+| `options_pcr` | 65% | Working |
+| `insider_signal` | 70% | Working |
+| `finnhub_score` | 0% | **Fetched but not written** |
+| `finnhub_social_score` | 0% | **Fetched but not written** |
+| `av_score` | 0% | **Fetched but not written** |
+| `eodhd_score` | 0% | **Fetched but not written** |
+| `marketaux_score` | 0% | **Fetched but not written** |
+| `fmp_social_score` | 0% | **Source not enabled** |
+| `stocktwits_bullish_pct` | 0% | **Source not enabled** |
+| `x_social_score` | 0% | **Needs xAI API key** |
+| `trends_interest_7d` | 0% | **Source not enabled** |
+
+**Fix required in sentimental_blogs** (`sentimentpulse/analysis/composite.py` or `sentimentpulse/utils/database.py`):
+
+1. **Write per-source averages to DuckDB** — After computing the composite score, also write the average sentiment per source to the corresponding column. The data IS available in the articles table (each article has a `source` field) — it just needs to be aggregated and written to `sentiment_features`.
+
+```python
+# In composite.py, after computing composite_score:
+# Group articles by source, compute mean sentiment per source
+source_avgs = articles_df.groupby('source')['sentiment'].mean()
+row['finnhub_score'] = source_avgs.get('finnhub_news', None)
+row['av_score'] = source_avgs.get('alpha_vantage', None)
+row['massive_score'] = source_avgs.get('massive', None)
+row['eodhd_score'] = source_avgs.get('eodhd', None)
+row['marketaux_score'] = source_avgs.get('marketaux', None)
+```
+
+2. **Enable remaining sources** — StockTwits, FMP social, and Google Trends sources exist in the crawler code but may not be enabled in the crawl config.
+
+3. **Expected improvement**: With per-source scores populated, breadth should jump from ~0.50 to ~0.75–0.85. This directly improves conviction scores and trigger layer accuracy.
+
+**No change needed in midterm-stock-planner** — once the crawler writes the scores, the dashboard and trigger layer will use them automatically.
+
 ---
 
 ## Column Definitions
