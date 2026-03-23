@@ -437,8 +437,19 @@ def prepare_sentiment_from_news(
     min_daily_count: int = 1,
 ) -> pd.DataFrame:
     """
+    DEPRECATED: Superseded by SentimentPulse + Trigger Layer.
+
+    Sentiment is now consumed via src/trigger/sentiment_trigger.py, NOT the
+    cross-sectional ranker. use_sentiment stays false permanently.
+    See src/sentiment/sentiment_adapter.py for the replacement.
+
+    This function is kept for backward compatibility during the transition
+    period. It will be removed after 90 days of stable SentimentPulse
+    operation (Gap 6 in sentimental_blogs/docs/12-engine-sentimentpulse-gap-analysis.md).
+
+    Original docstring:
     Prepare sentiment features from raw news data.
-    
+
     This is a convenience function that wraps the sentiment module's
     functionality for use in feature engineering.
     
@@ -502,25 +513,28 @@ def compute_all_features_with_sentiment(
     include_momentum: bool = True,
     include_mean_reversion: bool = True,
     bars_per_day: float = 1.0,
+    sentiment_days: int = 90,
 ) -> pd.DataFrame:
     """
-    Compute all features including sentiment.
-    
-    This is an extended version of compute_all_features_extended that
-    also integrates sentiment features from news data.
-    
+    Compute all features including sentiment from DuckDB.
+
+    Reads sentiment data from the SentimentPulse DuckDB database
+    (data/sentimentpulse.db) synced from the office Mac. The news_df
+    parameter is ignored — sentiment comes exclusively from DuckDB.
+
     Args:
         price_df: DataFrame with OHLCV data.
         fundamental_df: Optional DataFrame with fundamental data.
         benchmark_df: Optional benchmark DataFrame.
-        news_df: Optional news DataFrame for sentiment features.
+        news_df: Ignored (kept for backward compatibility).
         sentiment_lookbacks: Lookback periods for sentiment.
-        sentiment_model_type: Type of sentiment model.
+        sentiment_model_type: Ignored (kept for backward compatibility).
         sentiment_fillna: Value for missing sentiment.
         include_technical: Whether to add technical indicators.
         include_momentum: Whether to add momentum features.
         include_mean_reversion: Whether to add mean reversion features.
-    
+        sentiment_days: How many days of sentiment history to load.
+
     Returns:
         DataFrame with all features including sentiment.
     """
@@ -534,25 +548,26 @@ def compute_all_features_with_sentiment(
         include_mean_reversion=include_mean_reversion,
         bars_per_day=bars_per_day,
     )
-    
-    # Add sentiment features if news data provided
-    if news_df is not None and len(news_df) > 0:
-        try:
-            sentiment_features = prepare_sentiment_from_news(
-                news_df=news_df,
-                lookbacks=sentiment_lookbacks,
-                model_type=sentiment_model_type,
-            )
-            
+
+    # Load sentiment features from DuckDB
+    try:
+        from ..sentiment.sentiment_adapter import load_sentimentpulse_features
+
+        sentiment_features = load_sentimentpulse_features(
+            days=sentiment_days,
+            lookbacks=sentiment_lookbacks,
+        )
+
+        if not sentiment_features.empty:
             df = add_sentiment_features(
                 df,
                 sentiment_features,
                 fillna_value=sentiment_fillna,
             )
-        except Exception as e:
-            import warnings
-            warnings.warn(f"Failed to add sentiment features: {e}")
-    
+    except Exception as e:
+        import warnings
+        warnings.warn(f"Failed to add sentiment features from DuckDB: {e}")
+
     return df
 
 

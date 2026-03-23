@@ -712,27 +712,18 @@ class PaperTradingEngine:
         bpd = bars_per_day_from_interval("1d")
         feature_cfg = self.config.features
 
-        # Load sentiment data if enabled
-        news_df = None
+        # Check if DuckDB sentiment data is available
         use_sentiment = getattr(feature_cfg, 'use_sentiment', False)
-        if use_sentiment:
-            sentiment_path = PROJECT_ROOT / "data" / "sentiment" / "news.csv"
-            if sentiment_path.exists():
-                news_df = pd.read_csv(sentiment_path, parse_dates=["date"])
-                print(f"Loaded sentiment: {len(news_df)} articles for {news_df['ticker'].nunique()} tickers")
-            else:
-                print("Warning: use_sentiment=true but no news data found. Run: python scripts/download_sentiment.py")
+        duckdb_path = PROJECT_ROOT / "data" / "sentimentpulse.db"
 
         n_tickers = price_df['ticker'].nunique()
-        if use_sentiment and news_df is not None:
-            print(f"Computing features + sentiment for {n_tickers} tickers...")
+        if use_sentiment and duckdb_path.exists():
+            print(f"Computing features + sentiment (DuckDB) for {n_tickers} tickers...")
             feature_df = compute_all_features_with_sentiment(
                 price_df=price_df,
                 fundamental_df=fundamental_df,
                 benchmark_df=benchmark_df,
-                news_df=news_df,
                 sentiment_lookbacks=getattr(feature_cfg, 'sentiment_lookbacks', [1, 7, 14]),
-                sentiment_model_type=getattr(feature_cfg, 'sentiment_model_type', 'lexicon'),
                 sentiment_fillna=getattr(feature_cfg, 'sentiment_fillna', 0.0),
                 include_technical=getattr(feature_cfg, 'include_technical', True),
                 include_momentum=getattr(feature_cfg, 'include_momentum', False),
@@ -740,6 +731,8 @@ class PaperTradingEngine:
                 bars_per_day=bpd,
             )
         else:
+            if use_sentiment:
+                print(f"Warning: use_sentiment=true but sentimentpulse.db not found. Using features without sentiment.")
             print(f"Computing features for {n_tickers} tickers...")
             feature_df = compute_all_features_extended(
                 price_df=price_df,
