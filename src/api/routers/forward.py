@@ -2,12 +2,13 @@
 
 from fastapi import APIRouter, Query
 from typing import Optional
-from ..db import query_forward
+from ..db import cached_response, query_forward
 
 router = APIRouter(prefix="/api/forward", tags=["forward"])
 
 
 @router.get("/predictions")
+@cached_response(ttl=120)
 def get_predictions(
     watchlist: Optional[str] = Query(None),
     horizon: Optional[int] = Query(None),
@@ -46,6 +47,7 @@ def get_predictions(
 
 
 @router.get("/accuracy")
+@cached_response(ttl=120)
 def get_accuracy(watchlist: Optional[str] = Query(None)):
     """Aggregated hit rates."""
     # By watchlist + horizon
@@ -93,6 +95,7 @@ def get_accuracy(watchlist: Optional[str] = Query(None)):
 
 
 @router.get("/trend")
+@cached_response(ttl=120)
 def get_accuracy_trend(
     watchlist: Optional[str] = Query(None),
     horizon: int = Query(5),

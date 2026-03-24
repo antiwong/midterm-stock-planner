@@ -1,83 +1,160 @@
-"""Database helpers for the trading API. Read-only access to SQLite DBs and CSV files."""
+"""Database helpers for the trading API.
 
-import sqlite3
-from functools import lru_cache
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+Thin wrapper over src.data.shared_db — the shared database layer used by both
+myFuture (FastAPI) and QuantaAlpha (Streamlit).
+"""
 
+import time
+import json
+import hashlib
+from functools import wraps
+from typing import Any
 import pandas as pd
 
-DATA_DIR = Path(__file__).parent.parent.parent / "data"
+# --- CSV caching with TTL ---
+_csv_cache: dict[str, tuple[float, pd.DataFrame]] = {}
+CSV_TTL = 60  # seconds
 
-WATCHLISTS = ["moby_picks", "tech_giants", "semiconductors", "precious_metals"]
+# --- API response caching with TTL ---
+_response_cache: dict[str, tuple[float, Any]] = {}
 
 
-def get_paper_db(watchlist: str) -> Optional[sqlite3.Connection]:
-    """Get read-only connection to a paper trading DB."""
-    db_path = DATA_DIR / f"paper_trading_{watchlist}.db"
-    if not db_path.exists():
+def cached_response(ttl: int = 30):
+    """Decorator to cache API endpoint responses for `ttl` seconds.
+    Cache key is derived from the function name + arguments."""
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            key_data = f"{func.__module__}.{func.__name__}:{args}:{sorted(kwargs.items())}"
+            key = hashlib.md5(key_data.encode()).hexdigest()
+            now = time.time()
+            if key in _response_cache:
+                cached_at, result = _response_cache[key]
+                if now - cached_at < ttl:
+                    return result
+            result = func(*args, **kwargs)
+            _response_cache[key] = (now, result)
+            return result
+        return wrapper
+    return decorator
+
+
+def read_csv_cached(path: str) -> pd.DataFrame:
+    """Read a CSV with a 60-second TTL cache. Returns a copy to avoid mutation."""
+    now = time.time()
+    key = str(path)
+    if key in _csv_cache:
+        ts, df = _csv_cache[key]
+        if now - ts < CSV_TTL:
+            return df.copy()
+    df = pd.read_csv(key)
+    _csv_cache[key] = (now, df)
+    return df.copy()
+
+
+from src.data.shared_db import (
+    DATA_DIR,
+    WATCHLISTS,
+    get_active_watchlists,
+    get_paper_db,
+    get_forward_db,
+    query_paper,
+    query_forward,
+    get_prices,
+    get_moby_analysis,
+    get_analysis_db,
+    load_runs_from_db,
+    load_run_by_id,
+    get_analysis_result,
+    load_regression_results,
+    load_ensemble_comparison,
+    load_stress_test,
+    load_watchlist_config,
+    load_ticker_configs,
+)
+
+def ensure_indexes():
+    """Create indexes on commonly queried columns in paper trading and forward journal DBs."""
+    import sqlite3
+
+    # Paper trading DBs
+    for wl in get_active_watchlists():
+        db_path = DATA_DIR / f"paper_trading_{wl}.db"
+        if not db_path.exists():
+            continue
+        conn = sqlite3.connect(str(db_path))
+        try:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_signals_date ON signals(date)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_signals_ticker ON signals(ticker)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_positions_active ON positions(is_active)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_snapshots_date ON daily_snapshots(date)")
+            conn.commit()
+        finally:
+            conn.close()
+
+    # Forward journal DB
+    fwd_path = DATA_DIR / "forward_journal.db"
+    if fwd_path.exists():
+        conn = sqlite3.connect(str(fwd_path))
+        try:
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_fwd_ticker ON predictions(ticker)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_fwd_date ON predictions(prediction_date)")
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_fwd_evaluated ON predictions(evaluated_at)")
+            conn.commit()
+        finally:
+            conn.close()
+
+
+__all__ = [
+    "DATA_DIR",
+    "WATCHLISTS",
+    "get_active_watchlists",
+    "read_csv_cached",
+    "ensure_indexes",
+    "get_paper_db",
+    "get_forward_db",
+    "query_paper",
+    "query_forward",
+    "get_prices",
+    "get_moby_analysis",
+    "get_analysis_db",
+    "load_runs_from_db",
+    "load_run_by_id",
+    "get_analysis_result",
+    "load_regression_results",
+    "load_ensemble_comparison",
+    "load_stress_test",
+    "load_watchlist_config",
+    "load_ticker_configs",
+]
+
+
+# --- DuckDB connection pool ---
+import threading
+
+_duckdb_lock = threading.Lock()
+_duckdb_conn = None
+_duckdb_mtime: float = 0
+
+DUCKDB_PATH = DATA_DIR / "sentimentpulse.db"
+
+
+def get_duckdb_conn():
+    """Get a shared read-only DuckDB connection. Reopens if file changed."""
+    global _duckdb_conn, _duckdb_mtime
+    import duckdb
+
+    if not DUCKDB_PATH.exists():
         return None
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
 
-
-def get_forward_db() -> Optional[sqlite3.Connection]:
-    """Get read-only connection to forward journal DB."""
-    db_path = DATA_DIR / "forward_journal.db"
-    if not db_path.exists():
-        return None
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
-    return conn
-
-
-def query_paper(watchlist: str, sql: str, params=()) -> List[Dict[str, Any]]:
-    """Run a query against a paper trading DB."""
-    conn = get_paper_db(watchlist)
-    if conn is None:
-        return []
-    try:
-        rows = conn.execute(sql, params).fetchall()
-        return [dict(r) for r in rows]
-    finally:
-        conn.close()
-
-
-def query_forward(sql: str, params=()) -> List[Dict[str, Any]]:
-    """Run a query against the forward journal DB."""
-    conn = get_forward_db()
-    if conn is None:
-        return []
-    try:
-        rows = conn.execute(sql, params).fetchall()
-        return [dict(r) for r in rows]
-    finally:
-        conn.close()
-
-
-# Cache prices in memory (~50MB for 280K rows)
-_prices_cache: Optional[pd.DataFrame] = None
-_prices_mtime: float = 0
-
-
-def get_prices() -> pd.DataFrame:
-    """Get cached prices DataFrame. Reloads if file changed."""
-    global _prices_cache, _prices_mtime
-    path = DATA_DIR / "prices_daily.csv"
-    if not path.exists():
-        return pd.DataFrame()
-    mtime = path.stat().st_mtime
-    if _prices_cache is None or mtime > _prices_mtime:
-        _prices_cache = pd.read_csv(path)
-        _prices_cache["date"] = pd.to_datetime(_prices_cache["date"], format="mixed")
-        _prices_mtime = mtime
-    return _prices_cache
-
-
-def get_moby_analysis() -> pd.DataFrame:
-    """Load Moby analysis CSV."""
-    path = DATA_DIR / "sentiment" / "moby_analysis.csv"
-    if not path.exists():
-        return pd.DataFrame()
-    return pd.read_csv(path)
+    mtime = DUCKDB_PATH.stat().st_mtime
+    with _duckdb_lock:
+        if _duckdb_conn is None or mtime > _duckdb_mtime:
+            if _duckdb_conn is not None:
+                try:
+                    _duckdb_conn.close()
+                except Exception:
+                    pass
+            _duckdb_conn = duckdb.connect(str(DUCKDB_PATH), read_only=True)
+            _duckdb_mtime = mtime
+        return _duckdb_conn

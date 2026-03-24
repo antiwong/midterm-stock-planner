@@ -3,12 +3,13 @@
 from fastapi import APIRouter, Query
 from typing import List
 from datetime import datetime, timedelta
-from ..db import get_prices
+from ..db import cached_response, get_prices
 
 router = APIRouter(prefix="/api/prices", tags=["prices"])
 
 
 @router.get("/{ticker}")
+@cached_response(ttl=60)
 def get_ticker_prices(ticker: str, days: int = Query(90, le=3650)):
     """OHLCV data for a single ticker."""
     df = get_prices()
@@ -17,23 +18,22 @@ def get_ticker_prices(ticker: str, days: int = Query(90, le=3650)):
 
     cutoff = datetime.now() - timedelta(days=days)
     mask = (df["ticker"] == ticker.upper()) & (df["date"] >= cutoff)
-    filtered = df.loc[mask].sort_values("date")
+    filtered = df.loc[mask].sort_values("date").copy()
 
-    prices = []
-    for _, row in filtered.iterrows():
-        prices.append({
-            "date": row["date"].strftime("%Y-%m-%d"),
-            "open": round(row["open"], 2),
-            "high": round(row["high"], 2),
-            "low": round(row["low"], 2),
-            "close": round(row["close"], 2),
-            "volume": int(row["volume"]) if row["volume"] == row["volume"] else 0,
-        })
+    filtered["date"] = filtered["date"].dt.strftime("%Y-%m-%d")
+    filtered["open"] = filtered["open"].round(2)
+    filtered["high"] = filtered["high"].round(2)
+    filtered["low"] = filtered["low"].round(2)
+    filtered["close"] = filtered["close"].round(2)
+    filtered["volume"] = filtered["volume"].fillna(0).astype(int)
+
+    prices = filtered[["date", "open", "high", "low", "close", "volume"]].to_dict("records")
 
     return {"ticker": ticker.upper(), "count": len(prices), "prices": prices}
 
 
 @router.get("/multi/batch")
+@cached_response(ttl=60)
 def get_multi_prices(tickers: str = Query(..., description="Comma-separated tickers"),
                      days: int = Query(90, le=3650)):
     """OHLCV data for multiple tickers (close prices only for overlay charts)."""
@@ -47,10 +47,9 @@ def get_multi_prices(tickers: str = Query(..., description="Comma-separated tick
     result = {}
     for ticker in ticker_list:
         mask = (df["ticker"] == ticker) & (df["date"] >= cutoff)
-        filtered = df.loc[mask].sort_values("date")
-        result[ticker] = [
-            {"date": row["date"].strftime("%Y-%m-%d"), "close": round(row["close"], 2)}
-            for _, row in filtered.iterrows()
-        ]
+        filtered = df.loc[mask].sort_values("date").copy()
+        filtered["date"] = filtered["date"].dt.strftime("%Y-%m-%d")
+        filtered["close"] = filtered["close"].round(2)
+        result[ticker] = filtered[["date", "close"]].to_dict("records")
 
     return {"tickers": result}

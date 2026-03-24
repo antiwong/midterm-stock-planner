@@ -6,7 +6,7 @@ from typing import Optional
 import pandas as pd
 
 from src.data.shared_db import DATA_DIR, load_watchlist_config, get_active_watchlists
-from src.api.db import read_csv_cached, cached_response
+from src.api.db import read_csv_cached, cached_response, get_duckdb_conn
 
 router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
@@ -34,9 +34,12 @@ def _read_csv(name: str) -> pd.DataFrame:
 
 
 def _get_duckdb_conn():
-    """Open a read-only DuckDB connection."""
-    import duckdb
-    return duckdb.connect(str(DUCKDB_PATH), read_only=True)
+    """Get pooled read-only DuckDB connection."""
+    conn = get_duckdb_conn()
+    if conn is None:
+        import duckdb
+        return duckdb.connect(str(DUCKDB_PATH), read_only=True)
+    return conn
 
 
 def _get_all_tickers() -> set:
@@ -72,7 +75,6 @@ def sentiment_overview():
             WHERE date = (SELECT MAX(date) FROM sentiment_features)
             ORDER BY composite_score DESC
         """).fetchdf()
-        conn.close()
 
         if not df.empty:
             for _, row in df.iterrows():
@@ -125,7 +127,6 @@ def sentiment_overview():
             "SELECT ticker, rating, current_price, price_target, upside_pct, article_title, date "
             "FROM moby_picks ORDER BY date DESC"
         ).fetchdf()
-        conn.close()
         if not moby_df.empty:
             for _, row in moby_df.iterrows():
                 tk = row["ticker"]
@@ -186,7 +187,6 @@ def sentiment_overview():
             WHERE date = (SELECT MAX(date) FROM sentiment_features)
             LIMIT 1
         """).fetchone()
-        conn.close()
         if regime_row:
             regime = {
                 "regime": regime_row[0] or "UNKNOWN",
@@ -217,7 +217,6 @@ def sentiment_trend(ticker: str = "AAPL", days: int = 30):
             "WHERE ticker = ? ORDER BY date DESC LIMIT ?",
             [ticker, days],
         ).fetchdf()
-        conn.close()
         if not df.empty:
             df = df.sort_values("date")
             data = [
@@ -269,7 +268,6 @@ def sentiment_trend_multi(tickers: str = "AAPL,MSFT,GOOG", days: int = 30):
         # Get all available tickers
         avail_df = conn.execute("SELECT DISTINCT ticker FROM sentiment_features ORDER BY ticker").fetchdf()
         available = avail_df["ticker"].tolist() if not avail_df.empty else []
-        conn.close()
     except Exception:
         pass
 
@@ -292,7 +290,6 @@ def sentimentpulse(days: int = 7):
             "SELECT * FROM sentiment_features WHERE date >= ? ORDER BY date DESC, composite_score DESC",
             [cutoff],
         ).fetchdf()
-        conn.close()
 
         if df.empty:
             return {"tickers": [], "count": 0, "source": "duckdb"}
@@ -349,7 +346,6 @@ def recent_news(ticker: Optional[str] = None, limit: int = 50):
                 "SELECT * FROM articles ORDER BY date DESC LIMIT ?",
                 [limit],
             ).fetchdf()
-        conn.close()
 
         if not df.empty:
             articles = []
@@ -398,7 +394,6 @@ def analyst_recommendations(ticker: Optional[str] = None):
             query += f" AND ticker = '{ticker}'"
         query += " ORDER BY analyst_consensus_score DESC"
         df = conn.execute(query).fetchdf()
-        conn.close()
 
         if df.empty:
             return {"recommendations": [], "count": 0}
@@ -437,7 +432,6 @@ def insider_transactions(ticker: Optional[str] = None, limit: int = 50):
         query += " ORDER BY ABS(insider_net_30d) DESC"
         query += f" LIMIT {min(limit, 200)}"
         df = conn.execute(query).fetchdf()
-        conn.close()
 
         if df.empty:
             return {"transactions": [], "count": 0}
@@ -476,7 +470,6 @@ def earnings_surprises(ticker: Optional[str] = None):
             query += f" AND ticker = '{ticker}'"
         query += " ORDER BY earnings_days_to ASC NULLS LAST"
         df = conn.execute(query).fetchdf()
-        conn.close()
 
         if df.empty:
             return {"earnings": [], "count": 0}
@@ -518,7 +511,6 @@ def trigger_log(days: int = Query(30, ge=1, le=365)):
             "SELECT * FROM trigger_log WHERE evaluated_at >= ? ORDER BY evaluated_at DESC",
             [cutoff],
         ).fetchdf()
-        conn.close()
 
         if not df.empty:
             import math
@@ -649,8 +641,7 @@ def sentiment_overview_full(ticker: str):
         has_deep = not da_df.empty
         da_trigger = str(da_df.iloc[0]["trigger_reason"]) if has_deep and pd.notna(da_df.iloc[0]["trigger_reason"]) else None
     finally:
-        conn.close()
-
+        pass
     # Moby picks from CSV
     moby_data = None
     try:
@@ -778,8 +769,7 @@ def deep_analysis_recent(limit: int = Query(20, ge=1, le=100)):
             [limit],
         ).fetchdf()
     finally:
-        conn.close()
-
+        pass
     if df.empty:
         return {"analyses": [], "count": 0}
 
@@ -813,8 +803,7 @@ def deep_analysis_detail(ticker: str, date: Optional[str] = Query(None)):
                 [ticker.upper()],
             ).fetchdf()
     finally:
-        conn.close()
-
+        pass
     if df.empty:
         return {"error": f"No deep analysis found for {ticker.upper()}", "ticker": ticker.upper()}
 
@@ -842,8 +831,7 @@ def crawl_health():
             "FROM crawl_runs ORDER BY started_at DESC LIMIT 5"
         ).fetchdf()
     finally:
-        conn.close()
-
+        pass
     if df.empty:
         return {"runs": [], "count": 0}
 
