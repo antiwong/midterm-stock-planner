@@ -93,10 +93,26 @@ def sentiment_overview():
                     "llm_score": _safe_float(row.get("llm_score")),
                     "finnhub_score": _safe_float(row.get("finnhub_score")),
                     "eodhd_score": _safe_float(row.get("eodhd_score")),
-                    "options_pcr": _safe_float(row.get("options_pcr")) if row.get("options_pcr") is not None else None,
+                    "options_pcr": _safe_float(row.get("options_pcr")) if row.get("options_pcr") is not None and not pd.isna(row.get("options_pcr")) else None,
                     "insider_signal": row.get("insider_signal", ""),
+                    "insider_cluster_flag": bool(row.get("insider_cluster_flag")) if row.get("insider_cluster_flag") is not None and not pd.isna(row.get("insider_cluster_flag")) else False,
                     "analyst_consensus": row.get("analyst_consensus", ""),
                     "analyst_consensus_score": _safe_float(row.get("analyst_consensus_score")),
+                    # ICD fields for overview table
+                    "options_sentiment_signal": _safe_float(row.get("options_sentiment_signal")) if row.get("options_sentiment_signal") is not None and not pd.isna(row.get("options_sentiment_signal")) else None,
+                    "iv_skew": _safe_float(row.get("iv_skew")) if row.get("iv_skew") is not None and not pd.isna(row.get("iv_skew")) else None,
+                    "unusual_options_flag": bool(row.get("unusual_options_flag")) if row.get("unusual_options_flag") is not None and not pd.isna(row.get("unusual_options_flag")) else False,
+                    "price_divergence": bool(row.get("price_divergence")) if row.get("price_divergence") is not None and not pd.isna(row.get("price_divergence")) else False,
+                    "divergence_direction": str(row.get("divergence_direction", "none")),
+                    "apewisdom_mentions": int(_safe_float(row.get("apewisdom_mentions", 0))),
+                    "apewisdom_spike_flag": bool(row.get("apewisdom_spike_flag")) if row.get("apewisdom_spike_flag") is not None and not pd.isna(row.get("apewisdom_spike_flag")) else False,
+                    "forward_event_type": str(row.get("forward_event_type", "")) if row.get("forward_event_type") is not None and not pd.isna(row.get("forward_event_type")) else None,
+                    "earnings_date": str(row.get("earnings_date", "")) if row.get("earnings_date") is not None and not pd.isna(row.get("earnings_date")) else None,
+                    "earnings_days_to": _safe_float(row.get("earnings_days_to")) if row.get("earnings_days_to") is not None and not pd.isna(row.get("earnings_days_to")) else None,
+                    "market_regime": str(row.get("market_regime", "")),
+                    "market_vix": _safe_float(row.get("market_vix")) if row.get("market_vix") is not None and not pd.isna(row.get("market_vix")) else None,
+                    "market_spy_5d": _safe_float(row.get("market_spy_5d")) if row.get("market_spy_5d") is not None and not pd.isna(row.get("market_spy_5d")) else None,
+                    "market_confidence_mult": _safe_float(row.get("market_confidence_mult")) if row.get("market_confidence_mult") is not None and not pd.isna(row.get("market_confidence_mult")) else None,
                 }
     except Exception as e:
         import logging
@@ -162,6 +178,26 @@ def sentiment_overview():
                 "count": d["headline_count"],
                 "positive": 0, "negative": 0, "neutral": 0,
             }
+            # Options flow
+            if d.get("options_pcr") is not None:
+                entry["options_pcr"] = round(d["options_pcr"], 3)
+            # Forward events
+            fwd = d.get("forward_event_type")
+            if fwd:
+                entry["forward_event"] = fwd
+            elif d.get("earnings_days_to") is not None and d["earnings_days_to"] <= 14:
+                entry["forward_event"] = f"Earnings in {int(d['earnings_days_to'])}d"
+            # Divergence
+            if d.get("price_divergence"):
+                entry["divergence"] = d["divergence_direction"]
+            # Social
+            if d.get("apewisdom_mentions", 0) > 0:
+                entry["apewisdom_mentions"] = d["apewisdom_mentions"]
+            if d.get("apewisdom_spike_flag"):
+                entry["apewisdom_spike"] = True
+            # Insider
+            if d.get("insider_cluster_flag"):
+                entry["insider_cluster"] = True
         else:
             entry["composite"] = None
             entry["signal_breadth"] = 0.0
@@ -177,6 +213,17 @@ def sentiment_overview():
             overview.append(entry)
 
     overview.sort(key=lambda x: abs(x.get("composite") or 0), reverse=True)
+
+    # Extract market regime from first ticker's data
+    market_regime_data = None
+    first_with_regime = next((d for d in duckdb_agg.values() if d.get("market_regime")), None)
+    if first_with_regime:
+        market_regime_data = {
+            "regime": first_with_regime["market_regime"],
+            "confidence_multiplier": first_with_regime.get("market_confidence_mult", 1.0),
+            "vix": first_with_regime.get("market_vix"),
+            "spy_5d_return": first_with_regime.get("market_spy_5d"),
+        }
 
     # Market regime
     try:
@@ -437,18 +484,26 @@ def insider_transactions(ticker: Optional[str] = None, limit: int = 50):
             return {"transactions": [], "count": 0}
 
         txns = []
+        signals = {}
         for _, row in df.iterrows():
             net_val = _safe_float(row.get("insider_net_30d"))
+            tk = str(row["ticker"])
             txns.append({
                 "date": str(row["date"]),
-                "ticker": str(row["ticker"]),
-                "insider_signal": round(_safe_float(row.get("insider_signal")), 4),
-                "insider_cluster_flag": bool(row.get("insider_cluster_flag")) if row.get("insider_cluster_flag") is not None and not pd.isna(row.get("insider_cluster_flag")) else False,
+                "ticker": tk,
+                "insider": "Multiple insiders",
                 "type": "BUY" if net_val > 0 else "SELL",
-                "insider_net_30d": round(net_val, 2),
-                "insider_buy_count_30d": int(_safe_float(row.get("insider_buy_count_30d"))),
+                "shares": int(abs(_safe_float(row.get("insider_buy_count_30d")))),
+                "price": 0.0,
+                "value": round(abs(net_val), 2),
             })
-        return {"transactions": txns, "count": len(txns)}
+            signals[tk] = {
+                "insider_cluster_flag": bool(row.get("insider_cluster_flag")) if row.get("insider_cluster_flag") is not None and not pd.isna(row.get("insider_cluster_flag")) else False,
+                "insider_tx_count_30d": int(_safe_float(row.get("insider_buy_count_30d"))),
+                "insider_unique_30d": int(_safe_float(row.get("insider_buy_count_30d"))),
+                "insider_value_30d": round(net_val, 2),
+            }
+        return {"transactions": txns, "signals": signals, "count": len(txns)}
     except Exception:
         return {"transactions": [], "count": 0}
 
