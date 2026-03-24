@@ -5,7 +5,27 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .auth import init_auth_db, validate_session
-from .routers import portfolios, forward, prices, moby, auth_routes
+from .routers import (
+    auth_routes,
+    portfolios,
+    forward,
+    prices,
+    moby,
+    alerts,
+    commentary,
+    comparison,
+    earnings,
+    monitoring,
+    particles,
+    recommendations,
+    runs,
+    sentiment,
+    settings,
+    signals,
+    similar_days,
+    ticker,
+    watchlists,
+)
 
 # Paths that don't require authentication
 PUBLIC_PATHS = {"/api/health", "/api/auth/login", "/api/auth/me"}
@@ -19,7 +39,7 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5000", "http://127.0.0.1:5000"],
-    allow_methods=["GET", "POST"],
+    allow_methods=["GET", "POST", "PUT"],
     allow_headers=["*"],
     allow_credentials=True,
 )
@@ -55,11 +75,34 @@ app.add_middleware(AuthMiddleware)
 # Initialize auth DB on startup
 init_auth_db()
 
+# Auth
 app.include_router(auth_routes.router)
+
+# Core trading
 app.include_router(portfolios.router)
 app.include_router(forward.router)
+app.include_router(commentary.router)
 app.include_router(prices.router)
 app.include_router(moby.router)
+
+# Analysis
+app.include_router(sentiment.router)
+app.include_router(comparison.router)
+app.include_router(earnings.router)
+app.include_router(monitoring.router)
+app.include_router(signals.router)
+app.include_router(recommendations.router)
+app.include_router(watchlists.router)
+
+# Ticker detail
+app.include_router(ticker.router)
+app.include_router(particles.router)
+app.include_router(similar_days.router)
+
+# System
+app.include_router(alerts.router)
+app.include_router(runs.router)
+app.include_router(settings.router)
 
 
 @app.get("/api/health")

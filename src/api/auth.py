@@ -162,6 +162,10 @@ def require_auth(request: Request, sp_session: Optional[str] = Cookie(None)) -> 
     return user
 
 
+# Alias for backwards compatibility with existing routers (e.g. settings.py)
+get_current_user = require_auth
+
+
 def set_user_password(username: str, password: str):
     """Set/reset a user's password (for CLI use)."""
     salt = secrets.token_hex(16)
