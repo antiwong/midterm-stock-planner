@@ -135,21 +135,30 @@ import threading
 _duckdb_lock = threading.Lock()
 _duckdb_conn = None
 _duckdb_mtime: float = 0
+_duckdb_inode: int = 0
 
 DUCKDB_PATH = DATA_DIR / "sentimentpulse.db"
 
 
 def get_duckdb_conn():
-    """Get a shared read-only DuckDB connection. Reopens if file changed."""
-    global _duckdb_conn, _duckdb_mtime
+    """Get a shared read-only DuckDB connection.
+
+    Reopens when the file changes (mtime) or is replaced (inode changes,
+    which happens during atomic mv from rsync sync).
+    """
+    global _duckdb_conn, _duckdb_mtime, _duckdb_inode
     import duckdb
 
     if not DUCKDB_PATH.exists():
         return None
 
-    mtime = DUCKDB_PATH.stat().st_mtime
+    stat = DUCKDB_PATH.stat()
+    mtime = stat.st_mtime
+    inode = stat.st_ino
+
     with _duckdb_lock:
-        if _duckdb_conn is None or mtime > _duckdb_mtime:
+        # Reopen if file was modified OR replaced (atomic mv changes inode)
+        if _duckdb_conn is None or mtime > _duckdb_mtime or inode != _duckdb_inode:
             if _duckdb_conn is not None:
                 try:
                     _duckdb_conn.close()
@@ -157,4 +166,5 @@ def get_duckdb_conn():
                     pass
             _duckdb_conn = duckdb.connect(str(DUCKDB_PATH), read_only=True)
             _duckdb_mtime = mtime
+            _duckdb_inode = inode
         return _duckdb_conn
