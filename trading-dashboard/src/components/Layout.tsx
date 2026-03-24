@@ -8,7 +8,12 @@ const NAV = [
   { to: '/moby', label: 'Moby Analysis', icon: '🐋' },
 ];
 
-export default function Layout() {
+interface Props {
+  user: { username: string; display_name?: string };
+  onLogout: () => void;
+}
+
+export default function Layout({ user, onLogout }: Props) {
   return (
     <div className="flex h-screen">
       {/* Sidebar */}
@@ -36,8 +41,16 @@ export default function Layout() {
             </NavLink>
           ))}
         </div>
-        <div className="p-4 border-t border-surface-lighter text-xs text-muted">
-          Auto-refresh: 60s
+        <div className="p-4 border-t border-surface-lighter">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted truncate">{user.display_name || user.username}</span>
+            <button
+              onClick={onLogout}
+              className="text-xs text-muted hover:text-red-400 transition-colors"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       </nav>
 

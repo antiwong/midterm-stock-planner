@@ -59,7 +59,7 @@ export default function PaperTrading() {
               <YAxis tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} tickFormatter={(v: number) => `${(v * 100).toFixed(1)}%`} />
               <Tooltip
                 contentStyle={{ background: '#22232d', border: '1px solid #2a2b37', borderRadius: 8, color: '#e2e8f0' }}
-                formatter={(v: number) => `${(v * 100).toFixed(2)}%`}
+                formatter={(v) => `${(Number(v) * 100).toFixed(2)}%`}
               />
               <Bar dataKey="daily_return">
                 {(snaps.data?.snapshots || []).slice(-20).map((s, i) => (

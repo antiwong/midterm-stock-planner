@@ -1,7 +1,12 @@
 const BASE = '/api';
 
 export async function apiFetch<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`);
+  const res = await fetch(`${BASE}${path}`, { credentials: 'include' });
+  if (res.status === 401) {
+    // Session expired — force reload to show login
+    window.location.reload();
+    throw new Error('Session expired');
+  }
   if (!res.ok) throw new Error(`API ${res.status}: ${path}`);
   return res.json();
 }
