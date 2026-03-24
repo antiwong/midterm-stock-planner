@@ -996,14 +996,54 @@ class PaperTradingEngine:
         state = self.db.get_state()
         initial_value = state["initial_value"]
 
+        # Check stop-losses on current Alpaca positions
+        alpaca_positions = self.broker.get_positions()
+        for p in alpaca_positions:
+            entry = float(p.get("avg_entry_price", 0))
+            current = float(p.get("current_price", 0))
+            ticker = p.get("symbol", "")
+            if entry > 0 and current > 0:
+                pnl_pct = (current / entry) - 1
+                stop_pct = getattr(self.config.backtest, 'stop_loss_pct', -0.08)
+                if pnl_pct <= stop_pct:
+                    print(f"  STOP-LOSS {ticker}: {pnl_pct:+.1%} — closing via Alpaca")
+                    try:
+                        self.broker.close_position(ticker)
+                    except Exception as e:
+                        print(f"  WARNING: stop-loss sell failed for {ticker}: {e}")
+                    self._record_cooldown(ticker, today, getattr(self.config.backtest, 'stop_loss_cooldown_days', 5))
+
+        # Market regime filter
+        regime, spy_return, regime_scale = self._get_spy_regime()
+        if regime == 'exit':
+            print(f"\n  MARKET REGIME: EXIT (SPY 20d: {spy_return:+.1%}) — closing all Alpaca positions")
+            try:
+                self.broker.close_all_positions()
+            except Exception as e:
+                print(f"  WARNING: regime exit failed: {e}")
+            return
+        elif regime == 'reduce':
+            print(f"\n  MARKET REGIME: REDUCE (SPY 20d: {spy_return:+.1%}) — scaling to {regime_scale:.0%}")
+
+        # Filter cooled tickers
+        cooled = self._get_cooled_tickers(today)
+        if cooled:
+            print(f"  Cooldown active: {', '.join(sorted(cooled))}")
+
         # Target portfolio from signals
         buy_signals = signals[signals["action"] == "BUY"].copy()
+        if cooled:
+            buy_signals = buy_signals[~buy_signals["ticker"].isin(cooled)]
         if len(buy_signals) == 0:
-            print("No BUY signals. Holding current positions.")
+            print("No BUY signals (after cooldown). Holding current positions.")
             return
 
         top_n = self.config.backtest.top_n or 5
         target_weights = self._compute_target_weights(buy_signals, top_n)
+
+        # Apply regime scale
+        if regime_scale < 1.0:
+            target_weights = {t: w * regime_scale for t, w in target_weights.items()}
 
         print(f"\nTarget weights: {target_weights}")
 

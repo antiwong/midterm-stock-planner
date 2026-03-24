@@ -352,6 +352,9 @@ class DailyRoutine:
             # 8. Generate recommendations
             results["recommendations"] = _run_step(8, "Recommendations", self._generate_recommendations)
 
+            # Write daily monitoring summary
+            self._write_daily_summary(results)
+
             # Final summary
             elapsed = datetime.now() - start_time
             summary = self._format_daily_summary(results)
@@ -1227,6 +1230,144 @@ class DailyRoutine:
     # ------------------------------------------------------------------
     # Notifications
     # ------------------------------------------------------------------
+
+    def _write_daily_summary(self, results: Dict):
+        """Write a plain-language daily summary to logs/daily_summary.txt."""
+        from datetime import datetime as dt
+        import sqlite3
+        lines = []
+        lines.append(f"{'='*60}")
+        lines.append(f"DAILY SUMMARY — {dt.now().strftime('%Y-%m-%d %H:%M')}")
+        lines.append(f"{'='*60}")
+
+        # 1. Market regime
+        try:
+            price_df = pd.read_csv(DATA_DIR / "prices_daily.csv", parse_dates=["date"])
+            spy = price_df[price_df["ticker"] == "SPY"].sort_values("date")
+            if len(spy) >= 20:
+                spy_current = spy.iloc[-1]["close"]
+                spy_20d = spy.iloc[-20]["close"]
+                spy_ret = (spy_current / spy_20d) - 1
+                if spy_ret <= -0.08:
+                    regime = "CASH (SPY <-8%)"
+                elif spy_ret <= -0.05:
+                    regime = "REDUCED (SPY <-5%)"
+                else:
+                    regime = "NORMAL"
+                lines.append(f"\nMARKET REGIME: {regime}")
+                lines.append(f"  SPY 20d return: {spy_ret:+.2%}  (reduce at -5%, exit at -8%)")
+                lines.append(f"  SPY close: ${spy_current:.2f}")
+        except Exception as e:
+            lines.append(f"\nMARKET REGIME: unknown ({e})")
+
+        # 2. Portfolio summary
+        lines.append(f"\nPORTFOLIOS:")
+        total_value = 0
+        positions_count = 0
+        stopped_today = []
+        cooled_tickers = set()
+        all_position_returns = []
+
+        for p in PORTFOLIOS:
+            wl = p["watchlist"]
+            db_path = DATA_DIR / f"paper_trading_{wl}.db"
+            if not db_path.exists():
+                continue
+            try:
+                conn = sqlite3.connect(str(db_path))
+                conn.row_factory = sqlite3.Row
+
+                snap = conn.execute(
+                    "SELECT portfolio_value, daily_return, cumulative_return "
+                    "FROM daily_snapshots ORDER BY date DESC LIMIT 1"
+                ).fetchone()
+
+                pos = conn.execute(
+                    "SELECT ticker, shares, entry_price, weight "
+                    "FROM positions WHERE is_active = 1"
+                ).fetchall()
+
+                # Check for stop-loss cooldowns
+                try:
+                    cooled = conn.execute(
+                        "SELECT ticker, cooldown_until FROM stop_loss_cooldown WHERE cooldown_until > date('now')"
+                    ).fetchall()
+                    for c in cooled:
+                        cooled_tickers.add(f"{c[0]} ({wl}, until {c[1]})")
+                except Exception:
+                    pass
+
+                # Check today's trades for stop-losses
+                today_str = dt.now().strftime("%Y-%m-%d")
+                try:
+                    today_trades = conn.execute(
+                        "SELECT ticker, action, shares, price FROM trades WHERE date LIKE ? AND action = 'SELL'",
+                        (f"{today_str}%",)
+                    ).fetchall()
+                except Exception:
+                    today_trades = []
+
+                conn.close()
+
+                if snap:
+                    pv = snap["portfolio_value"]
+                    dr = snap["daily_return"]
+                    cr = snap["cumulative_return"]
+                    total_value += pv
+                    positions_count += len(pos)
+                    lines.append(f"  {wl:22s} ${pv:>10,.0f}  daily:{dr:+.2%}  total:{cr:+.2%}  pos:{len(pos)}")
+
+                    # Track per-position returns for top/bottom
+                    price_df_wl = pd.read_csv(DATA_DIR / "prices_daily.csv")
+                    latest = price_df_wl.sort_values("date").groupby("ticker").last()["close"].to_dict()
+                    for position in pos:
+                        tk = position["ticker"]
+                        entry = position["entry_price"]
+                        current = latest.get(tk, entry)
+                        if entry > 0:
+                            ret = (current / entry) - 1
+                            all_position_returns.append((tk, wl, ret, current, entry))
+
+            except Exception as e:
+                lines.append(f"  {wl:22s} ERROR: {e}")
+
+        lines.append(f"\n  TOTAL VALUE: ${total_value:,.0f}  |  POSITIONS: {positions_count}")
+
+        # 3. Stop-losses triggered today
+        if stopped_today:
+            lines.append(f"\nSTOP-LOSSES TODAY: {', '.join(stopped_today)}")
+        else:
+            lines.append(f"\nSTOP-LOSSES TODAY: none")
+
+        # 4. Cooldown tickers
+        if cooled_tickers:
+            lines.append(f"COOLDOWN ACTIVE ({len(cooled_tickers)}):")
+            for c in sorted(cooled_tickers):
+                lines.append(f"  {c}")
+        else:
+            lines.append(f"COOLDOWN ACTIVE: none")
+
+        # 5. Top 3 / Bottom 3 positions
+        if all_position_returns:
+            sorted_pos = sorted(all_position_returns, key=lambda x: x[2])
+            lines.append(f"\nBOTTOM 3 POSITIONS:")
+            for tk, wl, ret, cur, entry in sorted_pos[:3]:
+                lines.append(f"  {tk:6s} ({wl:15s}) {ret:+.1%}  entry=${entry:.2f} now=${cur:.2f}")
+            lines.append(f"\nTOP 3 POSITIONS:")
+            for tk, wl, ret, cur, entry in sorted_pos[-3:]:
+                lines.append(f"  {tk:6s} ({wl:15s}) {ret:+.1%}  entry=${entry:.2f} now=${cur:.2f}")
+
+            avg_ret = sum(r[2] for r in all_position_returns) / len(all_position_returns)
+            lines.append(f"\n  AVG POSITION RETURN: {avg_ret:+.2%} across {len(all_position_returns)} positions")
+
+        lines.append(f"\n{'='*60}")
+
+        summary = "\n".join(lines)
+        summary_path = LOG_DIR / "daily_summary.txt"
+        with open(summary_path, "w") as f:
+            f.write(summary)
+        self.logger.info(f"Daily summary written to {summary_path}")
+        return summary
 
     def _step_status(self, name: str, result: dict) -> str:
         """Format a one-line status string for a step result."""
