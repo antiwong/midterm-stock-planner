@@ -450,9 +450,44 @@ class DailyRoutine:
     # Data Refresh
     # ------------------------------------------------------------------
 
+    def _download_us_yfinance(self, tickers: list, start_date: str, end_date: str) -> pd.DataFrame:
+        """Fallback: download US tickers via yfinance."""
+        import yfinance as yf
+        self.logger.info(f"  yfinance fallback: downloading {len(tickers)} US tickers...")
+        yf_data = yf.download(
+            tickers, start=start_date, end=end_date,
+            group_by="ticker", auto_adjust=True, threads=True,
+        )
+        rows = []
+        for ticker in tickers:
+            try:
+                if len(tickers) == 1:
+                    t_df = yf_data
+                else:
+                    t_df = yf_data[ticker] if ticker in yf_data.columns.get_level_values(0) else None
+                if t_df is None or t_df.empty:
+                    continue
+                t_df = t_df.dropna(subset=["Close"])
+                for idx, row in t_df.iterrows():
+                    rows.append({
+                        "date": idx.strftime("%Y-%m-%d"),
+                        "ticker": ticker,
+                        "open": round(float(row.get("Open", 0)), 4),
+                        "high": round(float(row.get("High", 0)), 4),
+                        "low": round(float(row.get("Low", 0)), 4),
+                        "close": round(float(row.get("Close", 0)), 4),
+                        "volume": int(row.get("Volume", 0)),
+                    })
+            except Exception:
+                pass
+        if rows:
+            return pd.DataFrame(rows)
+        return pd.DataFrame()
+
     def _refresh_all_data(self) -> Dict:
         """Download prices for union of all watchlists (deduplicated).
-        Uses Alpaca for US tickers and yfinance for SGX (.SI) tickers."""
+        Uses Alpaca (SIP → IEX fallback) for US tickers, yfinance for SGX.
+        Falls back to yfinance for US if Alpaca completely fails."""
         self.logger.info("--- Data Refresh ---")
         watchlist_names = [p["watchlist"] for p in PORTFOLIOS]
         all_tickers = get_all_tickers(watchlist_names)
@@ -469,65 +504,59 @@ class DailyRoutine:
         end_date = datetime.now().strftime("%Y-%m-%d")
         start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
         all_dfs = []
+        us_rows = 0
+        us_source = "none"
 
-        # US tickers via Alpaca
+        # US tickers: yfinance (free, primary) → Alpaca IEX (free fallback)
         if us_tickers:
+            # Try 1: yfinance (free, reliable for daily data)
             try:
-                from src.data.alpaca_client import AlpacaClient
-                client = AlpacaClient()
-                df = client.download(
-                    tickers=us_tickers,
-                    start_date=start_date,
-                    end_date=end_date,
-                    interval="1d",
-                )
-                if df is not None and len(df) > 0:
-                    all_dfs.append(df)
-                    self.logger.info(f"  Alpaca: {len(df)} rows for {len(us_tickers)} US tickers")
+                yf_df = self._download_us_yfinance(us_tickers, start_date, end_date)
+                if not yf_df.empty:
+                    all_dfs.append(yf_df)
+                    us_rows = len(yf_df)
+                    us_source = "yfinance"
+                    self.logger.info(f"  yfinance: {us_rows} rows for {len(us_tickers)} US tickers")
             except Exception as e:
-                self.logger.error(f"  Alpaca download failed: {e}")
+                self.logger.warning(f"  yfinance US download failed: {e}")
+
+            # Try 2: Alpaca IEX feed (free tier fallback)
+            if us_rows == 0:
+                try:
+                    from src.data.alpaca_client import AlpacaClient
+                    client = AlpacaClient()
+                    df = client.download(
+                        tickers=us_tickers,
+                        start_date=start_date,
+                        end_date=end_date,
+                        interval="1d",
+                    )
+                    if df is not None and len(df) > 0:
+                        all_dfs.append(df)
+                        us_rows = len(df)
+                        us_source = "alpaca"
+                        self.logger.info(f"  Alpaca fallback: {us_rows} rows for {len(us_tickers)} US tickers")
+                except Exception as e:
+                    self.logger.warning(f"  Alpaca fallback also failed: {e}")
+
+            # Data freshness guard
+            if us_rows == 0 and us_tickers:
+                self.logger.error(f"CRITICAL: 0 US price rows downloaded from all sources (SIP/IEX/yfinance). "
+                                  f"{len(us_tickers)} tickers will use stale data!")
+                self._notify(f":rotating_light: *Data Refresh CRITICAL*: 0 US rows from ALL sources "
+                             f"(Alpaca SIP, IEX, yfinance). {len(us_tickers)} tickers running on stale data.")
 
         # SGX tickers via yfinance
+        sgx_rows = 0
         if sgx_tickers:
             try:
-                import yfinance as yf
-                self.logger.info(f"  Downloading {len(sgx_tickers)} SGX tickers via yfinance...")
-                yf_data = yf.download(
-                    sgx_tickers,
-                    start=start_date,
-                    end=end_date,
-                    group_by="ticker",
-                    auto_adjust=True,
-                    threads=True,
-                )
-                rows = []
-                for ticker in sgx_tickers:
-                    try:
-                        if len(sgx_tickers) == 1:
-                            t_df = yf_data
-                        else:
-                            t_df = yf_data[ticker] if ticker in yf_data.columns.get_level_values(0) else None
-                        if t_df is None or t_df.empty:
-                            continue
-                        t_df = t_df.dropna(subset=["Close"])
-                        for idx, row in t_df.iterrows():
-                            rows.append({
-                                "date": idx.strftime("%Y-%m-%d"),
-                                "ticker": ticker,
-                                "open": round(float(row.get("Open", 0)), 4),
-                                "high": round(float(row.get("High", 0)), 4),
-                                "low": round(float(row.get("Low", 0)), 4),
-                                "close": round(float(row.get("Close", 0)), 4),
-                                "volume": int(row.get("Volume", 0)),
-                            })
-                    except Exception as e:
-                        self.logger.warning(f"  yfinance {ticker} failed: {e}")
-                if rows:
-                    sgx_df = pd.DataFrame(rows)
+                sgx_df = self._download_us_yfinance(sgx_tickers, start_date, end_date)
+                if not sgx_df.empty:
                     all_dfs.append(sgx_df)
-                    self.logger.info(f"  yfinance: {len(rows)} rows for {len(sgx_tickers)} SGX tickers")
+                    sgx_rows = len(sgx_df)
+                    self.logger.info(f"  yfinance: {sgx_rows} rows for {len(sgx_tickers)} SGX tickers")
             except Exception as e:
-                self.logger.error(f"  yfinance download failed: {e}")
+                self.logger.error(f"  yfinance SGX download failed: {e}")
 
         # Merge and save
         if all_dfs:
@@ -538,14 +567,20 @@ class DailyRoutine:
                     subset=["date", "ticker"]
                 )
                 combined.to_csv(output_path, index=False)
-                self.logger.info(f"Data refresh complete: {len(new_data)} new rows appended")
+                self.logger.info(f"Data refresh complete: {len(new_data)} new rows appended (US: {us_rows} via {us_source}, SGX: {sgx_rows})")
             else:
                 new_data.to_csv(output_path, index=False)
                 self.logger.info(f"Data refresh complete: {len(new_data)} rows (fresh)")
         else:
-            self.logger.warning("Data refresh returned no data")
+            self.logger.warning("Data refresh returned no data from any source")
+            self._notify(":x: *Data Refresh FAILED*: No data from any source. All portfolios will use stale data.")
 
-        return {"status": "success", "tickers": len(all_tickers), "us": len(us_tickers), "sgx": len(sgx_tickers)}
+        return {
+            "status": "success" if us_rows > 0 or sgx_rows > 0 else "error",
+            "tickers": len(all_tickers),
+            "us": len(us_tickers), "us_rows": us_rows, "us_source": us_source,
+            "sgx": len(sgx_tickers), "sgx_rows": sgx_rows,
+        }
 
     # ------------------------------------------------------------------
     # Sentiment
