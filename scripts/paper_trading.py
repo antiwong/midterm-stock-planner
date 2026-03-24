@@ -633,6 +633,101 @@ class PaperTradingEngine:
             )
             self.db.conn.commit()
 
+    # ------------------------------------------------------------------
+    # Market regime filter
+    # ------------------------------------------------------------------
+
+    def _get_spy_regime(self) -> tuple:
+        """Check SPY 20d return for market regime filter.
+
+        Returns:
+            (regime, spy_return, scale_factor)
+            regime: 'normal' | 'reduce' | 'exit'
+            spy_return: float (20d return)
+            scale_factor: float (1.0 = normal, 0.3 = reduce, 0.0 = exit)
+        """
+        mrf = getattr(self.config.backtest, 'market_regime_filter', None)
+        if not mrf or not (mrf.get('enabled', False) if isinstance(mrf, dict) else getattr(mrf, 'enabled', False)):
+            return ('normal', 0.0, 1.0)
+
+        try:
+            price_path = PROJECT_ROOT / self.config.data.price_data_path_daily
+            price_df = pd.read_csv(price_path, parse_dates=["date"])
+            spy = price_df[price_df["ticker"] == "SPY"].sort_values("date").tail(30)
+            if len(spy) < 20:
+                return ('normal', 0.0, 1.0)
+
+            current = spy.iloc[-1]["close"]
+            past = spy.iloc[-20]["close"] if len(spy) >= 20 else spy.iloc[0]["close"]
+            spy_return = (current / past) - 1
+
+            _get = mrf.get if isinstance(mrf, dict) else lambda k, d: getattr(mrf, k, d)
+            threshold_exit = _get('threshold_exit', -0.08)
+            threshold_reduce = _get('threshold_reduce', -0.05)
+            reduce_scale = _get('reduce_scale', 0.30)
+
+            if spy_return <= threshold_exit:
+                return ('exit', spy_return, 0.0)
+            elif spy_return <= threshold_reduce:
+                return ('reduce', spy_return, reduce_scale)
+            else:
+                return ('normal', spy_return, 1.0)
+        except Exception as e:
+            print(f"  Market regime check failed: {e}")
+            return ('normal', 0.0, 1.0)
+
+    # ------------------------------------------------------------------
+    # Stop-loss with cooldown
+    # ------------------------------------------------------------------
+
+    def _check_stop_losses(self, positions: list, latest_prices: dict, today: str) -> list:
+        """Check positions against stop-loss threshold.
+
+        Returns list of tickers to force-sell. Records cooldown in DB.
+        """
+        stop_pct = getattr(self.config.backtest, 'stop_loss_pct', -0.08)
+        cooldown_days = getattr(self.config.backtest, 'stop_loss_cooldown_days', 5)
+        stopped = []
+
+        for pos in positions:
+            ticker = pos["ticker"]
+            entry = pos["entry_price"]
+            current = latest_prices.get(ticker, entry)
+            if entry <= 0:
+                continue
+            pnl_pct = (current / entry) - 1
+            if pnl_pct <= stop_pct:
+                stopped.append(ticker)
+                print(f"  STOP-LOSS {ticker}: {pnl_pct:+.1%} (threshold: {stop_pct:.0%})")
+                # Record cooldown
+                self._record_cooldown(ticker, today, cooldown_days)
+        return stopped
+
+    def _record_cooldown(self, ticker: str, date: str, days: int):
+        """Record a stop-loss cooldown in the DB."""
+        self.db.conn.execute(
+            "CREATE TABLE IF NOT EXISTS stop_loss_cooldown "
+            "(ticker TEXT, stopped_date TEXT, cooldown_until TEXT, PRIMARY KEY (ticker, stopped_date))"
+        )
+        from datetime import datetime as dt, timedelta
+        stopped_dt = dt.strptime(date, "%Y-%m-%d")
+        cooldown_until = stopped_dt + timedelta(days=days)
+        self.db.conn.execute(
+            "INSERT OR REPLACE INTO stop_loss_cooldown (ticker, stopped_date, cooldown_until) VALUES (?, ?, ?)",
+            (ticker, date, cooldown_until.strftime("%Y-%m-%d"))
+        )
+        self.db.conn.commit()
+
+    def _get_cooled_tickers(self, today: str) -> set:
+        """Get tickers in stop-loss cooldown (can't re-enter)."""
+        try:
+            rows = self.db.conn.execute(
+                "SELECT ticker FROM stop_loss_cooldown WHERE cooldown_until > ?", (today,)
+            ).fetchall()
+            return {r[0] for r in rows}
+        except Exception:
+            return set()
+
     def refresh_data(self) -> bool:
         """Download latest price data."""
         print("Refreshing price data...")
@@ -1058,14 +1153,75 @@ class PaperTradingEngine:
         )
         portfolio_value = cash + invested
 
+        # Check stop-losses on current positions
+        stopped_tickers = self._check_stop_losses(current_positions, latest_prices, today)
+
+        # Force-sell stopped positions
+        for ticker in stopped_tickers:
+            if ticker in current_tickers:
+                pos = current_tickers[ticker]
+                price = latest_prices.get(ticker, pos["entry_price"])
+                value = pos["shares"] * price
+                cost = value * self.transaction_cost
+                realized_pnl = (price - pos["entry_price"]) * pos["shares"] - cost
+                trade = PaperTrade(
+                    date=today, ticker=ticker, action="SELL",
+                    shares=pos["shares"], price=price, value=value, cost=cost,
+                    weight_before=pos["weight"], weight_after=0.0
+                )
+                self.db.record_trade(trade)
+                self.db.close_position(ticker, today, price, realized_pnl)
+                cash += value - cost
+                del current_tickers[ticker]
+                print(f"  STOP-LOSS SELL {ticker}: {pos['shares']:.1f} shares @ ${price:.2f} (PnL: ${realized_pnl:+.2f})")
+
+        # Market regime filter
+        regime, spy_return, regime_scale = self._get_spy_regime()
+        if regime == 'exit':
+            print(f"\n  MARKET REGIME: EXIT (SPY 20d: {spy_return:+.1%}) — liquidating all positions")
+            for ticker, pos in list(current_tickers.items()):
+                price = latest_prices.get(ticker, pos["entry_price"])
+                value = pos["shares"] * price
+                cost = value * self.transaction_cost
+                realized_pnl = (price - pos["entry_price"]) * pos["shares"] - cost
+                trade = PaperTrade(
+                    date=today, ticker=ticker, action="SELL",
+                    shares=pos["shares"], price=price, value=value, cost=cost,
+                    weight_before=pos["weight"], weight_after=0.0
+                )
+                self.db.record_trade(trade)
+                self.db.close_position(ticker, today, price, realized_pnl)
+                cash += value - cost
+                print(f"  REGIME SELL {ticker}: {pos['shares']:.1f} shares @ ${price:.2f}")
+            self.db.update_cash(cash)
+            self.db.record_signals(today, signals)
+            print(f"\nGone to cash. Portfolio: ${cash:,.2f}")
+            return
+        elif regime == 'reduce':
+            print(f"\n  MARKET REGIME: REDUCE (SPY 20d: {spy_return:+.1%}) — scaling to {regime_scale:.0%} position size")
+
+        # Filter out cooled-down tickers
+        cooled = self._get_cooled_tickers(today)
+        if cooled:
+            print(f"  Cooldown active: {', '.join(sorted(cooled))}")
+
         # Target portfolio from signals
         buy_signals = signals[signals["action"] == "BUY"].copy()
+
+        # Remove cooled tickers from buy signals
+        if cooled:
+            buy_signals = buy_signals[~buy_signals["ticker"].isin(cooled)]
+
         if len(buy_signals) == 0:
-            print("No BUY signals. Holding current positions.")
+            print("No BUY signals (after cooldown filter). Holding current positions.")
             return
 
         top_n = self.config.backtest.top_n or 5
         target_weights = self._compute_target_weights(buy_signals, top_n)
+
+        # Apply market regime scale
+        if regime_scale < 1.0:
+            target_weights = {t: w * regime_scale for t, w in target_weights.items()}
 
         trades = []
 
