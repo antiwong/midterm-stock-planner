@@ -552,40 +552,47 @@ class DailyRoutine:
     # ------------------------------------------------------------------
 
     def _run_sentiment_pipeline(self) -> Dict:
-        """Download sentiment data + score articles."""
-        self.logger.info("--- Sentiment Pipeline ---")
+        """Check DuckDB freshness (SentimentPulse handles crawl + scoring externally)."""
+        self.logger.info("--- Sentiment Pipeline (DuckDB check) ---")
         if self.dry_run:
             return {"status": "dry_run"}
 
+        # SentimentPulse runs on the Mac (5x/day) and syncs to Hetzner via rsync.
+        # We just verify the DuckDB has fresh data — no CSV download needed.
         result = {}
-
-        # Download from Finnhub
         try:
-            from scripts.download_sentiment import FinnhubSentiment
-            api_key = os.environ.get("FINNHUB_API_KEY", "")
-            if not api_key:
-                self.logger.warning("FINNHUB_API_KEY not set — skipping sentiment download")
-                result["download"] = {"status": "skipped", "reason": "no_api_key"}
-            else:
-                watchlist_names = [p["watchlist"] for p in PORTFOLIOS]
-                tickers = get_all_tickers(watchlist_names)
-                downloader = FinnhubSentiment(api_key=api_key)
-                downloader.download_all(tickers, days=30)
-                self.logger.info(f"Sentiment downloaded for {len(tickers)} tickers")
-                result["download"] = {"status": "success", "tickers": len(tickers)}
-        except Exception as e:
-            self.logger.error(f"Sentiment download failed: {e}")
-            result["download"] = {"status": "error", "error": str(e)}
+            import duckdb
+            db_path = DATA_DIR / "sentimentpulse.db"
+            if not db_path.exists():
+                self.logger.warning("sentimentpulse.db not found — sentiment unavailable")
+                return {"status": "skipped", "reason": "no_duckdb"}
 
-        # Score articles
-        try:
-            from scripts.score_sentiment import main as score_main
-            score_main()
-            self.logger.info("Sentiment scoring complete")
-            result["scoring"] = {"status": "success"}
+            conn = duckdb.connect(str(db_path), read_only=True)
+            row = conn.execute(
+                "SELECT MAX(date) as latest, COUNT(DISTINCT ticker) as tickers "
+                "FROM sentiment_features"
+            ).fetchone()
+            conn.close()
+
+            latest_date = str(row[0]) if row[0] else "none"
+            ticker_count = row[1] if row[1] else 0
+            self.logger.info(f"DuckDB sentiment: latest={latest_date}, tickers={ticker_count}")
+
+            # Warn if data is stale (>1 day old)
+            if row[0]:
+                from datetime import date as _date
+                days_old = (datetime.now().date() - row[0]).days if hasattr(row[0], 'days') else 0
+                try:
+                    days_old = (datetime.now().date() - pd.Timestamp(row[0]).date()).days
+                except Exception:
+                    days_old = 0
+                if days_old > 1:
+                    self.logger.warning(f"DuckDB sentiment is {days_old} days old — check rsync")
+
+            result = {"status": "success", "latest_date": latest_date, "tickers": ticker_count}
         except Exception as e:
-            self.logger.error(f"Sentiment scoring failed: {e}")
-            result["scoring"] = {"status": "error", "error": str(e)}
+            self.logger.error(f"DuckDB sentiment check failed: {e}")
+            result = {"status": "error", "error": str(e)}
 
         return result
 
