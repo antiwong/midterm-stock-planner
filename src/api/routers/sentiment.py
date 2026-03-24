@@ -341,29 +341,32 @@ def sentimentpulse(days: int = 7):
         if df.empty:
             return {"tickers": [], "count": 0, "source": "duckdb"}
 
+        # Replace NaN with None for JSON serialization
+        df = df.where(df.notna(), None)
+
         records = []
         for _, row in df.iterrows():
             records.append({
-                "date": str(row["date"]),
-                "ticker": row.get("ticker", ""),
+                "date": str(row.get("date", "")),
+                "ticker": str(row.get("ticker", "") or ""),
                 "composite_score": round(_safe_float(row.get("composite_score")), 4),
-                "confidence": row.get("confidence", "low"),
+                "confidence": str(row.get("confidence") or "low"),
                 "headline_count": int(_safe_float(row.get("headline_count", 0))),
                 "buzz_ratio": round(_safe_float(row.get("buzz_ratio", 1.0), 1.0), 2),
-                "regime": row.get("sentiment_regime", "NOISE"),
-                "category": row.get("category", "other"),
+                "regime": str(row.get("sentiment_regime") or "NOISE"),
+                "category": str(row.get("category") or "other"),
                 "source_count": int(_safe_float(row.get("source_count", 0))),
                 "options_pcr": round(_safe_float(row.get("options_pcr")), 2) if row.get("options_pcr") is not None else None,
                 "options_iv_pct": round(_safe_float(row.get("iv_percentile")), 1) if row.get("iv_percentile") is not None else None,
-                "forward_event": str(row.get("forward_event_type", "")) if pd.notna(row.get("forward_event_detected")) and row.get("forward_event_detected") else None,
+                "forward_event": str(row.get("forward_event_type")) if row.get("forward_event_detected") is True else None,
                 "signal_breadth": round(_safe_float(row.get("signal_breadth")), 4),
                 "signal_conviction": round(_safe_float(row.get("signal_conviction")), 4),
                 "signal_label": "",
                 "llm_score": round(_safe_float(row.get("llm_score")), 4),
                 "finnhub_score": round(_safe_float(row.get("finnhub_score")), 4),
                 "eodhd_score": round(_safe_float(row.get("eodhd_score")), 4),
-                "insider_signal": row.get("insider_signal", ""),
-                "watchlist": row.get("watchlist", ""),
+                "insider_signal": _safe_float(row.get("insider_signal")),
+                "watchlist": str(row.get("watchlist") or ""),
             })
 
         records.sort(key=lambda x: abs(x.get("signal_conviction", 0)), reverse=True)
