@@ -315,7 +315,7 @@ def make_training_dataset(
     
     df['_forward_return'] = df.groupby('ticker', group_keys=False).apply(
         lambda g: _compute_forward_return(g)
-    ).reset_index(level=0, drop=True)
+    ).values
     
     # Compute forward returns for benchmark
     benchmark['_benchmark_forward_return'] = (

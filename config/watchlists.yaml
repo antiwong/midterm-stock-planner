@@ -930,6 +930,109 @@ watchlists:
       - PWR     # Quanta Services
       - ARM     # Arm Holdings (semiconductor)
 
+  # ============================================================================
+  # SINGAPORE WATCHLISTS (SGX via yfinance — use .SI suffix)
+  # Download with: python scripts/download_prices.py --watchlist sg_blue_chips --backend yfinance
+  # ============================================================================
+
+  # Singapore Blue Chips — STI component stocks
+  sg_blue_chips:
+    name: "Singapore Blue Chips"
+    description: "STI components and major SGX-listed companies: banks, telcos, conglomerates"
+    category: "regional"
+    symbols:
+      # Banks — Big 3
+      - D05.SI    # DBS Group Holdings
+      - O39.SI    # OCBC Bank
+      - U11.SI    # UOB
+      # Telcos & Transport
+      - Z74.SI    # Singtel
+      - C6L.SI    # Singapore Airlines
+      - S58.SI    # SATS
+      # Conglomerates & Industrials
+      - BN4.SI    # Keppel Corporation
+      - U96.SI    # Sembcorp Industries
+      - C52.SI    # ComfortDelGro
+      - S63.SI    # ST Engineering
+      - BS6.SI    # Yangzijiang Shipbuilding
+      # Real Estate Developers
+      - C09.SI    # City Developments
+      - U14.SI    # UOL Group
+      - H78.SI    # Hongkong Land
+      # Consumer & Healthcare
+      - F34.SI    # Wilmar International
+      - Y92.SI    # Thai Beverage
+      - Q0F.SI    # iFAST Corporation
+      # Finance
+      - S68.SI    # SGX (Singapore Exchange)
+      # Index ETF
+      - ES3.SI    # SPDR STI ETF
+
+  # Singapore REITs — comprehensive SGX-listed REITs across all sectors
+  sg_reits:
+    name: "Singapore REITs"
+    description: "40+ SGX-listed REITs across retail, office, industrial, logistics, data centres, hospitality, healthcare"
+    category: "regional"
+    symbols:
+      # --- Retail / Integrated ---
+      - C38U.SI   # CapitaLand Integrated Commercial Trust (largest S-REIT)
+      - J69U.SI   # Frasers Centrepoint Trust
+      - N2IU.SI   # Mapletree Pan Asia Commercial Trust
+      - JYEU.SI   # Lendlease Global Commercial REIT
+      - BMGU.SI   # BHG Retail REIT
+      - D5IU.SI   # Lippo Malls Indonesia Retail Trust
+      # --- Office / Commercial ---
+      - K71U.SI   # Keppel REIT
+      - T82U.SI   # Suntec REIT
+      - TS0U.SI   # OUE REIT
+      - OXMU.SI   # Prime US REIT
+      - BTOU.SI   # Manulife US REIT
+      # --- Industrial / Logistics ---
+      - A17U.SI   # CapitaLand Ascendas REIT (largest industrial)
+      - ME8U.SI   # Mapletree Industrial Trust
+      - M44U.SI   # Mapletree Logistics Trust
+      - O5RU.SI   # AIMS APAC REIT
+      - BUOU.SI   # Frasers Logistics & Commercial Trust
+      # --- Data Centres ---
+      - AJBU.SI   # Keppel DC REIT
+      - DCRU.SI   # Digital Core REIT (US data centres)
+      # --- Hospitality ---
+      - J85.SI    # CDL Hospitality Trusts
+      - Q5T.SI    # Far East Hospitality Trust
+      - HMN.SI    # CapitaLand Ascott Trust (serviced residences)
+      - XZL.SI    # Acrophyte Hospitality Trust
+      # --- Healthcare ---
+      - C2PU.SI   # Parkway Life REIT (healthcare, defensive)
+      # --- Residential / Accommodation ---
+      - OU8.SI    # Centurion Corporation
+      # --- China / Overseas-focused ---
+      - AU8U.SI   # CapitaLand China Trust
+      - CRPU.SI   # Sasseur REIT (outlet malls)
+      - DHLU.SI   # Daiwa House Logistics Trust
+      # --- Europe / Global ---
+      - UD1U.SI   # IREIT Global (Europe office/retail)
+      # --- US-focused ---
+      - ODBU.SI   # United Hampshire US REIT
+      # --- REIT ETF ---
+      - CLR.SI    # Lion-Phillip S-REIT ETF
+
+  # Anthony's Personal Portfolio (2026-03-19)
+  # Real brokerage positions — mixed US + SGX holdings
+  anthony_watchlist:
+    name: "Anthony Watchlist"
+    description: "Anthony's personal portfolio — US equities, precious metals, SGX REITs"
+    category: "custom"
+    symbols:
+      # US Holdings
+      - AMD     # Advanced Micro Devices (22.79 shares @ $224.95)
+      - AMZN    # Amazon.com (7.21 shares @ $226.87)
+      - CDE     # Coeur Mining (20 shares @ $23.68)
+      - NLR     # VanEck Uranium+Nuclear Energy ETF (9 shares @ $133.30)
+      - SLV     # iShares Silver Trust (29.52 shares @ $79.00)
+      # SGX Holdings
+      - C38U.SI # CapitaLand Integrated Commercial Trust (400 shares @ $2.406)
+      - ME8U.SI # Mapletree Industrial Trust (1000 shares @ $2.125)
+
   # Earnings Watch - Upcoming earnings to monitor
   earnings_watch:
     name: "Earnings Watch"

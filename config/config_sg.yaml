@@ -1,0 +1,27 @@
+# Config override for Singapore watchlists (daily data only)
+# Use with: python3 -m src.app.cli run-backtest -w sg_blue_chips -c config/config_sg.yaml
+
+data:
+  interval: 1d
+  price_data_path: data/prices_daily.csv
+  price_data_path_daily: data/prices_daily.csv
+  fundamental_data_path: null  # No fundamentals for SGX tickers yet
+  benchmark_data_path: data/benchmark.csv
+
+features:
+  horizon_days: 63
+  use_sentiment: false
+  include_rsi: true
+  include_obv: true
+  include_momentum: true
+  include_mean_reversion: true
+
+backtest:
+  train_years: 3.0
+  test_years: 0.5
+  step_value: 7
+  step_unit: days
+  rebalance_freq: B
+
+model:
+  target_col: target

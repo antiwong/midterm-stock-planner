@@ -126,6 +126,8 @@ class FeatureConfig:
     include_obv: bool = False        # OBV hurts cross-sectional model (-0.18 Sharpe)
     include_momentum: bool = False   # Momentum hurts cross-sectional model (-0.24 Sharpe)
     include_mean_reversion: bool = False  # Mean reversion adds noise
+    # Per-watchlist feature transforms (e.g. invert ATR for tech_giants)
+    watchlist_overrides: Dict[str, Any] = field(default_factory=dict)
     # Cross-asset features
     use_cross_asset: bool = False
     cross_asset: Dict[str, Any] = field(default_factory=lambda: {

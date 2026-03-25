@@ -702,7 +702,7 @@ def run_walk_forward_backtest(
                 1 for w in window_results if w.get("ic") is not None and abs(w["ic"]) < _ic_thresh
             )
 
-    # Overfitting detection: train Sharpe >> test Sharpe (e.g. ratio > 2)
+    # Overfitting detection: train Sharpe >> test Sharpe (e.g. median ratio > 2)
     train_test_ratios = []
     for w in window_results:
         ts = w.get("test_sharpe")
@@ -710,12 +710,12 @@ def run_walk_forward_backtest(
         if ts is not None and tr is not None and ts > 0:
             train_test_ratios.append(tr / ts)
     if train_test_ratios:
-        max_ratio = float(np.max(train_test_ratios))
-        metrics["max_train_test_sharpe_ratio"] = max_ratio
+        median_ratio = float(np.median(train_test_ratios))
+        metrics["median_train_test_sharpe_ratio"] = median_ratio
         overfit_threshold = getattr(config, "overfit_sharpe_ratio_threshold", 2.0)
-        if max_ratio >= overfit_threshold and verbose:
+        if median_ratio >= overfit_threshold and verbose:
             print(
-                f"  ⚠ Overfitting: max(train_sharpe/test_sharpe) = {max_ratio:.2f} "
+                f"  ⚠ Overfitting: median(train_sharpe/test_sharpe) = {median_ratio:.2f} "
                 f"(threshold {overfit_threshold}). Consider regularization or shorter train window."
             )
 

@@ -94,6 +94,11 @@ features:
   include_momentum: false     # Momentum hurts cross-sectional model (-0.24 Sharpe)
   include_mean_reversion: false  # Mean reversion adds noise
   horizon_days: 63
+  # Per-watchlist feature transforms
+  # NOTE: invert_atr was tested on 2026-03-25 but improvements were artifacts of
+  # an index alignment bug in make_training_dataset (fixed same day). With correct
+  # full data (32,500 rows vs 4,874), invert_atr helps 0/10 watchlists.
+  watchlist_overrides: {}
   # ── SENTIMENT IN RANKER ─────────────────────────────────────────────────
   # DO NOT SET TO TRUE. Sentiment in the cross-sectional ranker degrades
   # Sharpe by -0.18 to -0.28. Sentiment is consumed ONLY by the Sentiment
