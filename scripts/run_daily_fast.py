@@ -304,6 +304,75 @@ def get_spy_20d_return(latest_prices_df: pd.DataFrame = None) -> float:
     return (spy.iloc[-1]["close"] / spy.iloc[-20]["close"]) - 1
 
 
+def get_ticker_20d_return(ticker: str, price_df: pd.DataFrame = None) -> float:
+    """Get any ticker's 20-trading-day return (for STI/ES3.SI regime check)."""
+    try:
+        if price_df is not None:
+            tk = price_df[price_df["ticker"] == ticker].sort_values("date").tail(30)
+            if len(tk) >= 20:
+                return (tk.iloc[-1]["close"] / tk.iloc[-20]["close"]) - 1
+        # Fallback to yfinance for tickers not in price_df
+        import yfinance as yf
+        data = yf.download(ticker, period="2mo", interval="1d", progress=False)
+        if len(data) >= 20:
+            return (data["Close"].iloc[-1] / data["Close"].iloc[-20]) - 1
+    except Exception:
+        pass
+    return 0.0
+
+
+def get_vix_level() -> float:
+    """Get current VIX level."""
+    try:
+        import yfinance as yf
+        vix = yf.download("^VIX", period="5d", interval="1d", progress=False)
+        if not vix.empty:
+            return float(vix["Close"].iloc[-1].item() if hasattr(vix["Close"].iloc[-1], 'item') else vix["Close"].iloc[-1])
+    except Exception:
+        pass
+    return 20.0  # Default to neutral if unavailable
+
+
+def compute_vix_scale(vix: float) -> float:
+    """VIX-based position scaling.
+
+    VIX < 20: 100%  |  20-25: 75%  |  25-30: 50%  |  > 30: 25%
+    """
+    if vix < 20:
+        return 1.0
+    elif vix < 25:
+        return 0.75
+    elif vix < 30:
+        return 0.50
+    else:
+        return 0.25
+
+
+def compute_dual_regime(spy_return: float, sgx_return: float,
+                        threshold_reduce: float = -0.05,
+                        threshold_exit: float = -0.08,
+                        reduce_scale: float = 0.30) -> tuple:
+    """Dual US+SGX regime filter — use the MORE conservative of the two.
+
+    Returns (regime, regime_scale, trigger_source).
+    """
+    # Determine each market's regime independently
+    def _classify(ret):
+        if ret <= threshold_exit:
+            return "exit", 0.0
+        elif ret <= threshold_reduce:
+            return "reduce", reduce_scale
+        return "normal", 1.0
+
+    spy_regime, spy_scale = _classify(spy_return)
+    sgx_regime, sgx_scale = _classify(sgx_return)
+
+    # Use the more conservative (lower scale)
+    if spy_scale <= sgx_scale:
+        return spy_regime, spy_scale, "SPY"
+    return sgx_regime, sgx_scale, "ES3.SI"
+
+
 def check_stop_losses(db_path: str, latest_prices: dict, stop_pct: float, cooldown_days: int) -> list:
     """Check and execute stop-losses. Returns list of stopped tickers."""
     conn = sqlite3.connect(db_path)
@@ -677,14 +746,17 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
     print("  {} done: ${:,.0f} ({:+.2%}) | {} positions".format(wl, pv, daily_ret, len(positions)))
 
 
-def write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped):
+def write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped,
+                        sgx_return=0.0, vix_level=20.0):
     """Write plain-language daily summary."""
     lines = []
     lines.append("=" * 60)
     lines.append("DAILY SUMMARY — {}".format(datetime.now().strftime("%Y-%m-%d %H:%M")))
     lines.append("=" * 60)
 
-    lines.append("\nMARKET REGIME: {} (SPY 20d: {:+.2%})".format(regime.upper(), spy_return))
+    lines.append("\nMARKET REGIME: {} (scale: {:.0%})".format(regime.upper(), regime_scale))
+    lines.append("  SPY 20d: {:+.2%} | ES3.SI 20d: {:+.2%} | VIX: {:.1f}".format(
+        spy_return, sgx_return, vix_level))
     if regime == "reduce":
         lines.append("  Position sizes scaled to {:.0%}".format(regime_scale))
     elif regime == "exit":
@@ -743,8 +815,12 @@ def main():
     latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
     benchmark_df = pd.read_csv(DATA_DIR / "benchmark_daily.csv", parse_dates=["date"])
 
-    # 2. Market regime
+    # 2. Market regime (dual US + SGX) + VIX scaling
     spy_return = get_spy_20d_return(price_df)
+    sgx_return = get_ticker_20d_return("ES3.SI", price_df)
+    vix_level = get_vix_level()
+    vix_scale = compute_vix_scale(vix_level)
+
     mrf = config.backtest.market_regime_filter
     if mrf and (mrf.get("enabled") if isinstance(mrf, dict) else getattr(mrf, "enabled", False)):
         _get = mrf.get if isinstance(mrf, dict) else lambda k, d: getattr(mrf, k, d)
@@ -754,14 +830,16 @@ def main():
     else:
         threshold_exit, threshold_reduce, reduce_scale = -0.08, -0.05, 0.30
 
-    if spy_return <= threshold_exit:
-        regime, regime_scale = "exit", 0.0
-    elif spy_return <= threshold_reduce:
-        regime, regime_scale = "reduce", reduce_scale
-    else:
-        regime, regime_scale = "normal", 1.0
+    regime, regime_scale, regime_trigger = compute_dual_regime(
+        spy_return, sgx_return, threshold_reduce, threshold_exit, reduce_scale)
 
-    print("SPY 20d: {:+.2%} → REGIME: {} (scale: {:.0%})".format(spy_return, regime.upper(), regime_scale))
+    # Apply VIX scaling multiplicatively
+    regime_scale *= vix_scale
+
+    print("SPY 20d: {:+.2%} | ES3.SI 20d: {:+.2%} | VIX: {:.1f} ({:.0%})".format(
+        spy_return, sgx_return, vix_level, vix_scale))
+    print("REGIME: {} (trigger: {}, base: {:.0%} × VIX: {:.0%} = {:.0%})".format(
+        regime.upper(), regime_trigger, regime_scale / vix_scale if vix_scale else 0, vix_scale, regime_scale))
 
     # 2b. Load sector, industry, and watchlist mappings for concentration limits
     sector_map = load_sector_map()
@@ -783,7 +861,8 @@ def main():
     elapsed = time.time() - start
     print("\n" + "=" * 60)
     print("COMPLETE in {:.0f}s".format(elapsed))
-    write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped)
+    write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped,
+                        sgx_return=sgx_return, vix_level=vix_level)
 
     # 5. Slack notifications
     _send_slack_summary(latest_prices, spy_return, regime, regime_scale, elapsed)

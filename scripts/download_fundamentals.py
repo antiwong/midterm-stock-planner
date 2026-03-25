@@ -201,6 +201,19 @@ def download_fundamentals(
         
         df = fetcher.fetch_batch(tickers, delay=delay, parallel=True, max_workers=10)
         if not df.empty:
+            # Save to CSV (same merge logic as fallback path)
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            if output_path.exists():
+                existing_df = pd.read_csv(output_path)
+                existing_df = existing_df[~(
+                    (existing_df['ticker'].isin(df['ticker'])) &
+                    (existing_df['date'] == df['date'].iloc[0] if 'date' in df.columns else False)
+                )]
+                df = pd.concat([existing_df, df], ignore_index=True)
+                df = df.sort_values(['ticker', 'date'], ascending=[True, False])
+                df = df.drop_duplicates(subset=['ticker', 'date'], keep='first')
+            df.to_csv(output_path, index=False)
+            print(f"✅ Saved {len(df)} records to {output_path}")
             return df
     
     # Fallback to single-source methods
@@ -323,6 +336,8 @@ Examples:
     )
     
     parser.add_argument("--watchlist", type=str, help="Watchlist name from watchlists.yaml")
+    parser.add_argument("--all-us-watchlists", action="store_true",
+                       help="Download for all US tickers across all watchlists (excludes .SI)")
     parser.add_argument("--tickers", nargs="+", help="Specific tickers to download")
     parser.add_argument("--output", type=str, default="data/fundamentals.csv",
                        help="Output CSV file path")
@@ -335,6 +350,24 @@ Examples:
     if args.tickers:
         tickers = args.tickers
         print(f"📋 Using provided tickers: {len(tickers)}")
+    elif args.all_us_watchlists:
+        # Collect all unique US tickers across all watchlists
+        try:
+            from src.data.watchlists import WatchlistManager
+            manager = WatchlistManager.from_config_dir("config", include_custom=True)
+            all_tickers = set()
+            for wl in manager.list_watchlists():
+                wl_obj = manager.get_watchlist(wl['key'])
+                if wl_obj:
+                    for s in wl_obj.symbols:
+                        t = str(s).upper()
+                        if t and not t.endswith('.SI'):  # Skip SGX tickers
+                            all_tickers.add(t)
+            tickers = sorted(all_tickers)
+            print(f"📋 All US watchlists: {len(tickers)} unique tickers")
+        except Exception as e:
+            print(f"❌ Failed to load watchlists: {e}")
+            return 1
     else:
         tickers = load_watchlist_tickers(args.watchlist)
         if not tickers:
