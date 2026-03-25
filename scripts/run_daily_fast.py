@@ -581,7 +581,13 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
                 "VALUES (?, ?, 'SELL', ?, ?, ?, ?, ?, 0.0)",
                 (today, tk, pos["shares"], price, value, cost, pos["weight"])
             )
-            conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (pos["id"],))
+            try:
+                conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (pos["id"],))
+            except sqlite3.IntegrityError:
+                # UNIQUE constraint on (ticker, entry_date, is_active) — delete the old inactive row first
+                conn.execute("DELETE FROM positions WHERE ticker = ? AND entry_date = ? AND is_active = 0",
+                             (tk, pos["entry_date"] if "entry_date" in pos.keys() else today))
+                conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (pos["id"],))
             cash += value - cost
             print("    SELL {} {:.1f}@${:.2f} PnL=${:+,.0f}".format(tk, pos["shares"], price, pnl))
             del current_positions[tk]
