@@ -807,6 +807,32 @@ def main():
     print("FAST DAILY RUN — {}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
     print("=" * 60)
 
+    # Slack monitoring — wraps entire main() for crash reporting
+    try:
+        from utils.slack_notifier import SlackNotifier
+        notifier = SlackNotifier(job_name="daily-fast")
+        thread_ts = notifier.started("Daily fast run starting")
+    except Exception:
+        notifier, thread_ts = None, None
+
+    metrics = {}
+    warnings = []
+
+    try:
+        _run_daily(start, metrics, warnings)
+
+        if notifier:
+            notifier.completed(thread_ts=thread_ts, metrics=metrics,
+                               warnings=warnings if warnings else None)
+    except Exception as e:
+        if notifier:
+            notifier.failed(thread_ts=thread_ts, error=str(e), context=metrics, exc=e)
+        raise
+
+
+def _run_daily(start, metrics, warnings):
+    """Inner daily logic — separated for Slack wrapper."""
+
     config = load_config("config/config.yaml")
 
     # 1. Load prices + benchmark
@@ -864,7 +890,17 @@ def main():
     write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped,
                         sgx_return=sgx_return, vix_level=vix_level)
 
-    # 5. Slack notifications
+    # Collect metrics for Slack notifier
+    metrics.update({
+        'regime': f"SPY {spy_return:+.1%} / STI {sgx_return:+.1%}",
+        'vix': f"{vix_level:.1f} ({vix_scale:.0%})",
+        'position_scale': f"{regime_scale:.0%}",
+        'portfolios': len(PORTFOLIOS),
+        'stop_losses': len(all_stopped),
+        'duration_s': f"{elapsed:.0f}",
+    })
+
+    # 5. Slack notifications (existing channel-specific messages)
     _send_slack_summary(latest_prices, spy_return, regime, regime_scale, elapsed)
 
 

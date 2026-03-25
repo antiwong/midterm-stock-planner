@@ -246,37 +246,59 @@ def main():
     parser.add_argument("--all", action="store_true", help="Evaluate all portfolios")
     args = parser.parse_args()
 
-    # Load latest prices
-    price_df = pd.read_csv(DATA_DIR / "prices_daily.csv")
-    latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
+    try:
+        from utils.slack_notifier import SlackNotifier
+        notifier = SlackNotifier(job_name="feedback-eval")
+    except Exception:
+        notifier = None
 
-    if args.watchlist:
-        watchlists = [args.watchlist]
-    elif args.all:
-        watchlists = PORTFOLIOS
-    else:
-        # Default: evaluate all portfolios with DBs
-        watchlists = [wl for wl in PORTFOLIOS if (DATA_DIR / "paper_trading_{}.db".format(wl)).exists()]
+    metrics = {}
+    try:
+        # Load latest prices
+        price_df = pd.read_csv(DATA_DIR / "prices_daily.csv")
+        latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
 
-    results = []
-    for wl in watchlists:
-        r = evaluate_watchlist(wl, latest_prices)
-        results.append(r)
+        if args.watchlist:
+            watchlists = [args.watchlist]
+        elif args.all:
+            watchlists = PORTFOLIOS
+        else:
+            watchlists = [wl for wl in PORTFOLIOS if (DATA_DIR / "paper_trading_{}.db".format(wl)).exists()]
 
-    print_report(results)
+        results = []
+        for wl in watchlists:
+            r = evaluate_watchlist(wl, latest_prices)
+            results.append(r)
 
-    # Save daily feedback log
-    log_path = LOG_DIR / "feedback_{}.json".format(datetime.now().strftime("%Y%m%d"))
-    log_data = {
-        "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
-        "horizon_days": HORIZON_TRADING_DAYS,
-        "results": [
-            {k: v for k, v in r.items() if k != "positions"}
-            for r in results
-        ],
-    }
-    with open(log_path, "w") as f:
-        json.dump(log_data, f, indent=2, default=str)
+        print_report(results)
+
+        # Save daily feedback log
+        log_path = LOG_DIR / "feedback_{}.json".format(datetime.now().strftime("%Y%m%d"))
+        log_data = {
+            "date": datetime.now().strftime("%Y-%m-%d %H:%M"),
+            "horizon_days": HORIZON_TRADING_DAYS,
+            "results": [
+                {k: v for k, v in r.items() if k != "positions"}
+                for r in results
+            ],
+        }
+        with open(log_path, "w") as f:
+            json.dump(log_data, f, indent=2, default=str)
+
+        total_resolved = sum(r.get("resolved", 0) for r in results)
+        total_pending = sum(r.get("pending", 0) for r in results)
+        metrics = {
+            'watchlists': len(watchlists),
+            'resolved': total_resolved,
+            'pending': total_pending,
+        }
+        if notifier:
+            notifier.completed(metrics=metrics)
+
+    except Exception as e:
+        if notifier:
+            notifier.failed(error=str(e), context=metrics, exc=e)
+        raise
 
 
 if __name__ == "__main__":

@@ -377,15 +377,37 @@ Examples:
     print(f"📋 Total tickers: {len(tickers)}")
     print()
     
+    # Slack monitoring
+    try:
+        from utils.slack_notifier import SlackNotifier
+        notifier = SlackNotifier(job_name="fundamentals-refresh")
+    except Exception:
+        notifier = None
+
     # Download
     output_path = Path(args.output)
-    df = download_fundamentals(tickers, output_path, delay=args.delay)
-    
-    if df.empty:
-        return 1
-    
-    print("✅ Done!")
-    return 0
+    try:
+        df = download_fundamentals(tickers, output_path, delay=args.delay)
+
+        if df.empty:
+            if notifier:
+                notifier.failed(error="No data fetched", context={'tickers': len(tickers)})
+            return 1
+
+        fresh = len(df[df['date'] == datetime.now().strftime('%Y-%m-%d')]) if 'date' in df.columns else len(df)
+        if notifier:
+            notifier.completed(metrics={
+                'tickers_requested': len(tickers),
+                'records_saved': len(df),
+                'fresh_today': fresh,
+            })
+        print("✅ Done!")
+        return 0
+
+    except Exception as e:
+        if notifier:
+            notifier.failed(error=str(e), context={'tickers': len(tickers)}, exc=e)
+        raise
 
 
 if __name__ == "__main__":
