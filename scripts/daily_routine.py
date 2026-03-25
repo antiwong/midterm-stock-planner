@@ -281,6 +281,7 @@ class DailyRoutine:
                           or os.environ.get("slack_webhook"))
         self.gchat_url = (os.environ.get("GOOGLE_CHAT_WEBHOOK_URL")
                           or os.environ.get("google_chat_webhook_url"))
+        self.slack_sentiment_url = os.environ.get("SLACK_WEBHOOK_SENTIMENT")
 
     # ------------------------------------------------------------------
     # DAILY
@@ -1395,12 +1396,18 @@ class DailyRoutine:
         detail = ", ".join(parts) if parts else "ok"
         return f":white_check_mark: {name}: {detail}"
 
-    def _notify(self, message: str):
-        """Send notification to Slack + Google Chat."""
+    def _notify(self, message: str, channels: str = "stock-planner"):
+        """Send notification to Slack + Google Chat.
+
+        channels: 'stock-planner', 'sentiment', or 'both'
+        """
         tag = os.environ.get("SP_INSTANCE", "SP")
         tagged = f"[{tag}] {message}"
-        post_webhook(self.slack_url, tagged, self.logger)
-        post_webhook(self.gchat_url, tagged, self.logger)
+        if channels in ("stock-planner", "both"):
+            post_webhook(self.slack_url, tagged, self.logger)
+            post_webhook(self.gchat_url, tagged, self.logger)
+        if channels in ("sentiment", "both"):
+            post_webhook(self.slack_sentiment_url, tagged, self.logger)
 
     # ------------------------------------------------------------------
     # Summary Formatters

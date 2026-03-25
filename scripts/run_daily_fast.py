@@ -46,6 +46,8 @@ from src.features.engineering import (
 )
 from src.models.trainer import train_lgbm_regressor, ModelConfig
 
+import requests
+
 DATA_DIR = PROJECT_ROOT / "data"
 LOG_DIR = PROJECT_ROOT / "logs"
 
@@ -82,6 +84,23 @@ PORTFOLIOS = [
     {"watchlist": "clean_energy", "local": True, "capital": 100000},
     {"watchlist": "etfs", "local": True, "capital": 100000},
 ]
+
+# Slack webhooks — stock-planner channel + sentimental-blogs channel
+SLACK_STOCK_PLANNER = os.environ.get("SLACK_WEBHOOK_URL") or os.environ.get("slack_webhook")
+SLACK_SENTIMENT = os.environ.get("SLACK_WEBHOOK_SENTIMENT")
+SP_TAG = os.environ.get("SP_INSTANCE", "SP")
+
+
+def notify_slack(message: str, channel: str = "stock-planner"):
+    """Send message to Slack. channel: 'stock-planner' or 'sentiment'."""
+    url = SLACK_SENTIMENT if channel == "sentiment" else SLACK_STOCK_PLANNER
+    if not url:
+        return
+    tagged = "[{}] {}".format(SP_TAG, message)
+    try:
+        requests.post(url, json={"text": tagged}, timeout=15)
+    except Exception:
+        pass
 
 
 def load_sector_map() -> dict:
@@ -765,6 +784,80 @@ def main():
     print("\n" + "=" * 60)
     print("COMPLETE in {:.0f}s".format(elapsed))
     write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped)
+
+    # 5. Slack notifications
+    _send_slack_summary(latest_prices, spy_return, regime, regime_scale, elapsed)
+
+
+def _send_slack_summary(latest_prices: dict, spy_return: float, regime: str, regime_scale: float, elapsed: float):
+    """Send summaries to both Slack channels."""
+    today = datetime.now().strftime("%Y-%m-%d")
+
+    # Build portfolio summary lines
+    portfolio_lines = []
+    total_value = 0
+    sg_blue_chips_detail = ""
+    for p in PORTFOLIOS:
+        wl = p["watchlist"]
+        db_path = DATA_DIR / "paper_trading_{}.db".format(wl)
+        if not db_path.exists():
+            continue
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            snap = conn.execute(
+                "SELECT portfolio_value, daily_return, cumulative_return FROM daily_snapshots ORDER BY date DESC LIMIT 1"
+            ).fetchone()
+            pos_count = conn.execute("SELECT COUNT(*) FROM positions WHERE is_active = 1").fetchone()[0]
+            if snap:
+                pv, dr, cr = snap["portfolio_value"], snap["daily_return"], snap["cumulative_return"]
+                total_value += pv
+                primary = " *" if p.get("primary") else ""
+                portfolio_lines.append("  {:20s} ${:>9,.0f} {:+.2%} (total {:+.2%}) {}pos{}".format(
+                    wl, pv, dr, cr, pos_count, primary))
+
+                # Detailed sg_blue_chips for sentiment channel
+                if wl == "sg_blue_chips":
+                    positions = conn.execute(
+                        "SELECT ticker, shares, entry_price FROM positions WHERE is_active = 1"
+                    ).fetchall()
+                    pos_lines = []
+                    for pos in positions:
+                        tk = pos["ticker"]
+                        price = latest_prices.get(tk, pos["entry_price"])
+                        ret = (price / pos["entry_price"]) - 1 if pos["entry_price"] > 0 else 0
+                        pos_lines.append("    {} {:.0f}sh @${:.2f} now ${:.2f} ({:+.1%})".format(
+                            tk, pos["shares"], pos["entry_price"], price, ret))
+                    sg_blue_chips_detail = "\n".join(pos_lines)
+            conn.close()
+        except Exception:
+            pass
+
+    # --- Stock Planner channel ---
+    stock_msg = (
+        ":chart_with_upwards_trend: *Daily Run* — {}\n"
+        "Regime: {} (SPY 20d: {:+.2%}, scale {:.0%})\n"
+        "```\n{}\n```\n"
+        "Total: ${:,.0f} | {:.0f}s"
+    ).format(
+        today, regime.upper(), spy_return, regime_scale,
+        "\n".join(portfolio_lines), total_value, elapsed,
+    )
+    notify_slack(stock_msg, "stock-planner")
+
+    # --- SentimentPulse channel ---
+    sentiment_msg = (
+        ":robot_face: *Stock Planner Signal* — {}\n"
+        "sg_blue_chips (PRIMARY forward test):\n"
+        "```\n{}\n```\n"
+        "Portfolio: ${:,.0f} | Regime: {} ({:.0%} invested)\n"
+        "Target Sharpe: 0.619 | Review: 2026-04-25"
+    ).format(
+        today,
+        sg_blue_chips_detail or "  no positions",
+        total_value, regime.upper(), regime_scale,
+    )
+    notify_slack(sentiment_msg, "sentiment")
 
 
 if __name__ == "__main__":
