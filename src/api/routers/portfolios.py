@@ -268,13 +268,16 @@ def get_portfolio_commentary(regenerate: bool = Query(False)):
         "",
     ]
     for p in portfolios:
-        alpha = p["cumulative_return"] - p.get("benchmark_cumulative", 0)
+        cum_ret = p["cumulative_return"] or 0
+        bench_cum = p.get("benchmark_cumulative") or 0
+        daily_ret = p.get("daily_return") or 0
+        alpha = cum_ret - bench_cum
         lines.append(
             f"- {p['watchlist']}: ${p['portfolio_value']:,.0f} "
             f"(initial ${p['initial_value']:,.0f}), "
-            f"return {p['cumulative_return'] * 100:+.2f}%, "
-            f"daily {p['daily_return'] * 100:+.2f}%, "
-            f"vs benchmark {p.get('benchmark_cumulative', 0) * 100:+.2f}% "
+            f"return {cum_ret * 100:+.2f}%, "
+            f"daily {daily_ret * 100:+.2f}%, "
+            f"vs benchmark {bench_cum * 100:+.2f}% "
             f"(alpha {alpha * 100:+.2f}%), "
             f"{p['positions_count']} active positions"
         )

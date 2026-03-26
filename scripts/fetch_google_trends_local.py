@@ -345,6 +345,12 @@ def main():
         default=15.0,
         help="Seconds between batches (default: 15)",
     )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=2,
+        help="Max retries per batch on failure (default: 2)",
+    )
     args = parser.parse_args()
 
     # Ensure log directory exists
@@ -393,6 +399,7 @@ def main():
         tickers,
         lookback_days=args.lookback,
         batch_delay_s=args.delay,
+        max_retries=args.retries,
     )
     elapsed = (datetime.now() - start).total_seconds()
 
