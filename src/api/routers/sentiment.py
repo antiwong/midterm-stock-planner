@@ -1,9 +1,13 @@
 """Sentiment Analysis router — DuckDB-first, with CSV fallback for news/analyst/insider/earnings."""
 
-from fastapi import APIRouter, Query
-from typing import Optional
+import logging
+import os
+from datetime import datetime
+from typing import Any, Dict, Optional
 
 import pandas as pd
+from fastapi import APIRouter, Header, HTTPException, Query
+from pydantic import BaseModel
 
 from src.data.shared_db import DATA_DIR, load_watchlist_config, get_active_watchlists
 from src.api.db import read_csv_cached, cached_response, get_duckdb_conn
@@ -12,6 +16,8 @@ router = APIRouter(prefix="/api/sentiment", tags=["sentiment"])
 
 SENTIMENT_DIR = DATA_DIR / "sentiment"
 DUCKDB_PATH = DATA_DIR / "sentimentpulse.db"
+
+_trends_log = logging.getLogger("trends_update")
 
 
 def _safe_float(v, default=0.0) -> float:
@@ -906,3 +912,110 @@ def crawl_health():
             "market_vix": round(_safe_float(row.get("market_vix")), 2) if pd.notna(row.get("market_vix")) else None,
         })
     return {"runs": records, "count": len(records)}
+
+
+# ---------------------------------------------------------------------------
+# Google Trends push endpoint — receives data from Mac local fetcher
+# ---------------------------------------------------------------------------
+
+TRENDS_API_TOKEN = os.environ.get("TRENDS_API_TOKEN", "")
+
+
+class TrendsUpdatePayload(BaseModel):
+    data: Dict[str, Dict[str, Any]]   # ticker -> trends dict
+    fetched_at: str
+    ticker_count: int
+    spike_count: int = 0
+
+
+class TrendsUpdateResponse(BaseModel):
+    status: str
+    updated_rows: int
+    spike_count: int
+    received_at: str
+
+
+def _verify_trends_token(authorization: Optional[str]) -> None:
+    """Verify Bearer token for trends-update endpoint."""
+    if not TRENDS_API_TOKEN:
+        return  # No token configured — allow (dev mode)
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    if authorization.split(" ", 1)[1] != TRENDS_API_TOKEN:
+        raise HTTPException(status_code=403, detail="Invalid token")
+
+
+@router.post("/trends-update", response_model=TrendsUpdateResponse)
+async def update_trends(
+    payload: TrendsUpdatePayload,
+    authorization: Optional[str] = Header(None),
+):
+    """
+    Receive Google Trends data from local Mac fetcher and update DuckDB.
+
+    Updates the most recent sentiment_features row per ticker with the
+    4 trends columns. Called by scripts/fetch_google_trends_local.py.
+    """
+    _verify_trends_token(authorization)
+
+    import duckdb
+
+    db_path = str(DUCKDB_PATH)
+    updated = 0
+
+    try:
+        conn = duckdb.connect(db_path, config={"lock_timeout": 30_000})
+
+        for ticker, trends in payload.data.items():
+            # Only update rows with non-zero interest (don't overwrite with zeros)
+            if trends.get("trends_interest_7d", 0) <= 0:
+                continue
+
+            conn.execute(
+                """
+                UPDATE sentiment_features
+                SET trends_interest_7d  = ?,
+                    trends_interest_30d = ?,
+                    trends_7d_change    = ?,
+                    trends_spike_flag   = ?
+                WHERE ticker = ?
+                  AND date = (
+                      SELECT MAX(date) FROM sentiment_features
+                      WHERE ticker = ?
+                  )
+                """,
+                [
+                    trends["trends_interest_7d"],
+                    trends["trends_interest_30d"],
+                    trends["trends_7d_change"],
+                    bool(trends["trends_spike_flag"]),
+                    ticker,
+                    ticker,
+                ],
+            )
+
+            rows_changed = conn.execute("SELECT changes()").fetchone()
+            if rows_changed and rows_changed[0] > 0:
+                updated += 1
+
+        conn.commit()
+        conn.close()
+
+        spike_count = sum(
+            1 for v in payload.data.values() if v.get("trends_spike_flag")
+        )
+        _trends_log.info(
+            f"Trends update: {updated}/{payload.ticker_count} rows updated, "
+            f"{spike_count} spikes"
+        )
+
+        return TrendsUpdateResponse(
+            status="ok",
+            updated_rows=updated,
+            spike_count=spike_count,
+            received_at=datetime.now().isoformat(),
+        )
+
+    except Exception as e:
+        _trends_log.error(f"Trends update failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))

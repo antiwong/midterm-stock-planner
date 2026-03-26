@@ -28,7 +28,7 @@ from .routers import (
 )
 
 # Paths that don't require authentication
-PUBLIC_PATHS = {"/api/health", "/api/auth/login", "/api/auth/me"}
+PUBLIC_PATHS = {"/api/health", "/api/auth/login", "/api/auth/me", "/api/sentiment/trends-update"}
 
 app = FastAPI(
     title="Stock Planner Trading API",
