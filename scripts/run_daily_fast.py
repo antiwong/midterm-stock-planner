@@ -801,47 +801,262 @@ def write_daily_summary(config, latest_prices, spy_return, regime, regime_scale,
     print(summary)
 
 
-def main():
-    start = time.time()
-    print("=" * 60)
-    print("FAST DAILY RUN — {}".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
-    print("=" * 60)
+PREDICTION_HORIZONS = [5, 63]  # days
+OVERALL_TIMEOUT_S = 1200  # 20 minutes
 
-    # Slack monitoring — wraps entire main() for crash reporting
+
+def get_all_tickers(watchlists: list) -> list:
+    """Get union of all tickers across given watchlists (deduplicated)."""
+    config_path = PROJECT_ROOT / "config" / "watchlists.yaml"
+    with open(config_path) as f:
+        wl_config = yaml.safe_load(f)
+    all_tickers = set()
+    for wl_name in watchlists:
+        wl = wl_config.get("watchlists", {}).get(wl_name, {})
+        all_tickers.update(str(s) for s in wl.get("symbols", []))
+    return sorted(all_tickers)
+
+
+# ── Step runner ──────────────────────────────────────────────────────────────
+
+def run_step(step_num: int, name: str, fn, step_results: list, **kwargs):
+    """Run a step with timing, error isolation, and Slack notification on failure.
+
+    Each step:
+    - Logs start and completion time
+    - Sends Slack notification if it fails
+    - Continues to next step on failure (never aborts the run)
+    """
+    print("\n[{}/8] {} — starting...".format(step_num, name))
+    t0 = time.time()
     try:
-        from utils.slack_notifier import SlackNotifier
-        notifier = SlackNotifier(job_name="daily-fast")
-        thread_ts = notifier.started("Daily fast run starting")
-    except Exception:
-        notifier, thread_ts = None, None
-
-    metrics = {}
-    warnings = []
-
-    try:
-        _run_daily(start, metrics, warnings)
-
-        if notifier:
-            notifier.completed(thread_ts=thread_ts, metrics=metrics,
-                               warnings=warnings if warnings else None)
+        result = fn(**kwargs) if kwargs else fn()
+        elapsed = time.time() - t0
+        status = "OK"
+        print("[{}/8] {} — done ({:.1f}s)".format(step_num, name, elapsed))
+        step_results.append({"step": step_num, "name": name, "time_s": elapsed, "status": status})
+        return result
     except Exception as e:
-        if notifier:
-            notifier.failed(thread_ts=thread_ts, error=str(e), context=metrics, exc=e)
-        raise
+        elapsed = time.time() - t0
+        status = "FAILED"
+        print("[{}/8] {} — FAILED: {} ({:.1f}s)".format(step_num, name, e, elapsed))
+        notify_slack(":x: [{}/8] {} FAILED: {}".format(step_num, name, str(e)[:200]))
+        step_results.append({"step": step_num, "name": name, "time_s": elapsed, "status": status, "error": str(e)[:200]})
+        return None
 
 
-def _run_daily(start, metrics, warnings):
-    """Inner daily logic — separated for Slack wrapper."""
+# ── Step 1: Price Refresh ────────────────────────────────────────────────────
 
+def step_price_refresh() -> dict:
+    """Download fresh prices via yf.download() batch mode. ~30-40s."""
+    import yfinance as yf
+    import signal
+
+    watchlist_names = [p["watchlist"] for p in PORTFOLIOS]
+    all_tickers = get_all_tickers(watchlist_names)
+    sgx_tickers = [t for t in all_tickers if t.endswith(".SI")]
+    us_tickers = [t for t in all_tickers if not t.endswith(".SI")]
+
+    print("  Refreshing: {} US + {} SGX tickers".format(len(us_tickers), len(sgx_tickers)))
+
+    end_date = datetime.now().strftime("%Y-%m-%d")
+    start_date = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    all_dfs = []
+    us_rows, sgx_rows = 0, 0
+
+    # US batch download
+    if us_tickers:
+        try:
+            yf_data = yf.download(
+                us_tickers, start=start_date, end=end_date,
+                group_by="ticker", auto_adjust=True, threads=True, progress=False,
+                timeout=60,
+            )
+            rows = _parse_yf_batch(yf_data, us_tickers)
+            if rows:
+                all_dfs.append(pd.DataFrame(rows))
+                us_rows = len(rows)
+                print("  US: {} rows".format(us_rows))
+        except Exception as e:
+            print("  US download failed: {}".format(e))
+
+    # SGX batch download
+    if sgx_tickers:
+        try:
+            yf_data = yf.download(
+                sgx_tickers, start=start_date, end=end_date,
+                group_by="ticker", auto_adjust=True, threads=True, progress=False,
+                timeout=60,
+            )
+            rows = _parse_yf_batch(yf_data, sgx_tickers)
+            if rows:
+                all_dfs.append(pd.DataFrame(rows))
+                sgx_rows = len(rows)
+                print("  SGX: {} rows".format(sgx_rows))
+        except Exception as e:
+            print("  SGX download failed: {}".format(e))
+
+    # Merge and save
+    output_path = DATA_DIR / "prices_daily.csv"
+    if all_dfs:
+        new_data = pd.concat(all_dfs, ignore_index=True)
+        if output_path.exists():
+            existing = pd.read_csv(output_path)
+            combined = pd.concat([existing, new_data], ignore_index=True).drop_duplicates(
+                subset=["date", "ticker"])
+            combined.to_csv(output_path, index=False)
+        else:
+            new_data.to_csv(output_path, index=False)
+        print("  Saved {} new rows (US: {}, SGX: {})".format(len(new_data), us_rows, sgx_rows))
+    else:
+        print("  WARNING: No data downloaded — using stale prices")
+        notify_slack(":warning: Price refresh returned 0 rows — stale prices")
+
+    # Also refresh benchmark
+    try:
+        bench_data = yf.download("SPY", start=start_date, end=end_date,
+                                  auto_adjust=True, progress=False, timeout=30)
+        if bench_data is not None and len(bench_data) > 0:
+            bench_rows = []
+            for idx, row in bench_data.iterrows():
+                bench_rows.append({
+                    "date": idx.strftime("%Y-%m-%d"),
+                    "open": round(float(row.get("Open", 0)), 4),
+                    "high": round(float(row.get("High", 0)), 4),
+                    "low": round(float(row.get("Low", 0)), 4),
+                    "close": round(float(row.get("Close", 0)), 4),
+                    "volume": int(row.get("Volume", 0)),
+                })
+            bench_path = DATA_DIR / "benchmark_daily.csv"
+            if bench_path.exists():
+                existing = pd.read_csv(bench_path)
+                combined = pd.concat([existing, pd.DataFrame(bench_rows)], ignore_index=True)
+                combined = combined.drop_duplicates(subset=["date"])
+                combined.to_csv(bench_path, index=False)
+    except Exception as e:
+        print("  Benchmark refresh failed: {}".format(e))
+
+    return {"us_rows": us_rows, "sgx_rows": sgx_rows, "total": us_rows + sgx_rows}
+
+
+def _parse_yf_batch(yf_data, tickers: list) -> list:
+    """Parse yf.download() batch result into list of row dicts."""
+    rows = []
+    for ticker in tickers:
+        try:
+            if len(tickers) == 1:
+                t_df = yf_data
+            else:
+                t_df = yf_data[ticker] if ticker in yf_data.columns.get_level_values(0) else None
+            if t_df is None or t_df.empty:
+                continue
+            t_df = t_df.dropna(subset=["Close"])
+            for idx, row in t_df.iterrows():
+                rows.append({
+                    "date": idx.strftime("%Y-%m-%d"),
+                    "ticker": ticker,
+                    "open": round(float(row.get("Open", 0)), 4),
+                    "high": round(float(row.get("High", 0)), 4),
+                    "low": round(float(row.get("Low", 0)), 4),
+                    "close": round(float(row.get("Close", 0)), 4),
+                    "volume": int(row.get("Volume", 0)),
+                })
+        except Exception:
+            pass
+    return rows
+
+
+# ── Step 2: Sentiment Check ─────────────────────────────────────────────────
+
+def step_sentiment_check() -> dict:
+    """Check DuckDB freshness. SentimentPulse crawl runs separately. ~2s."""
+    try:
+        import duckdb
+        db_path = DATA_DIR / "sentimentpulse.db"
+        if not db_path.exists():
+            print("  sentimentpulse.db not found — sentiment unavailable")
+            return {"status": "skipped", "reason": "no_duckdb"}
+
+        conn = duckdb.connect(str(db_path), read_only=True)
+        row = conn.execute(
+            "SELECT MAX(date) as latest, COUNT(DISTINCT ticker) as tickers FROM sentiment_features"
+        ).fetchone()
+        conn.close()
+
+        latest_date = str(row[0]) if row[0] else "none"
+        ticker_count = row[1] if row[1] else 0
+        print("  DuckDB sentiment: latest={}, tickers={}".format(latest_date, ticker_count))
+
+        if row[0]:
+            try:
+                days_old = (datetime.now().date() - pd.Timestamp(row[0]).date()).days
+                if days_old > 1:
+                    print("  WARNING: DuckDB sentiment is {} days old".format(days_old))
+            except Exception:
+                pass
+
+        return {"latest_date": latest_date, "tickers": ticker_count}
+    except ImportError:
+        print("  duckdb not installed — skipping")
+        return {"status": "skipped", "reason": "no_duckdb_module"}
+
+
+# ── Step 3: Moby Parsing ────────────────────────────────────────────────────
+
+def step_moby_parsing() -> dict:
+    """Parse Moby emails for ticker picks. Skips gracefully if no credentials. ~5s."""
+    moby_password = os.environ.get("MOBY_APP_PASSWORD", "")
+    if not moby_password:
+        print("  MOBY_APP_PASSWORD not set — skipping")
+        return {"status": "skipped"}
+
+    result = {}
+
+    # Email picks
+    try:
+        from scripts.parse_moby_emails import MobyEmailParser
+        parser = MobyEmailParser()
+        picks = parser.download(days=7)
+        count = len(picks) if picks is not None else 0
+        print("  Parsed {} Moby email picks".format(count))
+        result["email_picks"] = count
+    except Exception as e:
+        print("  Moby email parsing failed: {}".format(e))
+        result["email_picks_error"] = str(e)[:100]
+
+    # Structured analysis from moby_news/
+    try:
+        from scripts.parse_moby_analysis import parse_all_files
+        moby_dir = PROJECT_ROOT / "moby_news"
+        if moby_dir.exists():
+            df = parse_all_files(moby_dir)
+            if len(df) > 0:
+                output_path = DATA_DIR / "sentiment" / "moby_analysis.csv"
+                if output_path.exists():
+                    existing = pd.read_csv(output_path)
+                    df = pd.concat([existing, df], ignore_index=True)
+                    df = df.drop_duplicates(subset=["date", "ticker"], keep="last")
+                df.to_csv(output_path, index=False)
+                print("  Parsed {} Moby stock analyses".format(len(df)))
+                result["analyses"] = len(df)
+    except Exception as e:
+        print("  Moby analysis parsing failed: {}".format(e))
+        result["analysis_error"] = str(e)[:100]
+
+    return result
+
+
+# ── Step 4: Portfolio Runs (existing, wrapped) ───────────────────────────────
+
+def step_portfolio_runs() -> dict:
+    """Run all portfolios — stop-loss, regime, signals, rebalance. ~4-5 min."""
     config = load_config("config/config.yaml")
 
-    # 1. Load prices + benchmark
-    print("\nLoading prices...")
     price_df = pd.read_csv(DATA_DIR / "prices_daily.csv", parse_dates=["date"])
     latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
     benchmark_df = pd.read_csv(DATA_DIR / "benchmark_daily.csv", parse_dates=["date"])
 
-    # 2. Market regime (dual US + SGX) + VIX scaling
+    # Market regime
     spy_return = get_spy_20d_return(price_df)
     sgx_return = get_ticker_20d_return("ES3.SI", price_df)
     vix_level = get_vix_level()
@@ -858,50 +1073,495 @@ def _run_daily(start, metrics, warnings):
 
     regime, regime_scale, regime_trigger = compute_dual_regime(
         spy_return, sgx_return, threshold_reduce, threshold_exit, reduce_scale)
-
-    # Apply VIX scaling multiplicatively
     regime_scale *= vix_scale
 
-    print("SPY 20d: {:+.2%} | ES3.SI 20d: {:+.2%} | VIX: {:.1f} ({:.0%})".format(
+    print("  SPY 20d: {:+.2%} | ES3.SI 20d: {:+.2%} | VIX: {:.1f} ({:.0%})".format(
         spy_return, sgx_return, vix_level, vix_scale))
-    print("REGIME: {} (trigger: {}, base: {:.0%} × VIX: {:.0%} = {:.0%})".format(
-        regime.upper(), regime_trigger, regime_scale / vix_scale if vix_scale else 0, vix_scale, regime_scale))
+    print("  REGIME: {} (scale: {:.0%})".format(regime.upper(), regime_scale))
 
-    # 2b. Load sector, industry, and watchlist mappings for concentration limits
     sector_map = load_sector_map()
     industry_map = load_industry_map()
     wl_config = load_watchlist_config()
-    print("Sector map: {} tickers, Industry map: {} tickers, Watchlists: {}".format(
-        len(sector_map), len(industry_map), len(wl_config)))
 
-    # 3. Execute each portfolio
-    all_stopped = []
+    results = {}
     for p in PORTFOLIOS:
         wl = p["watchlist"]
         focused = is_sector_focused(wl, wl_config)
-        print("\n--- {} {} ---".format(wl, "[sector-focused]" if focused else "[diversified]"))
-        execute_portfolio(wl, config, latest_prices, spy_return, regime, regime_scale,
-                          sector_map, industry_map, wl_config, price_df, benchmark_df)
+        print("\n  --- {} {} ---".format(wl, "[sector-focused]" if focused else "[diversified]"))
+        try:
+            execute_portfolio(wl, config, latest_prices, spy_return, regime, regime_scale,
+                              sector_map, industry_map, wl_config, price_df, benchmark_df)
+            results[wl] = "OK"
+        except Exception as e:
+            print("  {} FAILED: {}".format(wl, e))
+            notify_slack(":x: Portfolio {} failed: {}".format(wl, str(e)[:150]))
+            results[wl] = "FAILED: {}".format(str(e)[:100])
 
-    # 4. Summary
-    elapsed = time.time() - start
-    print("\n" + "=" * 60)
-    print("COMPLETE in {:.0f}s".format(elapsed))
-    write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, all_stopped,
+    # Write summary
+    write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, [],
                         sgx_return=sgx_return, vix_level=vix_level)
 
-    # Collect metrics for Slack notifier
-    metrics.update({
-        'regime': f"SPY {spy_return:+.1%} / STI {sgx_return:+.1%}",
-        'vix': f"{vix_level:.1f} ({vix_scale:.0%})",
-        'position_scale': f"{regime_scale:.0%}",
-        'portfolios': len(PORTFOLIOS),
-        'stop_losses': len(all_stopped),
-        'duration_s': f"{elapsed:.0f}",
-    })
+    # Slack summary
+    _send_slack_summary(latest_prices, spy_return, regime, regime_scale, 0)
 
-    # 5. Slack notifications (existing channel-specific messages)
-    _send_slack_summary(latest_prices, spy_return, regime, regime_scale, elapsed)
+    ok = sum(1 for v in results.values() if v == "OK")
+    failed = len(results) - ok
+    return {"ok": ok, "failed": failed, "regime": regime, "scale": regime_scale,
+            "spy_return": spy_return, "sgx_return": sgx_return, "vix": vix_level}
+
+
+# ── Step 5: Personal Alerts ──────────────────────────────────────────────────
+
+def step_personal_alerts() -> dict:
+    """Check anthony_watchlist for P&L thresholds and signal contradictions. ~2s."""
+    alerts = []
+    personal_dir = PROJECT_ROOT / "config" / "personal"
+    if not personal_dir.exists():
+        print("  No personal config dir — skipping")
+        return {"alerts": []}
+
+    # Load personal config
+    personal_cfg = None
+    try:
+        for yaml_file in personal_dir.glob("*.yaml"):
+            with open(yaml_file) as f:
+                cfg = yaml.safe_load(f)
+            if cfg and "portfolio" in cfg:
+                personal_cfg = cfg
+                break
+    except Exception as e:
+        print("  Could not load personal config: {}".format(e))
+        return {"alerts": []}
+
+    if not personal_cfg:
+        print("  No personal portfolio config found")
+        return {"alerts": []}
+
+    alert_cfg = personal_cfg.get("alerts", {})
+    all_positions = (
+        personal_cfg["portfolio"].get("us_positions", [])
+        + personal_cfg["portfolio"].get("sgx_positions", [])
+    )
+    holdings = {pos["ticker"]: pos for pos in all_positions}
+
+    # Load latest prices
+    try:
+        price_df = pd.read_csv(DATA_DIR / "prices_daily.csv", parse_dates=["date"])
+        latest_prices = price_df.sort_values("date").groupby("ticker").last()["close"].to_dict()
+    except Exception:
+        latest_prices = {}
+
+    # Check P&L thresholds
+    pnl_cfg = alert_cfg.get("pnl_thresholds", {})
+    loss_pct = pnl_cfg.get("loss_pct", -10.0)
+    gain_pct = pnl_cfg.get("gain_pct", 20.0)
+
+    for ticker, pos in holdings.items():
+        current = latest_prices.get(ticker)
+        if current is None or pos.get("cost_basis", 0) <= 0:
+            continue
+        pnl_pct = ((current - pos["cost_basis"]) / pos["cost_basis"]) * 100
+        if pnl_pct <= loss_pct:
+            alerts.append("P&L: {} down {:.1f}% (${:.2f} -> ${:.2f})".format(
+                ticker, pnl_pct, pos["cost_basis"], current))
+        elif pnl_pct >= gain_pct:
+            alerts.append("P&L: {} up {:.1f}% (${:.2f} -> ${:.2f})".format(
+                ticker, pnl_pct, pos["cost_basis"], current))
+
+    # Check signal contradictions from anthony_watchlist DB
+    db_path = DATA_DIR / "paper_trading_anthony_watchlist.db"
+    if db_path.exists():
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            today = datetime.now().strftime("%Y-%m-%d")
+            signals = conn.execute(
+                "SELECT ticker, action, prediction, rank FROM signals WHERE date = ?", (today,)
+            ).fetchall()
+            conn.close()
+
+            for sig in signals:
+                ticker = sig["ticker"]
+                if ticker in holdings and sig["action"] == "SELL":
+                    alerts.append("CONFLICT: Model says SELL {} (rank={}, score={:.3f}) — you hold it".format(
+                        ticker, sig["rank"], sig["prediction"]))
+        except Exception:
+            pass
+
+    if alerts:
+        alert_msg = "PERSONAL ALERTS:\n" + "\n".join("  " + a for a in alerts)
+        print("  " + alert_msg.replace("\n", "\n  "))
+        notify_slack(":bell: " + alert_msg)
+
+    return {"alerts": alerts}
+
+
+# ── Step 6: Forward Predictions ──────────────────────────────────────────────
+
+def step_forward_predictions() -> dict:
+    """Log today's signals to forward_journal.db. ~5s."""
+    from scripts.forward_journal import ForwardJournalDB
+
+    journal = ForwardJournalDB()
+    today = datetime.now().strftime("%Y-%m-%d")
+    total_logged = 0
+
+    price_df = pd.read_csv(DATA_DIR / "prices_daily.csv")
+    if "date" in price_df.columns:
+        price_df["date"] = pd.to_datetime(price_df["date"], format="mixed")
+
+    for p in PORTFOLIOS:
+        wl = p["watchlist"]
+        db_path = DATA_DIR / "paper_trading_{}.db".format(wl)
+        if not db_path.exists():
+            continue
+
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            signals = conn.execute(
+                "SELECT ticker, prediction, rank, percentile, action FROM signals WHERE date = ? ORDER BY rank",
+                (today,)
+            ).fetchall()
+
+            if not signals:
+                # Try most recent date
+                signals = conn.execute(
+                    "SELECT ticker, prediction, rank, percentile, action, date "
+                    "FROM signals ORDER BY date DESC LIMIT 50"
+                ).fetchall()
+                if signals:
+                    latest_date = signals[0]["date"]
+                    signals = [s for s in signals if s["date"] == latest_date]
+            conn.close()
+
+            predictions_batch = []
+            for sig in signals:
+                ticker = sig["ticker"]
+                ticker_prices = price_df[price_df["ticker"] == ticker] if "ticker" in price_df.columns else pd.DataFrame()
+                entry_price = float(ticker_prices.iloc[-1]["close"]) if len(ticker_prices) > 0 and "close" in ticker_prices.columns else 0.0
+
+                for horizon in PREDICTION_HORIZONS:
+                    predictions_batch.append({
+                        "prediction_date": today,
+                        "ticker": ticker,
+                        "watchlist": wl,
+                        "horizon_days": horizon,
+                        "predicted_score": float(sig["prediction"]),
+                        "predicted_rank": int(sig["rank"]),
+                        "predicted_action": sig["action"],
+                        "entry_price": entry_price,
+                    })
+
+            logged = journal.log_predictions_batch(predictions_batch)
+            total_logged += logged
+            if logged > 0:
+                print("  {}: {} predictions ({} signals x {} horizons)".format(
+                    wl, logged, len(signals), len(PREDICTION_HORIZONS)))
+
+        except Exception as e:
+            print("  {} journal failed: {}".format(wl, e))
+
+    journal.close()
+    print("  Total logged: {}".format(total_logged))
+    return {"logged": total_logged}
+
+
+# ── Step 7: Evaluate Matured Predictions ─────────────────────────────────────
+
+def step_evaluate_predictions() -> dict:
+    """Evaluate matured 5-day and 63-day predictions. ~3s."""
+    from scripts.forward_journal import ForwardJournalDB
+
+    journal = ForwardJournalDB()
+    today = datetime.now().strftime("%Y-%m-%d")
+    total_evaluated = 0
+
+    try:
+        price_df = pd.read_csv(DATA_DIR / "prices_daily.csv")
+        if "date" in price_df.columns:
+            price_df["date"] = pd.to_datetime(price_df["date"], format="mixed")
+    except Exception as e:
+        print("  Cannot load prices: {}".format(e))
+        journal.close()
+        return {"evaluated": 0, "error": str(e)}
+
+    for horizon in PREDICTION_HORIZONS:
+        matured = journal.get_matured_predictions(horizon_days=horizon, as_of_date=today)
+        if not matured:
+            continue
+
+        print("  Evaluating {} matured {}-day predictions".format(len(matured), horizon))
+
+        for pred in matured:
+            ticker = pred["ticker"]
+            entry_price = pred["entry_price"]
+            if entry_price <= 0:
+                continue
+
+            ticker_prices = price_df[price_df["ticker"] == ticker] if "ticker" in price_df.columns else pd.DataFrame()
+            if len(ticker_prices) == 0 or "close" not in ticker_prices.columns:
+                continue
+
+            actual_price = float(ticker_prices.iloc[-1]["close"])
+            actual_return = (actual_price - entry_price) / entry_price
+
+            if pred["predicted_action"] == "BUY":
+                hit = 1 if actual_return > 0 else 0
+            elif pred["predicted_action"] == "SELL":
+                hit = 1 if actual_return < 0 else 0
+            else:
+                hit = 0
+
+            journal.record_evaluation(pred["id"], actual_price, actual_return, hit)
+            total_evaluated += 1
+
+    # Log hit rates
+    for horizon in PREDICTION_HORIZONS:
+        rates = journal.get_hit_rates(horizon_days=horizon, last_n_days=30)
+        if rates["total"] > 0:
+            print("  {}d hit rate (30d): {:.1%} ({}/{})".format(
+                horizon, rates["hit_rate"], rates["hits"], rates["total"]))
+
+    journal.close()
+    return {"evaluated": total_evaluated}
+
+
+# ── Step 8: Generate Recommendations ─────────────────────────────────────────
+
+def step_recommendations() -> dict:
+    """Generate recommendations from top signals across all portfolios. ~2s."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Load prices and sectors
+    price_map = {}
+    try:
+        pdf = pd.read_csv(DATA_DIR / "prices_daily.csv")
+        if "date" in pdf.columns:
+            pdf["date"] = pd.to_datetime(pdf["date"], format="mixed")
+        for ticker in pdf["ticker"].unique():
+            tdf = pdf[pdf["ticker"] == ticker].sort_values("date")
+            if len(tdf) > 0 and "close" in tdf.columns:
+                price_map[ticker] = float(tdf.iloc[-1]["close"])
+    except Exception:
+        pass
+
+    sector_map = load_sector_map()
+
+    # Collect top signals from all watchlists
+    all_signals = []
+    for p in PORTFOLIOS:
+        wl = p["watchlist"]
+        db_path = DATA_DIR / "paper_trading_{}.db".format(wl)
+        if not db_path.exists():
+            continue
+        try:
+            conn = sqlite3.connect(str(db_path))
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT ticker, prediction, rank, percentile, action, date "
+                "FROM signals ORDER BY date DESC LIMIT 50"
+            ).fetchall()
+            conn.close()
+            if not rows:
+                continue
+            latest_date = rows[0]["date"]
+            for r in rows:
+                if r["date"] != latest_date:
+                    break
+                all_signals.append({
+                    "ticker": r["ticker"], "prediction": r["prediction"],
+                    "rank": r["rank"], "action": r["action"], "watchlist": wl,
+                })
+        except Exception:
+            pass
+
+    if not all_signals:
+        print("  No signals — skipping")
+        return {"count": 0}
+
+    # Deduplicate: keep highest prediction per ticker
+    best = {}
+    for sig in all_signals:
+        t = sig["ticker"]
+        if t not in best or sig["prediction"] > best[t]["prediction"]:
+            best[t] = sig
+
+    sorted_sigs = sorted(best.values(), key=lambda s: s["prediction"], reverse=True)
+    top_buys = [s for s in sorted_sigs if s["action"] == "BUY"][:10]
+    top_sells = [s for s in sorted_sigs if s["action"] == "SELL"][:5]
+    recs = top_buys + top_sells
+
+    if not recs:
+        print("  No actionable signals")
+        return {"count": 0}
+
+    # Write to analysis.db
+    analysis_db = DATA_DIR / "analysis.db"
+    conn = sqlite3.connect(str(analysis_db))
+    inserted = 0
+
+    for sig in recs:
+        ticker = sig["ticker"]
+        price = price_map.get(ticker, 0.0)
+        sector = sector_map.get(ticker, "Unknown")
+        action = sig["action"]
+        score = sig["prediction"]
+        confidence = 0.8 if (score > 0.8 or score < 0.2) else 0.7 if (score > 0.7 or score < 0.3) else 0.5
+
+        if action == "BUY" and price > 0:
+            target_price, stop_loss = round(price * 1.10, 2), round(price * 0.95, 2)
+        elif action == "SELL" and price > 0:
+            target_price, stop_loss = round(price * 0.90, 2), round(price * 1.05, 2)
+        else:
+            target_price, stop_loss = None, None
+
+        reason = "Score: {:.3f}, Rank #{} in {}".format(score, sig["rank"], sig["watchlist"].replace("_", " "))
+
+        existing = conn.execute(
+            "SELECT 1 FROM recommendations WHERE ticker = ? AND recommendation_date = ?",
+            (ticker, today)
+        ).fetchone()
+        if existing:
+            continue
+        try:
+            conn.execute(
+                """INSERT INTO recommendations
+                   (run_id, ticker, action, recommendation_date, reason,
+                    confidence, target_price, stop_loss, time_horizon,
+                    current_price, score, sector, source, created_at)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (run_id, ticker, action, today, reason, confidence, target_price,
+                 stop_loss, "medium", price, score, sector, "daily_fast", datetime.now().isoformat()),
+            )
+            inserted += 1
+        except Exception:
+            pass
+
+    conn.commit()
+
+    # Update tracking for past recommendations
+    updated = 0
+    try:
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            "SELECT id, ticker, action, current_price, target_price, stop_loss FROM recommendations WHERE current_price > 0"
+        ).fetchall()
+        now = datetime.now().isoformat()
+        for row in rows:
+            current_price = price_map.get(row["ticker"])
+            if current_price is None or row["current_price"] <= 0:
+                continue
+            actual_return = (current_price / row["current_price"]) - 1.0
+            if row["action"] == "SELL":
+                actual_return = -actual_return
+            hit_target = 1 if (row["target_price"] and row["action"] == "BUY" and current_price >= row["target_price"]) else 0
+            hit_stop = 1 if (row["stop_loss"] and row["action"] == "BUY" and current_price <= row["stop_loss"]) else 0
+            if row["action"] == "SELL":
+                hit_target = 1 if (row["target_price"] and current_price <= row["target_price"]) else 0
+                hit_stop = 1 if (row["stop_loss"] and current_price >= row["stop_loss"]) else 0
+            conn.execute(
+                "UPDATE recommendations SET actual_return=?, hit_target=?, hit_stop_loss=?, tracking_updated_at=? WHERE id=?",
+                (round(actual_return, 6), hit_target, hit_stop, now, row["id"]))
+            updated += 1
+        conn.commit()
+    except Exception:
+        pass
+    conn.close()
+
+    print("  Generated {} recommendations ({} BUY, {} SELL), updated {} tracking".format(
+        inserted, len(top_buys), len(top_sells), updated))
+    return {"count": inserted, "buys": len(top_buys), "sells": len(top_sells), "tracking_updated": updated}
+
+
+# ── Step Timer Table ─────────────────────────────────────────────────────────
+
+def print_step_table(step_results: list, total_elapsed: float):
+    """Print and return formatted step timer table."""
+    lines = []
+    lines.append("+" + "-" * 30 + "+" + "-" * 10 + "+" + "-" * 10 + "+")
+    lines.append("| {:28s} | {:8s} | {:8s} |".format("Step", "Time", "Status"))
+    lines.append("+" + "-" * 30 + "+" + "-" * 10 + "+" + "-" * 10 + "+")
+    for r in step_results:
+        t = "{:.1f}s".format(r["time_s"])
+        lines.append("| {:28s} | {:>8s} | {:8s} |".format(
+            "{}. {}".format(r["step"], r["name"])[:28], t, r["status"]))
+    lines.append("+" + "-" * 30 + "+" + "-" * 10 + "+" + "-" * 10 + "+")
+    lines.append("| {:28s} | {:>8s} |          |".format("Total", "{:.0f}s".format(total_elapsed)))
+    lines.append("+" + "-" * 30 + "+" + "-" * 10 + "+" + "-" * 10 + "+")
+    table = "\n".join(lines)
+    print("\n" + table)
+
+    # Write to daily_summary.txt
+    summary_path = LOG_DIR / "daily_summary.txt"
+    try:
+        with open(summary_path, "a") as f:
+            f.write("\n\n--- Step Timer ({}) ---\n".format(datetime.now().strftime("%Y-%m-%d %H:%M")))
+            f.write(table + "\n")
+    except Exception:
+        pass
+
+    return table
+
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+
+def main():
+    start = time.time()
+    print("=" * 60)
+    print("DAILY RUN — {} (8-step pipeline)".format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")))
+    print("=" * 60)
+
+    # Slack monitoring
+    try:
+        from utils.slack_notifier import SlackNotifier
+        notifier = SlackNotifier(job_name="daily-fast")
+        thread_ts = notifier.started("Daily run starting (8-step pipeline)")
+    except Exception:
+        notifier, thread_ts = None, None
+
+    step_results = []
+
+    # ── 8-step pipeline (each step isolated) ─────────────────────────────
+    run_step(1, "Price Refresh", step_price_refresh, step_results)
+    run_step(2, "Sentiment Check", step_sentiment_check, step_results)
+    run_step(3, "Moby Parsing", step_moby_parsing, step_results)
+    run_step(4, "Portfolio Runs", step_portfolio_runs, step_results)
+    run_step(5, "Personal Alerts", step_personal_alerts, step_results)
+    run_step(6, "Forward Predictions", step_forward_predictions, step_results)
+    run_step(7, "Evaluate Predictions", step_evaluate_predictions, step_results)
+    run_step(8, "Recommendations", step_recommendations, step_results)
+
+    # ── Summary ──────────────────────────────────────────────────────────
+    total_elapsed = time.time() - start
+    table = print_step_table(step_results, total_elapsed)
+
+    # Check for timeout
+    if total_elapsed > OVERALL_TIMEOUT_S:
+        notify_slack(":rotating_light: Daily run exceeded {:.0f}s timeout ({:.0f}s)".format(
+            OVERALL_TIMEOUT_S, total_elapsed))
+
+    # Send step table to Slack
+    failed_steps = [r for r in step_results if r["status"] == "FAILED"]
+    if failed_steps:
+        notify_slack(":warning: Daily run completed with {} failed step(s):\n```\n{}\n```".format(
+            len(failed_steps), table))
+    else:
+        notify_slack(":white_check_mark: Daily run complete ({:.0f}s)\n```\n{}\n```".format(
+            total_elapsed, table))
+
+    # Slack notifier wrap-up
+    if notifier:
+        metrics = {
+            "steps": "{}/8 OK".format(sum(1 for r in step_results if r["status"] == "OK")),
+            "duration_s": "{:.0f}".format(total_elapsed),
+        }
+        if failed_steps:
+            notifier.completed(thread_ts=thread_ts, metrics=metrics,
+                               warnings=[r["error"] for r in failed_steps if "error" in r])
+        else:
+            notifier.completed(thread_ts=thread_ts, metrics=metrics)
 
 
 def _send_slack_summary(latest_prices: dict, spy_return: float, regime: str, regime_scale: float, elapsed: float):
