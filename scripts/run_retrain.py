@@ -4,18 +4,21 @@
 Designed for the 32-core compute server. Runs the full walk-forward
 backtest with configurable overrides, then prints a structured report.
 
-Usage:
-    python scripts/run_retrain.py --watchlist tech_giants
+Supports incremental training mode (Phase 4 optimization):
+    python scripts/run_retrain.py --watchlist tech_giants          # incremental if model exists
+    python scripts/run_retrain.py --watchlist tech_giants --full   # force full backtest
     python scripts/run_retrain.py --watchlist tech_giants --transaction-cost 0.005
     python scripts/run_retrain.py --watchlist tech_giants --non-overlapping
 """
 
 import argparse
+import json
 import sys
 import os
 import time
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional, Tuple
 
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
@@ -37,6 +40,17 @@ from src.features.engineering import (
     get_feature_columns,
 )
 from src.backtest.rolling import run_walk_forward_backtest
+from src.models.trainer import save_model, load_model
+
+MODEL_DIR = Path("models/")
+MODEL_DIR.mkdir(exist_ok=True)
+
+# Maximum age (days) before incremental mode falls back to full retrain
+INCREMENTAL_MAX_AGE_DAYS = 90
+# Number of extra estimators added during incremental warm-start
+INCREMENTAL_EXTRA_ESTIMATORS = 50
+# Days of recent data used for incremental training
+INCREMENTAL_DATA_DAYS = 35
 
 
 def build_config_overrides(args, base_config) -> BacktestConfig:
@@ -249,6 +263,206 @@ def print_report(results, trade_stats: dict, elapsed: float, args):
     print("\n" + "=" * 70)
 
 
+def _get_latest_model_dir(watchlist: str) -> Optional[Path]:
+    """Return the path to the latest model directory for a watchlist, or None."""
+    latest_pointer = MODEL_DIR / f"{watchlist}_latest"
+    if latest_pointer.is_symlink() or latest_pointer.is_dir():
+        # Resolve symlink or direct directory
+        target = latest_pointer.resolve() if latest_pointer.is_symlink() else latest_pointer
+        if target.exists() and (target / "model.txt").exists():
+            return target
+    return None
+
+
+def save_retrain_model(
+    model,
+    feature_cols: List[str],
+    config,
+    metrics: Dict,
+    watchlist: str,
+    train_end_date: str,
+    mode: str = "full",
+) -> str:
+    """Save trained model after retrain with metadata and update latest pointer.
+
+    Args:
+        model: Trained LGBMRegressor.
+        feature_cols: Feature column names.
+        config: ModelConfig used for training.
+        metrics: Performance metrics dict (sharpe, IC, etc.).
+        watchlist: Watchlist name.
+        train_end_date: ISO date string of the last training date.
+        mode: "full" or "incremental".
+
+    Returns:
+        Path to saved model directory.
+    """
+    from src.config.config import ModelConfig as CfgModelConfig
+
+    model_id = "{}_{}".format(watchlist, datetime.now().strftime("%Y%m%d_%H%M%S"))
+
+    # Build a trainer-compatible ModelConfig for save_model
+    trainer_cfg = CfgModelConfig(
+        target_col=config.target_col,
+        test_size=config.test_size,
+        random_state=config.random_state,
+        params=config.params,
+    )
+
+    data_info = {
+        "watchlist": watchlist,
+        "train_end_date": train_end_date,
+        "n_features": len(feature_cols),
+        "retrain_mode": mode,
+    }
+
+    saved_path = save_model(
+        model=model,
+        feature_names=feature_cols,
+        config=trainer_cfg,
+        metrics=metrics,
+        base_dir=str(MODEL_DIR),
+        model_id=model_id,
+        data_info=data_info,
+    )
+
+    # Update {watchlist}_latest symlink
+    latest_link = MODEL_DIR / f"{watchlist}_latest"
+    target_dir = Path(saved_path)
+    # Remove old symlink/file if it exists
+    if latest_link.is_symlink() or latest_link.exists():
+        latest_link.unlink()
+    latest_link.symlink_to(target_dir.resolve())
+
+    print("Model saved: {} (mode={})".format(saved_path, mode))
+    return saved_path
+
+
+def run_incremental_retrain(
+    watchlist: str,
+    config,
+    training_data: pd.DataFrame,
+    feature_cols: List[str],
+) -> Optional[Tuple]:
+    """Attempt incremental (warm-start) retrain on recent data.
+
+    Returns:
+        Tuple of (model, metrics_dict, train_end_date) if incremental succeeded,
+        or None to signal fallback to full retrain.
+    """
+    latest_dir = _get_latest_model_dir(watchlist)
+    if latest_dir is None:
+        print("No existing model for '{}' — falling back to full retrain.".format(watchlist))
+        return None
+
+    # Load metadata and check age
+    metadata_file = latest_dir / "metadata.json"
+    if not metadata_file.exists():
+        print("No metadata found — falling back to full retrain.")
+        return None
+
+    with open(metadata_file) as f:
+        metadata = json.load(f)
+
+    train_end_str = metadata.get("data_info", {}).get("train_end_date", "")
+    if not train_end_str:
+        # Use training_date as fallback
+        train_end_str = metadata.get("training_date", "")[:10]
+
+    try:
+        model_date = datetime.fromisoformat(train_end_str[:10])
+    except (ValueError, TypeError):
+        print("Cannot parse model date '{}' — falling back to full retrain.".format(train_end_str))
+        return None
+
+    age_days = (datetime.now() - model_date).days
+    if age_days > INCREMENTAL_MAX_AGE_DAYS:
+        print("Model is {} days old (>{} limit) — falling back to full retrain.".format(
+            age_days, INCREMENTAL_MAX_AGE_DAYS))
+        return None
+
+    # Check feature compatibility
+    saved_features = metadata.get("feature_names", [])
+    if set(saved_features) != set(feature_cols):
+        missing = set(feature_cols) - set(saved_features)
+        extra = set(saved_features) - set(feature_cols)
+        print("Feature mismatch (missing={}, extra={}) — falling back to full retrain.".format(
+            len(missing), len(extra)))
+        return None
+
+    # Load existing model
+    print("Loading model from {} (age={} days)...".format(latest_dir, age_days))
+    try:
+        model, model_meta = load_model(str(latest_dir))
+    except Exception as e:
+        print("Failed to load model: {} — falling back to full retrain.".format(e))
+        return None
+
+    # Prepare recent data for incremental training
+    cutoff_date = pd.Timestamp.now() - pd.Timedelta(days=INCREMENTAL_DATA_DAYS)
+    if "date" in training_data.columns:
+        recent_data = training_data[training_data["date"] >= cutoff_date]
+    else:
+        recent_data = training_data.tail(INCREMENTAL_DATA_DAYS * 50)  # rough estimate
+
+    if len(recent_data) < 100:
+        print("Only {} recent rows (need >=100) — falling back to full retrain.".format(
+            len(recent_data)))
+        return None
+
+    X_new = recent_data[feature_cols]
+    y_new = recent_data[config.model.target_col]
+
+    print("Incremental training: {} rows, adding {} estimators...".format(
+        len(X_new), INCREMENTAL_EXTRA_ESTIMATORS))
+
+    # Warm-start: increase n_estimators and refit
+    # LGBMRegressor supports init_model for warm-starting
+    from lightgbm import LGBMRegressor
+    import lightgbm as lgb
+
+    # Build fresh model with same params + extra estimators
+    fit_params = dict(config.model.params)
+    early_stopping = fit_params.pop("early_stopping_rounds", None)
+    original_n_estimators = fit_params.get("n_estimators", 200)
+    fit_params["n_estimators"] = INCREMENTAL_EXTRA_ESTIMATORS
+
+    new_model = LGBMRegressor(**fit_params)
+    callbacks = [lgb.log_evaluation(period=-1)]
+
+    # Use init_model to warm-start from the existing booster
+    new_model.fit(
+        X_new, y_new,
+        init_model=model.booster_,
+        callbacks=callbacks,
+    )
+
+    # Restore original n_estimators on the model object for metadata consistency
+    new_model.n_estimators = original_n_estimators + INCREMENTAL_EXTRA_ESTIMATORS
+
+    # Compute validation metrics on the new data
+    from sklearn.metrics import mean_squared_error, mean_absolute_error
+    y_pred = new_model.predict(X_new)
+    metrics = {
+        "mse": float(mean_squared_error(y_new, y_pred)),
+        "rmse": float(np.sqrt(mean_squared_error(y_new, y_pred))),
+        "mae": float(mean_absolute_error(y_new, y_pred)),
+        "n_train_incremental": len(X_new),
+        "incremental_age_days": age_days,
+    }
+
+    # Determine train_end_date from the data
+    if "date" in recent_data.columns:
+        train_end_date = str(recent_data["date"].max().date())
+    else:
+        train_end_date = datetime.now().strftime("%Y-%m-%d")
+
+    print("Incremental retrain complete: RMSE={:.6f}, {} rows".format(
+        metrics["rmse"], len(X_new)))
+
+    return new_model, metrics, train_end_date
+
+
 def main():
     parser = argparse.ArgumentParser(description="Retrain walk-forward model")
     parser.add_argument("--watchlist", required=True, help="Watchlist name")
@@ -263,6 +477,8 @@ def main():
     parser.add_argument("--invert-features", nargs="+", default=[],
                         help="Features to invert (multiply by -1) before training")
     parser.add_argument("--verbose", action="store_true", help="Print per-window progress")
+    parser.add_argument("--full", action="store_true",
+                        help="Force full walk-forward backtest (skip incremental)")
     args = parser.parse_args()
 
     config = load_config("config/config.yaml")
@@ -296,60 +512,135 @@ def main():
 
     print("Training data: {:,} rows, {} features".format(len(training_data), len(feature_cols)))
 
-    # Run backtest
-    t0 = time.time()
-    results = run_walk_forward_backtest(
-        training_data=training_data,
-        benchmark_data=benchmark_df,
-        price_data=price_df,
-        feature_cols=feature_cols,
-        config=bt_config,
-        model_config=config.model,
-        verbose=args.verbose,
-    )
-    elapsed = time.time() - t0
-
-    # Apply transaction costs to portfolio returns (the engine doesn't deduct them)
-    tx_cost = bt_config.transaction_cost
-    if tx_cost > 0 and results.positions is not None and len(results.positions) > 0:
-        positions_pivot = results.positions.pivot_table(
-            index="date", columns="ticker", values="weight", fill_value=0.0
+    # ── Incremental vs Full retrain decision ─────────────────────────────
+    incremental_result = None
+    if not args.full:
+        incremental_result = run_incremental_retrain(
+            watchlist=args.watchlist,
+            config=config,
+            training_data=training_data,
+            feature_cols=feature_cols,
         )
-        if len(positions_pivot) > 1:
-            # Turnover per rebalance = sum of absolute weight changes
-            turnover_per_rebal = positions_pivot.diff().abs().sum(axis=1)
-            # Spread cost across trading days between rebalances
-            rebal_dates = sorted(results.positions["date"].unique())
-            port_ret = results.portfolio_returns.copy()
-            for i in range(1, len(rebal_dates)):
-                rebal = rebal_dates[i]
-                prev = rebal_dates[i - 1]
-                days_between = port_ret.index[(port_ret.index > prev) & (port_ret.index <= rebal)]
-                if len(days_between) > 0 and rebal in turnover_per_rebal.index:
-                    daily_cost = (turnover_per_rebal[rebal] * tx_cost) / len(days_between)
-                    port_ret[days_between] -= daily_cost
-            results = type(results)(
-                portfolio_returns=port_ret,
-                benchmark_returns=results.benchmark_returns,
-                positions=results.positions,
-                metrics=results.metrics,
-                window_results=results.window_results,
-                predictions=results.predictions,
-                final_scores=results.final_scores,
+
+    if incremental_result is not None:
+        # ── Incremental path succeeded ───────────────────────────────────
+        incr_model, incr_metrics, train_end_date = incremental_result
+        elapsed = 0.0  # incremental is fast, no separate timing needed
+
+        # Save the incrementally trained model
+        save_retrain_model(
+            model=incr_model,
+            feature_cols=feature_cols,
+            config=config.model,
+            metrics=incr_metrics,
+            watchlist=args.watchlist,
+            train_end_date=train_end_date,
+            mode="incremental",
+        )
+
+        print("\n" + "=" * 70)
+        print("INCREMENTAL RETRAIN COMPLETE — {}".format(args.watchlist))
+        print("  RMSE: {:.6f}".format(incr_metrics.get("rmse", 0)))
+        print("  MAE:  {:.6f}".format(incr_metrics.get("mae", 0)))
+        print("  Rows: {}".format(incr_metrics.get("n_train_incremental", 0)))
+        print("  Model age: {} days".format(incr_metrics.get("incremental_age_days", 0)))
+        print("  Train end: {}".format(train_end_date))
+        print("=" * 70)
+    else:
+        # ── Full walk-forward backtest path ──────────────────────────────
+        if not args.full:
+            print("Proceeding with full walk-forward backtest...")
+
+        t0 = time.time()
+        results = run_walk_forward_backtest(
+            training_data=training_data,
+            benchmark_data=benchmark_df,
+            price_data=price_df,
+            feature_cols=feature_cols,
+            config=bt_config,
+            model_config=config.model,
+            verbose=args.verbose,
+        )
+        elapsed = time.time() - t0
+
+        # Apply transaction costs to portfolio returns (the engine doesn't deduct them)
+        tx_cost = bt_config.transaction_cost
+        if tx_cost > 0 and results.positions is not None and len(results.positions) > 0:
+            positions_pivot = results.positions.pivot_table(
+                index="date", columns="ticker", values="weight", fill_value=0.0
             )
-            # Recompute metrics with cost-adjusted returns
-            from src.backtest.rolling import _calculate_metrics
-            results.metrics.update(_calculate_metrics(
-                port_ret, results.benchmark_returns, results.positions
-            ))
-            print("Transaction costs applied: {:.1%} per side on {:.2f} avg turnover".format(
-                tx_cost, turnover_per_rebal.mean()))
+            if len(positions_pivot) > 1:
+                # Turnover per rebalance = sum of absolute weight changes
+                turnover_per_rebal = positions_pivot.diff().abs().sum(axis=1)
+                # Spread cost across trading days between rebalances
+                rebal_dates = sorted(results.positions["date"].unique())
+                port_ret = results.portfolio_returns.copy()
+                for i in range(1, len(rebal_dates)):
+                    rebal = rebal_dates[i]
+                    prev = rebal_dates[i - 1]
+                    days_between = port_ret.index[(port_ret.index > prev) & (port_ret.index <= rebal)]
+                    if len(days_between) > 0 and rebal in turnover_per_rebal.index:
+                        daily_cost = (turnover_per_rebal[rebal] * tx_cost) / len(days_between)
+                        port_ret[days_between] -= daily_cost
+                results = type(results)(
+                    portfolio_returns=port_ret,
+                    benchmark_returns=results.benchmark_returns,
+                    positions=results.positions,
+                    metrics=results.metrics,
+                    window_results=results.window_results,
+                    predictions=results.predictions,
+                    final_scores=results.final_scores,
+                )
+                # Recompute metrics with cost-adjusted returns
+                from src.backtest.rolling import _calculate_metrics
+                results.metrics.update(_calculate_metrics(
+                    port_ret, results.benchmark_returns, results.positions
+                ))
+                print("Transaction costs applied: {:.1%} per side on {:.2f} avg turnover".format(
+                    tx_cost, turnover_per_rebal.mean()))
 
-    # Trade stats
-    trade_stats = compute_trade_stats(results)
+        # Trade stats
+        trade_stats = compute_trade_stats(results)
 
-    # Report
-    print_report(results, trade_stats, elapsed, args)
+        # Report
+        print_report(results, trade_stats, elapsed, args)
+
+        # Save model from the last window of the full backtest
+        # Extract the last trained model if available in window_results
+        wr = results.window_results
+        if wr and len(wr) > 0:
+            last_window = wr[-1]
+            last_model = last_window.get("model")
+            if last_model is not None:
+                # Determine train_end_date from last window
+                train_end = last_window.get("train_end", "")
+                if hasattr(train_end, "strftime"):
+                    train_end_date = train_end.strftime("%Y-%m-%d")
+                elif train_end:
+                    train_end_date = str(train_end)[:10]
+                else:
+                    train_end_date = datetime.now().strftime("%Y-%m-%d")
+
+                save_metrics = {
+                    "sharpe_ratio": results.metrics.get("sharpe_ratio", 0),
+                    "annualized_return": results.metrics.get("annualized_return", 0),
+                    "max_drawdown": results.metrics.get("max_drawdown", 0),
+                }
+                # Add mean IC if available
+                ics = [w["rank_ic"] for w in wr
+                       if w.get("rank_ic") is not None and not np.isnan(w.get("rank_ic", float("nan")))]
+                if ics:
+                    save_metrics["mean_rank_ic"] = float(np.mean(ics))
+
+                save_retrain_model(
+                    model=last_model,
+                    feature_cols=feature_cols,
+                    config=config.model,
+                    metrics=save_metrics,
+                    watchlist=args.watchlist,
+                    train_end_date=train_end_date,
+                    mode="full",
+                )
 
 
 if __name__ == "__main__":

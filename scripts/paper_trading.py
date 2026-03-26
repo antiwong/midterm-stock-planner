@@ -273,6 +273,18 @@ class PaperTradingDB:
         self.conn.commit()
 
     def close_position(self, ticker: str, exit_date: str, exit_price: float, realized_pnl: float):
+        # Delete any existing closed positions for the same ticker+entry_date
+        # to avoid UNIQUE(ticker, entry_date, is_active) violation when
+        # a position is closed and re-opened on the same day.
+        active_row = self.conn.execute(
+            "SELECT entry_date FROM positions WHERE ticker = ? AND is_active = 1",
+            (ticker,)
+        ).fetchone()
+        if active_row:
+            self.conn.execute(
+                "DELETE FROM positions WHERE ticker = ? AND entry_date = ? AND is_active = 0",
+                (ticker, active_row["entry_date"])
+            )
         self.conn.execute(
             "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? "
             "WHERE ticker = ? AND is_active = 1",
@@ -1359,7 +1371,7 @@ class PaperTradingEngine:
         if prev:
             prev_value = prev[0]["portfolio_value"]
             daily_pct = (portfolio_value / prev_value) - 1 if prev_value > 0 else 0
-            prev_bench = prev[0].get("benchmark_cumulative", 0)
+            prev_bench = prev[0].get("benchmark_cumulative") or 0
             bench_daily = benchmark_cumulative - prev_bench
         else:
             daily_pct = 0
