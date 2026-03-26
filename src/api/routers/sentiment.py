@@ -964,11 +964,19 @@ async def update_trends(
     updated = 0
 
     try:
-        conn = duckdb.connect(db_path, config={"lock_timeout": 30_000})
+        conn = duckdb.connect(db_path)
 
         for ticker, trends in payload.data.items():
             # Only update rows with non-zero interest (don't overwrite with zeros)
             if trends.get("trends_interest_7d", 0) <= 0:
+                continue
+
+            # Check if ticker exists before updating
+            exists = conn.execute(
+                "SELECT COUNT(*) FROM sentiment_features WHERE ticker = ?",
+                [ticker],
+            ).fetchone()
+            if not exists or exists[0] == 0:
                 continue
 
             conn.execute(
@@ -993,10 +1001,7 @@ async def update_trends(
                     ticker,
                 ],
             )
-
-            rows_changed = conn.execute("SELECT changes()").fetchone()
-            if rows_changed and rows_changed[0] > 0:
-                updated += 1
+            updated += 1
 
         conn.commit()
         conn.close()
