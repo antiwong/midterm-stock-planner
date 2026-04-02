@@ -61,6 +61,7 @@ class BacktestConfig:
     vix_high_scale: float = 0.6         # Scale factor when VIX > high threshold
     vix_extreme_scale: float = 0.3      # Scale factor when VIX > extreme threshold
     market_regime_filter: Optional[Any] = None  # SPY-based cash rule
+    paused_watchlists: Optional[list] = None    # Watchlists with new BUY entries paused
 
 
 def bars_per_day_from_interval(interval: str) -> float:

@@ -52,7 +52,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 LOG_DIR = PROJECT_ROOT / "logs"
 
 # Concentration limits — diversified portfolios
-MAX_SECTOR_PCT = 0.25       # Max 25% of portfolio value in any single sector
+MAX_SECTOR_PCT = 0.40       # Max 40% of portfolio value in any single sector
 MAX_SAME_WATCHLIST = 2      # Max 2 positions from the portfolio's own watchlist
 
 # Concentration limits — sector-focused portfolios
@@ -68,6 +68,15 @@ WATCHLIST_GROUP_LIMITS = {
             "C38U.SI", "ME8U.SI", "N2IU.SI", "A17U.SI", "BUOU.SI",
             # Full sg_reits list loaded at runtime from watchlists.yaml
         }),
+    },
+    "precious_metals": {
+        "Miners": (2, {
+            "NEM", "GOLD", "KGC", "BTG", "CDE", "AEM", "AU", "EGO", "AGI", "HL",
+            "HMY", "PAAS", "MAG",
+        }),
+        "Streaming/Royalty": (1, {"FNV", "WPM", "RGLD", "OR", "SAND"}),
+        "Silver": (1, {"SLV", "SIVR", "PSLV", "AG", "PAAS", "MAG"}),
+        "Gold ETFs": (2, {"GLD", "IAU", "GLDM", "SGOL"}),
     },
 }
 
@@ -165,7 +174,7 @@ def apply_concentration_limits(
       - MAX_SAME_SUBSECTOR (3) positions from same industry
 
     Diversified portfolios:
-      - MAX_SECTOR_PCT (25%) of portfolio value per sector
+      - MAX_SECTOR_PCT (40%) of portfolio value per sector
       - MAX_SAME_WATCHLIST (2) from the portfolio's own watchlist only
 
     Returns a filtered DataFrame with at most top_n rows.
@@ -251,7 +260,7 @@ def apply_concentration_limits(
         else:
             # --- Diversified rules ---
 
-            # Sector cap (25%)
+            # Sector cap (40%)
             new_sector_total = sector_value.get(sector, 0) + est_value
             if new_sector_total / portfolio_value > MAX_SECTOR_PCT and sector != "Unknown":
                 skipped.append((tk, "sector:{} at {:.0%}".format(
@@ -336,12 +345,12 @@ def get_vix_level() -> float:
 def compute_vix_scale(vix: float) -> float:
     """VIX-based position scaling.
 
-    VIX < 20: 100%  |  20-25: 75%  |  25-30: 50%  |  > 30: 25%
+    VIX < 20: 100%  |  20-25: 50%  |  25-30: 50%  |  > 30: 25%
     """
     if vix < 20:
         return 1.0
     elif vix < 25:
-        return 0.75
+        return 0.50
     elif vix < 30:
         return 0.50
     else:
@@ -403,8 +412,11 @@ def check_stop_losses(db_path: str, latest_prices: dict, stop_pct: float, cooldo
                 "VALUES (?, ?, 'SELL', ?, ?, ?, ?, ?, 0.0)",
                 (today, tk, shares, current, value, cost, p["weight"])
             )
-            # Close position
-            conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (p["id"],))
+            # Close position — write all four fields to avoid zombie rows
+            conn.execute(
+                "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                (today, current, pnl, p["id"])
+            )
             # Update cash
             conn.execute("UPDATE portfolio_state SET cash = cash + ? WHERE id = 1", (value - cost,))
             # Cooldown
@@ -554,6 +566,12 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
         for s in stopped:
             print("    Stopped: {} ${:+,.2f} ({:+.1%})".format(s["ticker"], s["pnl"], s["return"]))
 
+    # 1b. Paused watchlist — stop-losses still run, but no new BUY entries
+    paused = getattr(config.backtest, "paused_watchlists", None) or []
+    if wl in paused:
+        print("  {} — PAUSED (no new buys), existing positions run normally".format(wl))
+        return
+
     # 2. Regime check — if EXIT, liquidate remaining
     if regime == "exit":
         conn = sqlite3.connect(db_path)
@@ -572,7 +590,11 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
                 "VALUES (?, ?, 'SELL', ?, ?, ?, ?, ?, 0.0)",
                 (today, tk, shares, current, value, cost, p["weight"])
             )
-            conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (p["id"],))
+            pnl = (current - entry) * shares
+            conn.execute(
+                "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                (today, current, pnl, p["id"])
+            )
             conn.execute("UPDATE portfolio_state SET cash = cash + ? WHERE id = 1", (value - cost,))
             print("    REGIME SELL {} {:.1f} shares @ ${:.2f}".format(tk, shares, current))
         conn.commit()
@@ -661,6 +683,9 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
     for tk, pos in list(current_positions.items()):
         if tk not in target_weights:
             price = latest_prices.get(tk, pos["entry_price"])
+            if not price or price <= 0 or pos["shares"] <= 0:
+                print("    SKIP SELL {} — no valid price/shares".format(tk))
+                continue
             value = pos["shares"] * price
             cost = value * 0.001
             pnl = (price - pos["entry_price"]) * pos["shares"]
@@ -670,12 +695,18 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
                 (today, tk, pos["shares"], price, value, cost, pos["weight"])
             )
             try:
-                conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (pos["id"],))
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, price, pnl, pos["id"])
+                )
             except sqlite3.IntegrityError:
                 # UNIQUE constraint on (ticker, entry_date, is_active) — delete the old inactive row first
                 conn.execute("DELETE FROM positions WHERE ticker = ? AND entry_date = ? AND is_active = 0",
                              (tk, pos["entry_date"] if "entry_date" in pos.keys() else today))
-                conn.execute("UPDATE positions SET is_active = 0 WHERE id = ?", (pos["id"],))
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, price, pnl, pos["id"])
+                )
             cash += value - cost
             print("    SELL {} {:.1f}@${:.2f} PnL=${:+,.0f}".format(tk, pos["shares"], price, pnl))
             del current_positions[tk]
@@ -685,6 +716,11 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
         price = latest_prices.get(tk)
         if not price or price <= 0:
             continue
+
+        # Skip if already holding this ticker at target weight (prevent stacking)
+        if tk in current_positions and abs(current_positions[tk]["weight"] - weight) < 0.005:
+            continue
+
         target_value = portfolio_value * weight
         current_value = 0
         current_shares = 0
@@ -908,6 +944,10 @@ def step_price_refresh() -> dict:
         else:
             new_data.to_csv(output_path, index=False)
         print("  Saved {} new rows (US: {}, SGX: {})".format(len(new_data), us_rows, sgx_rows))
+        # Keep prices.csv in sync for dashboard and ad-hoc scripts
+        import shutil
+        shutil.copy2(output_path, DATA_DIR / "prices.csv")
+        print("  Synced prices.csv <- prices_daily.csv")
     else:
         print("  WARNING: No data downloaded — using stale prices")
         notify_slack(":warning: Price refresh returned 0 rows — stale prices")
@@ -1536,6 +1576,7 @@ def main():
     # ── Summary ──────────────────────────────────────────────────────────
     total_elapsed = time.time() - start
     table = print_step_table(step_results, total_elapsed)
+    print("COMPLETE in {:.0f}s".format(total_elapsed))
 
     # Check for timeout
     if total_elapsed > OVERALL_TIMEOUT_S:

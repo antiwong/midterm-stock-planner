@@ -33,9 +33,9 @@ JOBS = [
     },
     {
         'name':         'daily-fast',
-        'log':          '/home/deploy/stock-planner/logs/daily_cron.log',
-        'max_age_h':    26,     # Runs Mon-Fri 6:30 AM SGT
-        'success_grep': 'COMPLETE in',
+        'log':          '/home/deploy/stock-planner/logs/daily_summary.txt',
+        'max_age_h':    26,     # Runs Tue-Sat 6:30 AM SGT (systemd timer)
+        'success_grep': 'DAILY SUMMARY',
         'failure_grep': 'Error',
     },
     {

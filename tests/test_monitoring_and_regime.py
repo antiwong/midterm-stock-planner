@@ -274,8 +274,8 @@ class TestVixScaling:
 
     def test_vix_20_to_25(self):
         from scripts.run_daily_fast import compute_vix_scale
-        assert compute_vix_scale(20.0) == 0.75
-        assert compute_vix_scale(24.9) == 0.75
+        assert compute_vix_scale(20.0) == 0.50
+        assert compute_vix_scale(24.9) == 0.50
 
     def test_vix_25_to_30(self):
         from scripts.run_daily_fast import compute_vix_scale
