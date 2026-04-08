@@ -1,263 +1,229 @@
 # Deployment Guide
 
-This guide covers deploying the Mid-term Stock Planner dashboard online.
+Production deployment on Hetzner Cloud running FastAPI + React (myFuture dashboard).
 
-## Deployment Options
+## Server Details
 
-### Option 1: Streamlit Cloud (Recommended - Free & Easy)
+| Field | Value |
+|-------|-------|
+| URL | https://stockplanner.blueideas.net |
+| IP | 178.156.173.199 |
+| SSH | `ssh deploy@178.156.173.199` |
+| Provider | Hetzner Cloud (Ashburn) |
+| Plan | CCX13 — 8GB RAM, 2 vCPU dedicated |
+| OS | Ubuntu 24.04 LTS |
+| Timezone | Asia/Singapore (SGT, UTC+8) |
 
-Streamlit Cloud is the easiest way to deploy Streamlit apps. It's free for public repositories.
+## Architecture
 
-#### Prerequisites
-1. GitHub account
-2. Repository pushed to GitHub (public or private with Streamlit Cloud access)
-
-#### Steps
-
-1. **Push your code to GitHub**
-   ```bash
-   git add .
-   git commit -m "Prepare for deployment"
-   git push origin main
-   ```
-
-2. **Sign up for Streamlit Cloud**
-   - Go to [share.streamlit.io](https://share.streamlit.io)
-   - Sign in with your GitHub account
-
-3. **Deploy your app**
-   - Click "New app"
-   - Select your repository: `antiwong/midterm-stock-planner`
-   - Main file path: `src/app/dashboard/app.py`
-   - App URL: Choose a custom subdomain (e.g., `midterm-stock-planner`)
-   - Click "Deploy"
-
-4. **Configure Environment Variables**
-   In the Streamlit Cloud dashboard, add these secrets:
-   - `GEMINI_API_KEY`: Your Google Gemini API key (for AI insights)
-   - `ALPHA_VANTAGE_API_KEY`: (Optional) For additional data sources
-
-5. **Access your app**
-   - Your app will be available at: `https://midterm-stock-planner.streamlit.app`
-   - Updates are automatically deployed when you push to GitHub
-
-#### Streamlit Cloud Configuration
-
-The app is configured via `.streamlit/config.toml`. Key settings:
-- Server runs in headless mode
-- Port 8501
-- CORS disabled (for security)
-
-### Option 2: Docker Deployment
-
-For more control, you can containerize the app.
-
-#### Create Dockerfile
-
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
-COPY . .
-
-# Expose Streamlit port
-EXPOSE 8501
-
-# Health check
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-
-# Run Streamlit
-CMD ["streamlit", "run", "src/app/dashboard/app.py", "--server.port=8501", "--server.address=0.0.0.0"]
+```
+Internet → Nginx (443/SSL) → FastAPI (127.0.0.1:9000, 2 workers)
+                            → React static files (myfuture/dist/)
 ```
 
-#### Build and Run
+- **Backend**: FastAPI via uvicorn, served by `stock-api.service`
+- **Frontend**: React (Vite + Tailwind), built to `myfuture/dist/`, served by Nginx
+- **Auth**: Cookie-based sessions (`sp_session`), stored in `data/auth.db`
+- **Data**: SQLite (paper trading, auth) + DuckDB (sentimentpulse) + CSV (prices, fundamentals)
+
+## Services
+
+### stock-api.service
+
+```ini
+[Unit]
+Description=Stock Planner FastAPI
+After=network.target
+
+[Service]
+Type=simple
+User=deploy
+WorkingDirectory=/home/deploy/stock-planner
+EnvironmentFile=/home/deploy/stock-planner/.env
+ExecStart=/home/deploy/stock-planner/venv/bin/uvicorn src.api.main:app --host 127.0.0.1 --port 9000 --workers 2
+Restart=always
+RestartSec=5
+```
 
 ```bash
-# Build image
-docker build -t midterm-stock-planner .
-
-# Run container
-docker run -p 8501:8501 \
-  -e GEMINI_API_KEY=your_key_here \
-  -v $(pwd)/data:/app/data \
-  -v $(pwd)/output:/app/output \
-  midterm-stock-planner
+sudo systemctl restart stock-api    # Restart after code changes
+sudo systemctl status stock-api     # Check status
+journalctl -u stock-api --since today  # View logs
 ```
 
-#### Deploy to Cloud Platforms
+### Nginx
 
-**AWS (ECS/Fargate):**
-- Push Docker image to ECR
-- Create ECS task definition
-- Deploy to Fargate with load balancer
+Reverse proxy on port 443 (SSL via Let's Encrypt). Config at `/etc/nginx/sites-enabled/stock-planner`.
 
-**Google Cloud Run:**
+- `/api/*` → proxied to FastAPI on port 9000
+- `/*` → static files from `myfuture/dist/`
+- Rate limiting: 10 req/s per IP with burst of 20
+
+## Cron Schedule (all times SGT)
+
+| # | Job | Schedule | Command |
+|---|-----|----------|---------|
+| 1 | Daily pipeline | Tue-Sat 6:30 AM | `run_daily_fast.py` |
+| 2 | Weekly retrain | Sunday 11:00 PM | `run_retrain.py --watchlist sg_blue_chips` |
+| 3 | Feedback eval | Daily 7:00 PM | `run_feedback.py` |
+| 4 | Fundamentals refresh | Saturday 2:00 AM | `download_fundamentals.py --all-us-watchlists` |
+| 5 | Health monitor | Every 2 hours | `health_monitor.py` |
+| 6 | Google Trends | Daily 5:00 AM | `fetch_google_trends_local.py` |
+| 7 | Data backup | Daily 3:00 AM | `backup_data.sh` (7-day rotation) |
+
+### Systemd timers
+
+| # | Timer | Schedule | Service | OnFailure |
+|---|-------|----------|---------|-----------|
+| 1 | daily-routine | Tue-Sat 6:30 AM | `run_daily_fast.py` | Slack alert |
+| 2 | sentimentpulse-crawl | 4x daily (00/06/12/18) | SentimentPulse batched crawl | Slack alert |
+| 3 | sentimentpulse-feedback | Daily 19:30 | SentimentPulse feedback | - |
+| 4 | sentimentpulse-postclose | Tue-Sat 04:30 | SentimentPulse post-close | - |
+| 5 | heartbeat | Daily 8:00 AM | `heartbeat.py` | Slack alert |
+
+The heartbeat timer is the **safety net** — it runs via systemd (not cron), so it catches cron failures. It checks: health monitor freshness, daily pipeline ran, no portfolio failures, API up, Google Trends ran. It always sends a Slack message (silence = broken).
+
+Edit with: `crontab -e` (as deploy user). All jobs use `. .env` (not `source`) for POSIX compatibility.
+
+**Important**: Use ASCII-only characters in crontab files (including comments). Ubuntu 24.04 cron silently rejects crontabs containing UTF-8 characters like em-dashes (`—`). Use regular dashes (`-`) instead.
+
+## Deploying Code Changes
+
+### Backend (Python)
+
 ```bash
-gcloud run deploy midterm-stock-planner \
-  --source . \
-  --platform managed \
-  --region us-central1 \
-  --allow-unauthenticated
+# From local machine
+scp scripts/run_daily_fast.py deploy@178.156.173.199:~/stock-planner/scripts/
+scp src/api/routers/portfolios.py deploy@178.156.173.199:~/stock-planner/src/api/routers/
+
+# Restart API to pick up changes
+ssh deploy@178.156.173.199 "sudo systemctl restart stock-api"
 ```
 
-**Azure Container Instances:**
-- Push to Azure Container Registry
-- Deploy via Azure Portal or CLI
+### Frontend (React)
 
-**Heroku:**
 ```bash
-# Create Procfile
-echo "web: streamlit run src/app/dashboard/app.py --server.port=\$PORT --server.address=0.0.0.0" > Procfile
+# From local machine — copy source files
+scp myfuture/src/pages/NewPage.tsx deploy@178.156.173.199:~/stock-planner/myfuture/src/pages/
+scp myfuture/src/App.tsx deploy@178.156.173.199:~/stock-planner/myfuture/src/
 
-# Deploy
-heroku create midterm-stock-planner
-heroku config:set GEMINI_API_KEY=your_key_here
-git push heroku main
+# On server — rebuild
+ssh deploy@178.156.173.199 "cd ~/stock-planner/myfuture && npm run build"
 ```
 
-### Option 3: VPS/Server Deployment
+No restart needed — Nginx serves the new static files immediately.
 
-For a dedicated server or VPS:
+## Data Layout
 
-1. **Install dependencies**
-   ```bash
-   sudo apt update
-   sudo apt install python3-pip python3-venv nginx
-   ```
+```
+data/
+├── prices_daily.csv          # Primary price data (US + SGX), updated daily
+├── prices.csv                # Synced copy of prices_daily.csv
+├── fundamentals.csv          # Quarterly fundamentals, refreshed weekly
+├── analysis.db               # Analysis results
+├── forward_journal.db        # Forward prediction tracking
+├── runs.db                   # Backtest run history
+├── auth.db                   # User sessions
+├── sentimentpulse.db         # DuckDB — sentiment data (424+ tickers)
+├── paper_trading_*.db        # One SQLite DB per watchlist portfolio
+│   ├── portfolio_state       # Cash, initial value
+│   ├── positions             # Active + closed positions
+│   ├── trades                # All executed trades
+│   ├── signals               # Model BUY/SELL signals
+│   ├── daily_snapshots       # Daily equity snapshots
+│   └── stop_loss_cooldown    # Stop-loss cooldown tracking
+└── sentiment/
+    ├── sentimentpulse_YYYY-MM-DD.csv  # Daily crawl exports
+    ├── sentimentpulse.parquet         # Consolidated parquet
+    ├── moby_picks.csv                 # Moby newsletter picks
+    └── news.csv                       # News sentiment
+```
 
-2. **Set up application**
-   ```bash
-   git clone https://github.com/antiwong/midterm-stock-planner.git
-   cd midterm-stock-planner
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## Active Portfolios
 
-3. **Run with systemd service**
-   Create `/etc/systemd/system/stock-planner.service`:
-   ```ini
-   [Unit]
-   Description=Mid-term Stock Planner Dashboard
-   After=network.target
+| Watchlist | Capital | Mode | Notes |
+|-----------|---------|------|-------|
+| moby_picks | $100K | Paper | Moby newsletter picks |
+| tech_giants | $100K | Paper | FAANG+ |
+| semiconductors | $100K | Paper | SOX constituents |
+| precious_metals | $100K | Paper | Miners, ETFs, streaming cos |
+| sg_reits | $100K | Paper | Singapore REITs |
+| sg_blue_chips | $100K | Paper | Primary forward test |
+| anthony_watchlist | $13.1K | Paper | Personal picks |
+| sp500 | $100K | Paper | S&P 500 |
+| clean_energy | $100K | Paper | Solar, wind, clean energy |
+| etfs | $100K | Paper | Broad market ETFs |
 
-   [Service]
-   Type=simple
-   User=www-data
-   WorkingDirectory=/path/to/midterm-stock-planner
-   Environment="PATH=/path/to/midterm-stock-planner/venv/bin"
-   Environment="GEMINI_API_KEY=your_key_here"
-   ExecStart=/path/to/midterm-stock-planner/venv/bin/streamlit run src/app/dashboard/app.py --server.port=8501 --server.address=0.0.0.0
-   Restart=always
+## Risk Controls
 
-   [Install]
-   WantedBy=multi-user.target
-   ```
-
-4. **Configure Nginx reverse proxy**
-   Create `/etc/nginx/sites-available/stock-planner`:
-   ```nginx
-   server {
-       listen 80;
-       server_name your-domain.com;
-
-       location / {
-           proxy_pass http://localhost:8501;
-           proxy_http_version 1.1;
-           proxy_set_header Upgrade $http_upgrade;
-           proxy_set_header Connection "upgrade";
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-           proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-           proxy_set_header X-Forwarded-Proto $scheme;
-           proxy_read_timeout 86400;
-       }
-   }
-   ```
-
-5. **Enable and start**
-   ```bash
-   sudo systemctl enable stock-planner
-   sudo systemctl start stock-planner
-   sudo ln -s /etc/nginx/sites-available/stock-planner /etc/nginx/sites-enabled/
-   sudo nginx -t
-   sudo systemctl reload nginx
-   ```
+- **Stop-loss**: -8% from entry price, 5-day cooldown before re-entry
+- **Concentration limits**:
+  - Diversified portfolios: max 40% in any single sector
+  - Precious metals: max 2 miners, 1 streaming/royalty, 1 silver, 2 gold ETFs
+  - sg_blue_chips: max 1 SG bank, max 2 SG REITs
+- **Position dedup**: Skip BUY if ticker already held at same weight
+- **Regime scaling**: 
+  - VIX 20-30: 50% | VIX > 30: 25%
+  - SPY 20d < -5%: 30% (reduce) | < -8%: 0% (exit to cash)
+  - All scales are multiplicative (e.g. VIX 25 + SPY reduce = 50% x 30% = 15%)
+- **DXY filter (precious_metals only)**: UUP 20d > +2%: 25% | 0-2%: 60% | < 0%: 100%. Multiplicative with VIX/SPY scales. Configured via `watchlist_overrides` in config.yaml.
 
 ## Environment Variables
 
-Set these environment variables for full functionality:
+Key variables in `/home/deploy/stock-planner/.env`:
 
-- `GEMINI_API_KEY`: Required for AI insights and commentary
-- `ALPHA_VANTAGE_API_KEY`: Optional, for additional data sources
-- `DATABASE_URL`: Optional, for custom database connection
-
-## Data Persistence
-
-The app stores data in:
-- `data/`: Price data, fundamentals, database
-- `output/`: Analysis results, reports
-- `models/`: Trained ML models
-
-For production deployments, consider:
-1. **Persistent volumes** for data storage
-2. **Database backups** (SQLite → PostgreSQL migration for production)
-3. **Model versioning** and storage
-
-## Security Considerations
-
-1. **API Keys**: Never commit API keys to Git. Use environment variables or secrets management.
-2. **Authentication**: Streamlit Cloud supports password protection. For other deployments, add authentication middleware.
-3. **Rate Limiting**: Implement rate limiting for API calls to prevent abuse.
-4. **HTTPS**: Always use HTTPS in production (Let's Encrypt for free certificates).
+- `ALPACA_API_KEY` / `ALPACA_SECRET_KEY` — Alpaca paper trading (IEX feed)
+- `GOOGLE_API_KEY` — Gemini for LLM commentary
+- `SLACK_WEBHOOK_URL` — Daily run notifications
+- `TRENDS_API_TOKEN` — Google Trends push endpoint auth
+- `EODHD_API_KEY` — EOD Historical Data sentiment
 
 ## Monitoring
 
-- **Streamlit Cloud**: Built-in analytics and error tracking
-- **Custom deployments**: Use tools like:
-  - Sentry for error tracking
-  - Prometheus + Grafana for metrics
-  - Log aggregation (ELK stack, CloudWatch, etc.)
+- **Health monitor** (cron, every 2h) checks job freshness: sentimentpulse crawl, daily pipeline, feedback eval, fundamentals, Google Trends. Alerts Slack on failure/staleness.
+- **Heartbeat** (systemd timer, daily 8 AM) is the safety net — independent of cron. Checks: health monitor alive, daily pipeline ran, no portfolio failures, API up, trends ran. Always sends Slack (silence = broken).
+- **OnFailure handlers**: `daily-routine.service` and `sentimentpulse-crawl.service` trigger Slack alerts via `slack-notify-failure@.service` if the process crashes.
+- **Slack notifications**: Daily run summary, portfolio failures, heartbeat status all sent to Slack.
+
+## Dashboard Pages
+
+| Path | Page | Description |
+|------|------|-------------|
+| `/` | Dashboard | Overview with equity curves |
+| `/portfolio-overview` | Portfolio P&L | All positions with live prices, P&L, cash, grand totals |
+| `/daily-actions` | Daily Actions | Actionable BUY/SELL sheet per watchlist |
+| `/paper-trading` | Paper Trading | Per-watchlist deep dive |
+| `/forward-testing` | Forward Testing | Prediction accuracy tracking |
+| `/multi-portfolio` | Multi-Portfolio | Normalized equity curve comparison |
+| `/signals` | Signal Tracker | Latest BUY/SELL triggers with forward confirmation |
+| `/moby` | Moby Analysis | Moby newsletter pick tracking |
+| `/sentiment` | Sentiment | SentimentPulse composite scores |
+| `/realtime-monitoring` | Monitoring | Real-time alerts and risk metrics |
+| `/watchlists` | Watchlists | Browse and manage watchlists |
+| `/recommendations` | Recommendations | AI-generated trade recommendations |
+| `/settings` | Settings | System configuration |
 
 ## Troubleshooting
 
-### Common Issues
-
-1. **Import errors**: Ensure all dependencies are in `requirements.txt`
-2. **Port conflicts**: Change port in `.streamlit/config.toml` or deployment config
-3. **File permissions**: Ensure app has read/write access to `data/` and `output/` directories
-4. **Memory issues**: Increase memory limits for large datasets
-
-### Debug Mode
-
-For local debugging:
 ```bash
-streamlit run src/app/dashboard/app.py --logger.level=debug
+# Check API health
+curl https://stockplanner.blueideas.net/api/health
+
+# View API logs
+ssh deploy@178.156.173.199 "journalctl -u stock-api --since '1 hour ago'"
+
+# View daily pipeline log
+ssh deploy@178.156.173.199 "tail -50 ~/stock-planner/logs/daily_cron.log"
+
+# View health monitor log
+ssh deploy@178.156.173.199 "tail -20 ~/stock-planner/logs/health_monitor.log"
+
+# Check cron is running
+ssh deploy@178.156.173.199 "sudo journalctl --unit=cron --since today | grep deploy"
+
+# Rebuild frontend after changes
+ssh deploy@178.156.173.199 "cd ~/stock-planner/myfuture && npm run build"
+
+# Restart API after Python changes
+ssh deploy@178.156.173.199 "sudo systemctl restart stock-api"
 ```
-
-## Cost Estimates
-
-- **Streamlit Cloud**: Free for public repos, $20/month for private repos
-- **AWS/GCP/Azure**: Pay-as-you-go, typically $5-50/month for small deployments
-- **VPS**: $5-20/month (DigitalOcean, Linode, etc.)
-
-## Next Steps
-
-1. Choose a deployment option
-2. Set up environment variables
-3. Test deployment locally first
-4. Deploy to production
-5. Set up monitoring and backups
-
-For questions or issues, refer to the main [README.md](README.md) or open an issue on GitHub.

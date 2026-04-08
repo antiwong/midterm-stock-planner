@@ -4,6 +4,80 @@ All notable changes to the Mid-term Stock Planner project are documented here.
 
 ## [Unreleased]
 
+### Added (2026-04-08)
+
+#### DXY Regime Filter for precious_metals
+- **`compute_dxy_scale()`**: UUP-based dollar index position scaling for precious_metals only. Three bands: UUP 20d > +2% = 25% (strong headwind), 0-2% = 60% (mild headwind), < 0% = 100% (tailwind). Multiplicative with existing VIX + SPY/SGX regime filters.
+- **Per-watchlist regime scaling**: `step_portfolio_runs()` now reads `watchlist_overrides` from config.yaml. The DXY filter is the first use of this mechanism — other watchlists are unaffected.
+- **Reference ETFs download**: `step_price_refresh()` now downloads all `reference_etfs` tickers from watchlists.yaml (UUP, TIP, BTC-USD, semi peers, etc.) alongside watchlist symbols. These are not tradeable — they provide data for cross-asset features and regime filters.
+- **Cross-asset features for precious_metals**: `generate_live_signals()` now injects `dxy_momentum`, `gold_silver_ratio`, `gold_silver_ratio_zscore`, and `real_yield_proxy` features for precious_metals via the existing `add_commodity_cross_asset_features()` pipeline. Enabled through `watchlist_overrides.precious_metals.use_cross_asset: true`.
+- **Unpaused precious_metals**: Was paused 2026-04-02 due to poor signal timing. Now protected by DXY regime filter and model has dollar awareness via cross-asset features.
+
+### Critical Fixes (2026-04-03)
+
+#### Position UNIQUE Constraint Crash (P1)
+- **BUG**: `execute_portfolio()` crashed with `UNIQUE constraint failed: positions.ticker, positions.entry_date, positions.is_active` when selling or buying positions that had both active and inactive rows with the same (ticker, entry_date). Three code paths lacked IntegrityError handling: `check_stop_losses()`, regime-exit sell, and BUY INSERT. The existing sell path in `execute_portfolio()` had the handler, but the other three did not.
+- **IMPACT**: tech_giants portfolio failed every daily run since 2026-03-27. No daily_snapshots written; DB frozen. sg_reits had 1 conflicting row (ME8U.SI) — not yet causing failures but would on next sell/re-buy cycle.
+- **FIX**: Added IntegrityError handling to all three unprotected paths. On conflict, the stale inactive row is deleted before retrying the UPDATE/INSERT. Pattern matches the existing handler in the sell path (lines 702-709).
+- **CLEANUP**: Removed 3 conflicting inactive rows from tech_giants (ORCL, AMD, CRM) and 1 from sg_reits (ME8U.SI). Backups at `paper_trading_tech_giants.db.bak`.
+
+#### Infrastructure Hardening
+- **Swap**: Created 2GB swapfile (was none). Prevents OOM killer from silently killing processes during memory spikes (DuckDB crawls, LightGBM training).
+- **Daily backups**: `backup_data.sh` runs at 3:00 AM SGT via cron. Backs up all 10 paper trading DBs, forward_journal.db, prices_daily.csv. 7-day rotation in `backups/` (~12MB/day compressed).
+- **Log rotation**: `/etc/logrotate.d/stock-planner` — weekly rotation, 4 weeks retained, compressed.
+
+#### Heartbeat Monitor (stability)
+- **Problem**: Health monitor ran via cron. When cron broke (UTF-8 bug), the watchdog died with it — 6 days of silent failure.
+- **Fix**: New `heartbeat.py` runs via **systemd timer** (independent of cron) daily at 8 AM SGT. Checks: health monitor cron alive, daily pipeline ran, no portfolio failures, API responding, Google Trends ran.
+- **Key design**: Always sends Slack (even when healthy). Silence = heartbeat itself is broken.
+- **Also**: Added `OnFailure=slack-notify-failure@%n.service` to `daily-routine.service` (was missing, sentimentpulse had it).
+
+#### Google Trends Server-Side Fetching
+- **Previously**: Required residential IP (Mac) to fetch Google Trends via local script pushing to server API endpoint. Data was 0% populated in DuckDB.
+- **Change**: trendspy library works from Hetzner datacenter IP (unlike old pytrends). Moved fetching to server as daily cron job at 5:00 AM SGT (before daily pipeline at 6:30).
+- **Added**: `google-trends` check in `health_monitor.py` (max_age 26h, checks `trends_cron.log`)
+- **Cron**: `0 5 * * * ... fetch_google_trends_local.py --retries 2 >> logs/trends_cron.log`
+
+#### Cron Jobs Silent Failure (P1)
+- **BUG**: All 4 cron jobs (health monitor, feedback eval, weekly retrain, weekly fundamentals) stopped running after 2026-03-28 crontab edit introduced a UTF-8 em-dash (`\u2014`) in a comment line. Ubuntu 24.04 cron silently rejects crontabs with non-ASCII characters.
+- **IMPACT**: 6-day gap in health monitoring (Mar 28 - Apr 2). Feedback eval, retrain, and fundamentals also missed their schedules. Systemd timers (daily pipeline, sentimentpulse) were unaffected.
+- **FIX**: Reinstalled crontab with ASCII-only characters. All 4 jobs now firing on schedule.
+
+### Critical Fixes (2026-03-27)
+
+#### Stop-Loss Zombie Bug (P0)
+- **BUG**: `check_stop_losses()` and 3 other SELL paths in `run_daily_fast.py` set `is_active=0` but never wrote `exit_date`, `exit_price`, or `realized_pnl` — creating "zombie" positions that appeared as unrealized losses but were already stopped out
+- **FIX**: All 4 UPDATE statements now write all 4 fields: `is_active=0, exit_date=today, exit_price=current, realized_pnl=pnl`
+- **CLEANUP**: Retroactively closed 98 zombie positions across all 10 portfolios using trade records. Recovered accurate P&L: actual loss is $30.5K (not $44.5K as previously shown)
+
+#### Cron Timezone Misalignment (P1)
+- **BUG**: Server timezone is SGT (+08) but crontab assumed UTC — all 5 jobs ran 8 hours off schedule. Daily pipeline ran at 10:30pm SGT (during US market hours) instead of 6:30am SGT (after close)
+- **FIX**: Recalculated all cron times for SGT. Also changed `source` to `.` for POSIX shell compatibility
+
+#### Moby Picks Data Corruption (P2)
+- **BUG**: 24 of 54 trades in `paper_trading_moby_picks.db` had `price=0, shares=0` from missing price data in earlier runs. Cash was $2,833 lower than it should have been
+- **FIX**: Deleted 24 corrupt trades, corrected cash from $83,287 to $86,120, added zero-price guard on SELL path
+
+### Added
+
+#### Dashboard Pages (2026-03-27)
+- **Portfolio P&L** (`/portfolio-overview`): Full P&L view with current prices, cost basis, market value, unrealized P&L per position, cash, and grand totals across all 10 portfolios
+- **Daily Actions** (`/daily-actions`): Actionable trade sheet showing net BUY/SELL per ticker per watchlist. Distinguishes new entries from rebalances — only shows what you need to execute. Date picker defaults to today
+- **API endpoint** `GET /api/portfolios/overview`: Returns positions with live market values, P&L, cash, and grand totals
+- **API endpoint** `GET /api/portfolios/daily-actions`: Returns net BUY/SELL/HOLD actions per watchlist for a given date
+
+#### Concentration Limits (2026-03-27)
+- **Precious metals sub-group caps**: Max 2 miners, 1 streaming/royalty, 1 silver, 2 gold ETFs — prevents the 80% correlated miner concentration that caused $15.8K loss
+- **Sector cap** raised from 25% to 40% for diversified portfolios
+- Group limits enforced via existing `WATCHLIST_GROUP_LIMITS` infrastructure in `apply_concentration_limits()`
+
+#### Position Deduplication (2026-03-27)
+- Skip BUY when ticker already held at same target weight — prevents daily position stacking
+
+#### Pipeline Improvements (2026-03-27)
+- Health monitor "COMPLETE in" marker added to `run_daily_fast.py`
+- `prices.csv` auto-synced from `prices_daily.csv` after each daily price refresh — keeps dashboard and ad-hoc scripts current
+
 ### Added
 
 #### QuantaAlpha-Inspired Features (2026-02-20)
