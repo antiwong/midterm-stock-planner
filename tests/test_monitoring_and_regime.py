@@ -339,6 +339,33 @@ class TestDxyScaling:
         assert abs(final - 0.0375) < 0.001  # 30% * 50% * 25% = 3.75%
 
 
+class TestReferenceEtfsDownload:
+    """Tests for reference_etfs ticker inclusion in price downloads."""
+
+    def test_get_reference_etf_tickers(self):
+        """get_reference_etf_tickers() should return all unique tickers from reference_etfs."""
+        from scripts.run_daily_fast import get_reference_etf_tickers
+        tickers = get_reference_etf_tickers()
+        assert "UUP" in tickers
+        assert "TIP" in tickers
+        assert "GLD" in tickers
+        # Should include semiconductor peers too
+        assert "QQQ" in tickers
+        # Should not contain duplicates
+        assert len(tickers) == len(set(tickers))
+
+    def test_reference_tickers_not_in_watchlist_symbols(self):
+        """Reference tickers should NOT be added to any watchlist symbols list."""
+        import yaml
+        from pathlib import Path
+        config_path = Path(__file__).parent.parent / "config" / "watchlists.yaml"
+        with open(config_path) as f:
+            wl_config = yaml.safe_load(f)
+        pm_symbols = [str(s) for s in wl_config["watchlists"]["precious_metals"]["symbols"]]
+        assert "UUP" not in pm_symbols
+        assert "TIP" not in pm_symbols
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Health Monitor Tests
 # ═══════════════════════════════════════════════════════════════════════════════

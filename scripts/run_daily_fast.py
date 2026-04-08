@@ -894,6 +894,19 @@ def get_all_tickers(watchlists: list) -> list:
     return sorted(all_tickers)
 
 
+def get_reference_etf_tickers() -> list:
+    """Get all unique reference ETF tickers from watchlists.yaml (not tradeable symbols)."""
+    config_path = PROJECT_ROOT / "config" / "watchlists.yaml"
+    with open(config_path) as f:
+        wl_config = yaml.safe_load(f)
+    ref_etfs = wl_config.get("reference_etfs", {})
+    all_ref = set()
+    for group_tickers in ref_etfs.values():
+        if isinstance(group_tickers, list):
+            all_ref.update(str(t) for t in group_tickers)
+    return sorted(all_ref)
+
+
 # ── Step runner ──────────────────────────────────────────────────────────────
 
 def run_step(step_num: int, name: str, fn, step_results: list, **kwargs):
@@ -931,6 +944,12 @@ def step_price_refresh() -> dict:
 
     watchlist_names = [p["watchlist"] for p in PORTFOLIOS]
     all_tickers = get_all_tickers(watchlist_names)
+    # Also fetch reference ETFs (UUP, TIP, etc.) for cross-asset features
+    ref_tickers = get_reference_etf_tickers()
+    added_ref = [t for t in ref_tickers if t not in all_tickers]
+    if added_ref:
+        all_tickers = sorted(set(all_tickers) | set(ref_tickers))
+        print("  + {} reference ETFs: {}".format(len(added_ref), ", ".join(added_ref)))
     sgx_tickers = [t for t in all_tickers if t.endswith(".SI")]
     us_tickers = [t for t in all_tickers if not t.endswith(".SI")]
 
