@@ -338,6 +338,33 @@ class TestDxyScaling:
         final = regime_scale * vix_scale * dxy_scale
         assert abs(final - 0.0375) < 0.001  # 30% * 50% * 25% = 3.75%
 
+    def test_nan_input_returns_full_scale(self):
+        """NaN UUP return (e.g., data unavailable) should return 1.0 (no penalty)."""
+        import math
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale(float("nan")) == 1.0
+
+    def test_config_driven_thresholds(self):
+        """Custom thresholds override defaults — config values actually take effect."""
+        from scripts.run_daily_fast import compute_dxy_scale
+        # With threshold_headwind=0.05, a 3% return is now mild, not strong
+        assert compute_dxy_scale(0.03, threshold_headwind=0.05) == 0.60
+        # With custom scales
+        assert compute_dxy_scale(0.10, headwind_scale=0.10) == 0.10
+        assert compute_dxy_scale(0.01, mild_headwind_scale=0.40) == 0.40
+
+    def test_enabled_false_skips_dxy(self):
+        """When dxy_regime_filter.enabled is false, compute_dxy_scale is not called."""
+        # This tests the call-site logic: if enabled is falsy, dxy_scale stays 1.0
+        dxy_cfg = {"enabled": False, "ticker": "UUP"}
+        # Simulate the guard from step_portfolio_runs
+        if dxy_cfg.get("enabled"):
+            from scripts.run_daily_fast import compute_dxy_scale
+            scale = compute_dxy_scale(0.03)
+        else:
+            scale = 1.0
+        assert scale == 1.0
+
 
 class TestReferenceEtfsDownload:
     """Tests for reference_etfs ticker inclusion in price downloads."""

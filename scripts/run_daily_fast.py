@@ -357,18 +357,24 @@ def compute_vix_scale(vix: float) -> float:
         return 0.25
 
 
-def compute_dxy_scale(uup_20d_return: float) -> float:
+def compute_dxy_scale(uup_20d_return: float,
+                      threshold_headwind: float = 0.02,
+                      headwind_scale: float = 0.25,
+                      mild_headwind_scale: float = 0.60) -> float:
     """UUP/DXY-based position scaling for precious_metals.
 
     Dollar strength is a headwind for gold/silver.
-    UUP > +2%:  0.25 (strong headwind)
-    UUP 0-2%:   0.60 (mild headwind)
-    UUP < 0%:   1.00 (tailwind/flat — full sizing)
+    UUP > threshold_headwind:  headwind_scale (strong headwind)
+    UUP 0 to threshold:        mild_headwind_scale (mild headwind)
+    UUP < 0%:                  1.00 (tailwind/flat — full sizing)
     """
-    if uup_20d_return > 0.02:
-        return 0.25
+    import math
+    if math.isnan(uup_20d_return):
+        return 1.0
+    if uup_20d_return > threshold_headwind:
+        return headwind_scale
     elif uup_20d_return >= 0.0:
-        return 0.60
+        return mild_headwind_scale
     return 1.0
 
 
@@ -1222,7 +1228,13 @@ def step_portfolio_runs() -> dict:
         if dxy_cfg.get("enabled"):
             dxy_ticker = dxy_cfg.get("ticker", "UUP")
             uup_return = get_ticker_20d_return(dxy_ticker, price_df)
-            dxy_scale = compute_dxy_scale(uup_return)
+            _dget = dxy_cfg.get if isinstance(dxy_cfg, dict) else lambda k, d: getattr(dxy_cfg, k, d)
+            dxy_scale = compute_dxy_scale(
+                uup_return,
+                threshold_headwind=_dget("threshold_headwind", 0.02),
+                headwind_scale=_dget("headwind_scale", 0.25),
+                mild_headwind_scale=_dget("mild_headwind_scale", 0.60),
+            )
             wl_regime_scale *= dxy_scale
             print("    {} 20d: {:+.2%} -> DXY scale: {:.0%} (combined: {:.0%})".format(
                 dxy_ticker, uup_return, dxy_scale, wl_regime_scale))
