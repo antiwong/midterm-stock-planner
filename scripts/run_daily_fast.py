@@ -497,6 +497,16 @@ def get_latest_signals(db_path: str) -> pd.DataFrame:
         conn.close()
 
 
+def _build_cross_asset_prices(price_df: pd.DataFrame, ref_tickers: list) -> dict:
+    """Extract reference ticker DataFrames from price_df for cross-asset features."""
+    result = {}
+    for ticker in ref_tickers:
+        tk_df = price_df[price_df["ticker"] == ticker].copy()
+        if not tk_df.empty:
+            result[ticker] = tk_df
+    return result
+
+
 def generate_live_signals(wl: str, config, price_df: pd.DataFrame, benchmark_df: pd.DataFrame) -> pd.DataFrame:
     """Generate today's signals by training on historical data and scoring today's features.
 
@@ -518,6 +528,16 @@ def generate_live_signals(wl: str, config, price_df: pd.DataFrame, benchmark_df:
     fc = config.features
     bpd = bars_per_day_from_interval("1d")
 
+    # Check for per-watchlist cross-asset feature override
+    wl_overrides = fc.watchlist_overrides or {}
+    wl_override = wl_overrides.get(wl, {})
+    use_cross_asset = wl_override.get("use_cross_asset", fc.use_cross_asset)
+
+    cross_asset_prices = None
+    if use_cross_asset:
+        ref_tickers = get_reference_etf_tickers()
+        cross_asset_prices = _build_cross_asset_prices(price_df, ref_tickers)
+
     # Step 1: compute features for all dates (including today)
     feature_df = compute_all_features_extended(
         price_df=wl_prices, fundamental_df=None, benchmark_df=benchmark_df,
@@ -526,6 +546,9 @@ def generate_live_signals(wl: str, config, price_df: pd.DataFrame, benchmark_df:
         include_obv=False,
         include_momentum=getattr(fc, "include_momentum", False),
         include_mean_reversion=getattr(fc, "include_mean_reversion", False),
+        include_cross_asset=use_cross_asset,
+        cross_asset_prices=cross_asset_prices,
+        cross_asset_params=fc.cross_asset if isinstance(fc.cross_asset, dict) else None,
         bars_per_day=bpd,
         rsi_period=fc.rsi_period, macd_fast=fc.macd_fast,
         macd_slow=fc.macd_slow, macd_signal=fc.macd_signal,
@@ -1183,13 +1206,29 @@ def step_portfolio_runs() -> dict:
     industry_map = load_industry_map()
     wl_config = load_watchlist_config()
 
+    # Per-watchlist macro filters
+    wl_overrides = config.features.watchlist_overrides or {}
+
     results = {}
     for p in PORTFOLIOS:
         wl = p["watchlist"]
         focused = is_sector_focused(wl, wl_config)
         print("\n  --- {} {} ---".format(wl, "[sector-focused]" if focused else "[diversified]"))
+
+        # Per-watchlist regime adjustments (multiplicative with global regime)
+        wl_regime_scale = regime_scale
+        wl_override = wl_overrides.get(wl, {})
+        dxy_cfg = wl_override.get("dxy_regime_filter", {})
+        if dxy_cfg.get("enabled"):
+            dxy_ticker = dxy_cfg.get("ticker", "UUP")
+            uup_return = get_ticker_20d_return(dxy_ticker, price_df)
+            dxy_scale = compute_dxy_scale(uup_return)
+            wl_regime_scale *= dxy_scale
+            print("    {} 20d: {:+.2%} -> DXY scale: {:.0%} (combined: {:.0%})".format(
+                dxy_ticker, uup_return, dxy_scale, wl_regime_scale))
+
         try:
-            execute_portfolio(wl, config, latest_prices, spy_return, regime, regime_scale,
+            execute_portfolio(wl, config, latest_prices, spy_return, regime, wl_regime_scale,
                               sector_map, industry_map, wl_config, price_df, benchmark_df)
             results[wl] = "OK"
         except Exception as e:

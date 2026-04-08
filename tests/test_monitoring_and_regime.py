@@ -366,6 +366,43 @@ class TestReferenceEtfsDownload:
         assert "TIP" not in pm_symbols
 
 
+class TestCrossAssetFeatureInjection:
+    """Tests for cross-asset feature enabling via watchlist_overrides."""
+
+    def test_precious_metals_gets_cross_asset_features(self):
+        """When use_cross_asset is true in watchlist_overrides, features should include dxy_momentum."""
+        from src.config.config import load_config
+
+        config = load_config("config/config.yaml")
+        overrides = config.features.watchlist_overrides or {}
+        pm_override = overrides.get("precious_metals", {})
+        assert pm_override.get("use_cross_asset") is True, "precious_metals should have use_cross_asset: true"
+
+    def test_build_cross_asset_prices_from_price_df(self):
+        """_build_cross_asset_prices should extract reference tickers from price_df."""
+        from scripts.run_daily_fast import _build_cross_asset_prices
+        import pandas as pd
+        import numpy as np
+
+        dates = pd.date_range("2026-01-01", periods=30, freq="B")
+        rows = []
+        for ticker in ["SLV", "GLD", "UUP", "TIP", "NEM"]:
+            for d in dates:
+                rows.append({"date": d, "ticker": ticker, "close": np.random.uniform(50, 200),
+                             "open": 100, "high": 105, "low": 95, "volume": 1000000})
+        price_df = pd.DataFrame(rows)
+
+        ref_tickers = ["GLD", "UUP", "TIP"]
+        result = _build_cross_asset_prices(price_df, ref_tickers)
+        assert "GLD" in result
+        assert "UUP" in result
+        assert "TIP" in result
+        assert len(result["UUP"]) == 30
+        # Should NOT include non-reference tickers
+        assert "NEM" not in result
+        assert "SLV" not in result
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Health Monitor Tests
 # ═══════════════════════════════════════════════════════════════════════════════

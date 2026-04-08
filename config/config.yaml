@@ -101,7 +101,17 @@ features:
   # NOTE: invert_atr was tested on 2026-03-25 but improvements were artifacts of
   # an index alignment bug in make_training_dataset (fixed same day). With correct
   # full data (32,500 rows vs 4,874), invert_atr helps 0/10 watchlists.
-  watchlist_overrides: {}
+  watchlist_overrides:
+    precious_metals:
+      use_cross_asset: true
+      dxy_regime_filter:
+        enabled: true
+        ticker: UUP
+        lookback_days: 20
+        threshold_headwind: 0.02    # UUP 20d > +2% -> scale 0.25
+        threshold_tailwind: 0.0     # UUP 20d < 0% -> scale 1.0
+        headwind_scale: 0.25        # Strong dollar headwind
+        mild_headwind_scale: 0.60   # Mild dollar headwind (0% to +2%)
   # ── SENTIMENT IN RANKER ─────────────────────────────────────────────────
   # DO NOT SET TO TRUE. Sentiment in the cross-sectional ranker degrades
   # Sharpe by -0.18 to -0.28. Sentiment is consumed ONLY by the Sentiment
