@@ -1227,7 +1227,15 @@ def step_portfolio_runs() -> dict:
         dxy_cfg = wl_override.get("dxy_regime_filter", {})
         if dxy_cfg.get("enabled"):
             dxy_ticker = dxy_cfg.get("ticker", "UUP")
-            uup_return = get_ticker_20d_return(dxy_ticker, price_df)
+            # Check if ticker has enough data before computing return.
+            # get_ticker_20d_return returns 0.0 for insufficient data, which would
+            # incorrectly map to mild headwind (0.60). Use NaN instead so
+            # compute_dxy_scale returns 1.0 (no penalty) when signal is unreliable.
+            _tk_rows = price_df[price_df["ticker"] == dxy_ticker] if price_df is not None else pd.DataFrame()
+            if len(_tk_rows) >= 20:
+                uup_return = get_ticker_20d_return(dxy_ticker, price_df)
+            else:
+                uup_return = float("nan")
             _dget = dxy_cfg.get if isinstance(dxy_cfg, dict) else lambda k, d: getattr(dxy_cfg, k, d)
             dxy_scale = compute_dxy_scale(
                 uup_return,
