@@ -297,6 +297,48 @@ class TestVixScaling:
         assert abs(final - 0.15) < 0.001  # 30% * 50% = 15%
 
 
+class TestDxyScaling:
+    """Tests for UUP/DXY-based position scaling for precious_metals."""
+
+    def test_import(self):
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale is not None
+
+    def test_strong_headwind(self):
+        """UUP 20d return > +2% means strong dollar — 25% scale."""
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale(0.03) == 0.25
+        assert compute_dxy_scale(0.05) == 0.25
+        assert compute_dxy_scale(0.021) == 0.25
+
+    def test_mild_headwind(self):
+        """UUP 20d return 0% to +2% means mild dollar strength — 60% scale."""
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale(0.01) == 0.60
+        assert compute_dxy_scale(0.005) == 0.60
+        assert compute_dxy_scale(0.0) == 0.60  # Zero is mild headwind band
+
+    def test_tailwind(self):
+        """UUP 20d return < 0% means weakening dollar — full scale."""
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale(-0.01) == 1.0
+        assert compute_dxy_scale(-0.05) == 1.0
+
+    def test_boundary_at_2pct(self):
+        """Exactly +2% is still mild headwind (threshold is > 0.02 for strong)."""
+        from scripts.run_daily_fast import compute_dxy_scale
+        assert compute_dxy_scale(0.02) == 0.60
+
+    def test_multiplicative_with_vix_and_regime(self):
+        """DXY scale multiplies with existing VIX and regime scales."""
+        from scripts.run_daily_fast import compute_dual_regime, compute_vix_scale, compute_dxy_scale
+        _, regime_scale, _ = compute_dual_regime(-0.06, 0.0)  # reduce = 0.30
+        vix_scale = compute_vix_scale(26.0)  # 0.50
+        dxy_scale = compute_dxy_scale(0.03)  # strong headwind = 0.25
+        final = regime_scale * vix_scale * dxy_scale
+        assert abs(final - 0.0375) < 0.001  # 30% * 50% * 25% = 3.75%
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Health Monitor Tests
 # ═══════════════════════════════════════════════════════════════════════════════

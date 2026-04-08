@@ -357,6 +357,21 @@ def compute_vix_scale(vix: float) -> float:
         return 0.25
 
 
+def compute_dxy_scale(uup_20d_return: float) -> float:
+    """UUP/DXY-based position scaling for precious_metals.
+
+    Dollar strength is a headwind for gold/silver.
+    UUP > +2%:  0.25 (strong headwind)
+    UUP 0-2%:   0.60 (mild headwind)
+    UUP < 0%:   1.00 (tailwind/flat — full sizing)
+    """
+    if uup_20d_return > 0.02:
+        return 0.25
+    elif uup_20d_return >= 0.0:
+        return 0.60
+    return 1.0
+
+
 def compute_dual_regime(spy_return: float, sgx_return: float,
                         threshold_reduce: float = -0.05,
                         threshold_exit: float = -0.08,
@@ -413,10 +428,19 @@ def check_stop_losses(db_path: str, latest_prices: dict, stop_pct: float, cooldo
                 (today, tk, shares, current, value, cost, p["weight"])
             )
             # Close position — write all four fields to avoid zombie rows
-            conn.execute(
-                "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
-                (today, current, pnl, p["id"])
-            )
+            try:
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, current, pnl, p["id"])
+                )
+            except sqlite3.IntegrityError:
+                # UNIQUE constraint on (ticker, entry_date, is_active) — delete the old inactive row first
+                conn.execute("DELETE FROM positions WHERE ticker = ? AND entry_date = ? AND is_active = 0",
+                             (tk, p["entry_date"]))
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, current, pnl, p["id"])
+                )
             # Update cash
             conn.execute("UPDATE portfolio_state SET cash = cash + ? WHERE id = 1", (value - cost,))
             # Cooldown
@@ -591,10 +615,18 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
                 (today, tk, shares, current, value, cost, p["weight"])
             )
             pnl = (current - entry) * shares
-            conn.execute(
-                "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
-                (today, current, pnl, p["id"])
-            )
+            try:
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, current, pnl, p["id"])
+                )
+            except sqlite3.IntegrityError:
+                conn.execute("DELETE FROM positions WHERE ticker = ? AND entry_date = ? AND is_active = 0",
+                             (tk, p["entry_date"]))
+                conn.execute(
+                    "UPDATE positions SET is_active = 0, exit_date = ?, exit_price = ?, realized_pnl = ? WHERE id = ?",
+                    (today, current, pnl, p["id"])
+                )
             conn.execute("UPDATE portfolio_state SET cash = cash + ? WHERE id = 1", (value - cost,))
             print("    REGIME SELL {} {:.1f} shares @ ${:.2f}".format(tk, shares, current))
         conn.commit()
@@ -752,10 +784,19 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
                 conn.execute("UPDATE positions SET shares = ?, weight = ? WHERE id = ?",
                              (new_shares, weight, existing["id"]))
             else:
-                conn.execute(
-                    "INSERT INTO positions (ticker, shares, entry_price, entry_date, weight) VALUES (?, ?, ?, ?, ?)",
-                    (tk, new_shares, entry_price, today, weight)
-                )
+                try:
+                    conn.execute(
+                        "INSERT INTO positions (ticker, shares, entry_price, entry_date, weight) VALUES (?, ?, ?, ?, ?)",
+                        (tk, new_shares, entry_price, today, weight)
+                    )
+                except sqlite3.IntegrityError:
+                    # UNIQUE constraint on (ticker, entry_date, is_active) — update existing inactive row
+                    conn.execute(
+                        "UPDATE positions SET shares = ?, entry_price = ?, weight = ?, is_active = 1, "
+                        "exit_date = NULL, exit_price = NULL, realized_pnl = NULL "
+                        "WHERE ticker = ? AND entry_date = ? AND is_active = 0",
+                        (new_shares, entry_price, weight, tk, today)
+                    )
 
         cash -= delta_value + cost
         print("    {} {} {:.1f}@${:.2f} (w={:.0%})".format(action, tk, abs(delta_shares), price, weight))
