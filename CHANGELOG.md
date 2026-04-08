@@ -12,6 +12,7 @@ All notable changes to the Mid-term Stock Planner project are documented here.
 - **Reference ETFs download**: `step_price_refresh()` now downloads all `reference_etfs` tickers from watchlists.yaml (UUP, TIP, BTC-USD, semi peers, etc.) alongside watchlist symbols. These are not tradeable — they provide data for cross-asset features and regime filters.
 - **Cross-asset features for precious_metals**: `generate_live_signals()` now injects `dxy_momentum`, `gold_silver_ratio`, `gold_silver_ratio_zscore`, and `real_yield_proxy` features for precious_metals via the existing `add_commodity_cross_asset_features()` pipeline. Enabled through `watchlist_overrides.precious_metals.use_cross_asset: true`.
 - **Unpaused precious_metals**: Was paused 2026-04-02 due to poor signal timing. Now protected by DXY regime filter and model has dollar awareness via cross-asset features.
+- **Robustness (simmer review)**: `compute_dxy_scale()` now config-driven (keyword args with defaults, matching `compute_dual_regime` pattern). NaN guard returns 1.0 when UUP data unavailable. Insufficient-data guard (<20 rows) avoids false 60% penalty on first run. 65 tests (was 57).
 
 ### Critical Fixes (2026-04-03)
 
