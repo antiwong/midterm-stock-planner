@@ -27,6 +27,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const RecommendationTracking = lazy(() => import('./pages/RecommendationTracking'));
 const PortfolioOverview = lazy(() => import('./pages/PortfolioOverview'));
 const DailyActions = lazy(() => import('./pages/DailyActions'));
+const Changelog = lazy(() => import('./pages/Changelog'));
 
 function Page({ children }: { children: React.ReactNode }) {
   return (
@@ -76,6 +77,7 @@ export default function App() {
             <Route path="watchlists" element={<Page><WatchlistBrowser /></Page>} />
             <Route path="recommendations" element={<Page><RecommendationTracking /></Page>} />
             <Route path="settings" element={<Page><Settings /></Page>} />
+            <Route path="changelog" element={<Page><Changelog /></Page>} />
           </Route>
         </Routes>
       </BrowserRouter>

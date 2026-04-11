@@ -21,6 +21,7 @@ import {
   Menu,
   X,
   MoreHorizontal,
+  BookOpen,
 } from 'lucide-react';
 
 const NAV_SECTIONS: { label: string; items: { to: string; label: string; icon: ReactNode }[] }[] = [
@@ -54,6 +55,7 @@ const NAV_SECTIONS: { label: string; items: { to: string; label: string; icon: R
       { to: '/alerts', label: 'Alerts', icon: <Bell size={16} /> },
       { to: '/notifications', label: 'Notifications', icon: <BellRing size={16} /> },
       { to: '/settings', label: 'Settings', icon: <Settings size={16} /> },
+      { to: '/changelog', label: 'Changelog', icon: <BookOpen size={16} /> },
     ],
   },
 ];
@@ -236,7 +238,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
               <div className="w-1.5 h-1.5 rounded-full bg-gain animate-pulse-soft" />
               <span className="text-[10px] text-muted">Live · 60s</span>
             </div>
-            <span className="text-[10px] text-surface-lighter">v2.0</span>
+            <NavLink to="/changelog" className="text-[10px] text-surface-lighter hover:text-muted transition-smooth">v2.1</NavLink>
           </div>
         </div>
       </nav>
