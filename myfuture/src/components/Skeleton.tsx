@@ -5,13 +5,15 @@
 
 interface SkeletonProps {
   className?: string;
+  style?: React.CSSProperties;
 }
 
 /** Generic rectangular shimmer bar */
-export function Skeleton({ className = '' }: SkeletonProps) {
+export function Skeleton({ className = '', style }: SkeletonProps) {
   return (
     <div
       className={`animate-pulse rounded bg-surface-lighter/40 ${className}`}
+      style={style}
     />
   );
 }
@@ -57,6 +59,37 @@ export function SkeletonCard({ rows = 4, cols = 6 }: { rows?: number; cols?: num
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+/** Table skeleton with header and rows */
+export function SkeletonTable({ rows = 4, cols = 6 }: { rows?: number; cols?: number }) {
+  return <SkeletonCard rows={rows} cols={cols} />;
+}
+
+/** Grid of skeleton cards */
+export function SkeletonGrid({ cols = 3, rows }: { cols?: number; rows?: number }) {
+  const count = rows ? rows * cols : cols;
+  return (
+    <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-${Math.min(cols, 4)} gap-4`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="bg-surface-light border border-surface-lighter/40 rounded-xl p-4 space-y-3">
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-8 w-full" />
+          <Skeleton className="h-3 w-32" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Chart placeholder with fixed height */
+export function SkeletonChart({ height = 200 }: { height?: number }) {
+  return (
+    <div className="bg-surface-light border border-surface-lighter/40 rounded-xl p-4">
+      <Skeleton className="h-3 w-24 mb-3" />
+      <Skeleton className="w-full rounded-lg" style={{ height }} />
     </div>
   );
 }

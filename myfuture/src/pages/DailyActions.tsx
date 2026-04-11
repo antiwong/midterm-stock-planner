@@ -191,7 +191,7 @@ export default function DailyActions() {
                         <Tooltip
                           contentStyle={{ backgroundColor: '#1a1b23', border: '1px solid #2d2e3a', borderRadius: 8, fontSize: 11 }}
                           labelStyle={{ color: '#9ca3af' }}
-                          formatter={(value: number) => ['$' + fmt(Math.abs(value))]}
+                          formatter={(value: unknown) => ['$' + fmt(Math.abs(Number(value)))]}
                         />
                         <Bar dataKey="buy" name="Buy" radius={[2, 2, 0, 0]}>
                           {data.watchlists.map((_, i) => (

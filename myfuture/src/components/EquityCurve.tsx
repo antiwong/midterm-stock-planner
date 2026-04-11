@@ -8,8 +8,8 @@ import { useId } from 'react';
 import { ComposedChart, AreaChart, Area, Line, ResponsiveContainer, XAxis, YAxis, Tooltip } from 'recharts';
 
 interface EquityCurveProps {
-  initialValue: number;
-  currentValue: number;
+  initialValue?: number;
+  currentValue?: number;
   /** Chart height in pixels (default 120) */
   height?: number;
   /** Hide tooltip for compact mode */
@@ -20,6 +20,10 @@ interface EquityCurveProps {
   data?: { date: string; value: number }[];
   /** Optional benchmark overlay data (e.g. SPY cumulative return in dollar terms) */
   benchmarkData?: { date: string; value: number }[];
+  /** Snapshot-based API (used by PaperTrading): array of {date, portfolio_value, benchmark_cumulative} */
+  snapshots?: { date: string; portfolio_value: number; benchmark_cumulative?: number }[];
+  /** Whether to show benchmark (used with snapshots API) */
+  showBenchmark?: boolean;
 }
 
 /** Seeded PRNG (mulberry32) for deterministic curves */
@@ -78,24 +82,39 @@ function generateEquityCurve(
 }
 
 export default function EquityCurve({
-  initialValue,
-  currentValue,
+  initialValue = 0,
+  currentValue = 0,
   height = 120,
   hideTooltip = false,
   seed = 'default',
   data: realData,
   benchmarkData,
+  snapshots,
+  showBenchmark,
 }: EquityCurveProps) {
   const gradId = useId().replace(/:/g, '_') + '_equityGrad';
-  const baseData = realData
-    ? realData.map((d, i) => ({ day: i, value: Math.round(d.value), label: d.date }))
-    : generateEquityCurve(initialValue, currentValue, seed);
+
+  // Support the snapshots API (used by PaperTrading page)
+  const effectiveData = snapshots
+    ? snapshots.map((s) => ({ date: s.date, value: s.portfolio_value }))
+    : realData;
+  const effectiveBenchmark = snapshots && showBenchmark && snapshots[0]?.portfolio_value
+    ? snapshots
+        .filter((s) => s.benchmark_cumulative != null)
+        .map((s) => ({ date: s.date, value: snapshots[0].portfolio_value * (1 + (s.benchmark_cumulative ?? 0)) }))
+    : benchmarkData;
+  const effectiveInitial = initialValue || (snapshots?.[0]?.portfolio_value ?? 0);
+  const effectiveCurrent = currentValue || (snapshots?.[snapshots.length - 1]?.portfolio_value ?? 0);
+
+  const baseData = effectiveData
+    ? effectiveData.map((d, i) => ({ day: i, value: Math.round(d.value), label: d.date }))
+    : generateEquityCurve(effectiveInitial, effectiveCurrent, seed);
 
   // Merge benchmark data by index (align by position) or date
-  const hasBenchmark = benchmarkData && benchmarkData.length > 0;
+  const hasBenchmark = effectiveBenchmark && effectiveBenchmark.length > 0;
   const data = baseData.map((point, i) => {
     const bmPoint = hasBenchmark
-      ? benchmarkData!.find((b) => b.date === point.label) ?? benchmarkData![i]
+      ? effectiveBenchmark!.find((b) => b.date === point.label) ?? effectiveBenchmark![i]
       : undefined;
     return {
       ...point,
@@ -103,7 +122,7 @@ export default function EquityCurve({
     };
   });
 
-  const isGain = currentValue >= initialValue;
+  const isGain = effectiveCurrent >= effectiveInitial;
   const stroke = isGain ? '#10b981' : '#ef4444';
   const fill = isGain ? '#10b981' : '#ef4444';
 
@@ -156,8 +175,8 @@ export default function EquityCurve({
                 }}
                 labelStyle={{ color: '#9ca3af' }}
                 labelFormatter={(_, payload) => payload?.[0]?.payload?.label ?? ''}
-                formatter={(value: number, name: string) => [
-                  `$${value.toLocaleString()}`,
+                formatter={(value: unknown, name: unknown) => [
+                  `$${Number(value).toLocaleString()}`,
                   name === 'benchmark' ? 'SPY' : 'Portfolio',
                 ]}
               />
