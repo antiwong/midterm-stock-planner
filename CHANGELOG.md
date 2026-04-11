@@ -4,6 +4,16 @@ All notable changes to the Mid-term Stock Planner project are documented here.
 
 ## [Unreleased]
 
+### Added (2026-04-11)
+
+#### myFuture Dashboard UI Overhaul (simmer: 4.3 -> 7.8/10)
+- **New components**: `Skeleton.tsx` (multi-tier shimmer loading), `Sparkline.tsx` (inline 80x32 Recharts AreaChart with real API data), `EquityCurve.tsx` (30-day equity curve with benchmark SPY overlay, XAxis labels, gradient fill, per-portfolio seeds), `ErrorCard.tsx` (styled error with AlertTriangle icon + retry button), `usePolling.ts` (generic polling hook).
+- **Layout overhaul**: Replaced all Unicode nav icons with 17 Lucide SVG icons. Added fixed bottom tab bar on mobile (5 primary tabs + More overlay). Focus-visible keyboard nav rings on all interactive elements. 44px+ touch targets throughout. iOS safe-area-inset support.
+- **PortfolioOverview**: Real-data sparklines from `/prices/{ticker}`, real equity curves from `/portfolios/{watchlist}/snapshots`, benchmark SPY overlay via `benchmark_cumulative`, return leaderboard with gold/silver/bronze rank badges, sortable summary table (4 columns), risk metric chips (Sharpe/DD/WR) on portfolio headers, polling spinner, responsive tables with overflow-x-auto.
+- **DailyActions**: Per-watchlist buy/sell BarChart (desktop) + ratio bar (mobile), skeleton loading, styled empty state with CalendarOff icon, 44px touch targets on date/checkbox controls.
+- **Data density**: 10-column position tables, 6-stat grand total card with equity curve, visual leaderboard, inline risk metrics.
+- **Mobile**: Bottom tab bar replaces hamburger menu, responsive table widths with sticky columns, compact mobile-specific chart variants.
+
 ### Added (2026-04-08)
 
 #### DXY Regime Filter for precious_metals

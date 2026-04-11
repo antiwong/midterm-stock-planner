@@ -1,37 +1,70 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import {
+  LayoutDashboard,
+  FileText,
+  FlaskConical,
+  PieChart,
+  PlayCircle,
+  Layers,
+  Zap,
+  List,
+  Fish,
+  SmilePlus,
+  Activity,
+  CalendarDays,
+  GitCompareArrows,
+  ThumbsUp,
+  Bell,
+  BellRing,
+  Settings,
+  Menu,
+  X,
+  MoreHorizontal,
+} from 'lucide-react';
 
-const NAV_SECTIONS = [
+const NAV_SECTIONS: { label: string; items: { to: string; label: string; icon: ReactNode }[] }[] = [
   {
     label: 'Trading',
     items: [
-      { to: '/', label: 'Dashboard', icon: '◈' },
-      { to: '/paper-trading', label: 'Paper Trading', icon: '◆' },
-      { to: '/forward-testing', label: 'Forward Testing', icon: '◇' },
-      { to: '/multi-portfolio', label: 'Multi-Portfolio', icon: '◫' },
-      { to: '/signals', label: 'Signal Tracker', icon: '⚡' },
+      { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={16} /> },
+      { to: '/paper-trading', label: 'Paper Trading', icon: <FileText size={16} /> },
+      { to: '/forward-testing', label: 'Forward Testing', icon: <FlaskConical size={16} /> },
+      { to: '/portfolio-overview', label: 'Portfolio P&L', icon: <PieChart size={16} /> },
+      { to: '/daily-actions', label: 'Daily Actions', icon: <PlayCircle size={16} /> },
+      { to: '/multi-portfolio', label: 'Multi-Portfolio', icon: <Layers size={16} /> },
+      { to: '/signals', label: 'Signal Tracker', icon: <Zap size={16} /> },
     ],
   },
   {
     label: 'Analysis',
     items: [
-      { to: '/watchlists', label: 'Watchlists', icon: '◱' },
-      { to: '/moby', label: 'Moby Analysis', icon: '◉' },
-      { to: '/sentiment', label: 'Sentiment', icon: '◔' },
-      { to: '/realtime-monitoring', label: 'Monitoring', icon: '◎' },
-      { to: '/earnings-calendar', label: 'Earnings', icon: '◰' },
-      { to: '/watchlist-comparison', label: 'Comparison', icon: '◧' },
-      { to: '/recommendations', label: 'Recommendations', icon: '◈' },
+      { to: '/watchlists', label: 'Watchlists', icon: <List size={16} /> },
+      { to: '/moby', label: 'Moby Analysis', icon: <Fish size={16} /> },
+      { to: '/sentiment', label: 'Sentiment', icon: <SmilePlus size={16} /> },
+      { to: '/realtime-monitoring', label: 'Monitoring', icon: <Activity size={16} /> },
+      { to: '/earnings-calendar', label: 'Earnings', icon: <CalendarDays size={16} /> },
+      { to: '/watchlist-comparison', label: 'Comparison', icon: <GitCompareArrows size={16} /> },
+      { to: '/recommendations', label: 'Recommendations', icon: <ThumbsUp size={16} /> },
     ],
   },
   {
     label: 'System',
     items: [
-      { to: '/alerts', label: 'Alerts', icon: '◬' },
-      { to: '/notifications', label: 'Notifications', icon: '◩' },
-      { to: '/settings', label: 'Settings', icon: '◈' },
+      { to: '/alerts', label: 'Alerts', icon: <Bell size={16} /> },
+      { to: '/notifications', label: 'Notifications', icon: <BellRing size={16} /> },
+      { to: '/settings', label: 'Settings', icon: <Settings size={16} /> },
     ],
   },
+];
+
+/** Primary bottom-bar tabs on mobile — these 5 routes get direct access */
+const BOTTOM_TABS: { to: string; label: string; icon: ReactNode }[] = [
+  { to: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { to: '/paper-trading', label: 'Trading', icon: <FileText size={20} /> },
+  { to: '/portfolio-overview', label: 'P&L', icon: <PieChart size={20} /> },
+  { to: '/daily-actions', label: 'Actions', icon: <PlayCircle size={20} /> },
+  { to: '/signals', label: 'Signals', icon: <Zap size={20} /> },
 ];
 
 interface LayoutProps {
@@ -64,7 +97,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile header */}
+      {/* Mobile header — hide hamburger since bottom bar handles primary nav */}
       <div className="md:hidden fixed top-0 left-0 right-0 z-30 bg-surface-light/90 backdrop-blur-md border-b border-surface-lighter px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-6 h-6 rounded-md bg-gradient-to-br from-accent to-purple flex items-center justify-center">
@@ -72,19 +105,23 @@ export default function Layout({ user, onLogout }: LayoutProps) {
           </div>
           <span className="text-sm font-semibold text-white tracking-tight">myFuture</span>
         </div>
-        <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-surface-lighter transition-smooth"
-          aria-label="Toggle menu"
-        >
-          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            {mobileOpen ? (
-              <><line x1="5" y1="5" x2="15" y2="15" /><line x1="5" y1="15" x2="15" y2="5" /></>
-            ) : (
-              <><line x1="3" y1="5" x2="17" y2="5" /><line x1="3" y1="10" x2="17" y2="10" /><line x1="3" y1="15" x2="17" y2="15" /></>
-            )}
-          </svg>
-        </button>
+        {/* Search on mobile header */}
+        <div className="relative flex-1 max-w-[180px] ml-3">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value.toUpperCase())}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && search.trim()) {
+                navigate(`/ticker/${search.trim()}`);
+                setSearch('');
+                searchRef.current?.blur();
+              }
+            }}
+            placeholder="Ticker..."
+            className="w-full bg-surface/50 border border-surface-lighter/40 rounded-lg pl-3 pr-2 py-1.5 text-xs text-white placeholder-gray-600 focus:outline-none focus:border-accent/50 min-h-[36px]"
+          />
+        </div>
       </div>
 
       {/* Mobile overlay */}
@@ -142,7 +179,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
           </div>
         </div>
 
-        {/* Navigation */}
+        {/* Navigation — py-2.5 for better touch targets */}
         <div className="flex-1 pt-3 pb-2 overflow-y-auto px-3 space-y-4">
           {NAV_SECTIONS.map((section) => (
             <div key={section.label}>
@@ -157,7 +194,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                     end={item.to === '/'}
                     onClick={() => setMobileOpen(false)}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] transition-smooth relative ${
+                      `group flex items-center gap-3 px-3 py-2.5 rounded-lg text-[13px] transition-smooth relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-offset-1 focus-visible:ring-offset-surface-light ${
                         isActive
                           ? 'bg-accent/10 text-white font-medium glow-accent'
                           : 'text-gray-500 hover:text-gray-300 hover:bg-surface-hover'
@@ -169,7 +206,7 @@ export default function Layout({ user, onLogout }: LayoutProps) {
                         {isActive && (
                           <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[3px] h-4 rounded-full bg-accent" />
                         )}
-                        <span className={`text-xs ${isActive ? 'text-accent-light' : 'text-gray-600 group-hover:text-gray-400'} transition-smooth`}>
+                        <span className={`flex-shrink-0 ${isActive ? 'text-accent-light' : 'text-gray-600 group-hover:text-gray-400'} transition-smooth`}>
                           {item.icon}
                         </span>
                         <span>{item.label}</span>
@@ -204,12 +241,52 @@ export default function Layout({ user, onLogout }: LayoutProps) {
         </div>
       </nav>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto bg-surface p-4 sm:p-6 lg:p-8 pt-16 md:pt-6 lg:pt-8">
+      {/* Main content — extra bottom padding on mobile to clear bottom bar */}
+      <main className="flex-1 overflow-auto bg-surface p-4 sm:p-6 lg:p-8 pt-16 md:pt-6 lg:pt-8 pb-24 md:pb-6 lg:pb-8">
         <div className="max-w-7xl mx-auto animate-fade-in" key={location.pathname}>
           <Outlet />
         </div>
       </main>
+
+      {/* Mobile bottom tab bar — visible below md breakpoint */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-30 bg-surface-light/95 backdrop-blur-md border-t border-surface-lighter">
+        <div className="flex items-stretch justify-around">
+          {BOTTOM_TABS.map((tab) => {
+            const isActive =
+              tab.to === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(tab.to);
+            return (
+              <NavLink
+                key={tab.to}
+                to={tab.to}
+                className={`flex flex-col items-center justify-center flex-1 min-h-[56px] min-w-[44px] py-1.5 transition-smooth focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 focus-visible:ring-inset ${
+                  isActive ? 'text-accent' : 'text-gray-500'
+                }`}
+              >
+                <span className={isActive ? 'text-accent' : 'text-gray-600'}>{tab.icon}</span>
+                <span className={`text-[10px] mt-0.5 leading-tight ${isActive ? 'font-semibold' : ''}`}>
+                  {tab.label}
+                </span>
+              </NavLink>
+            );
+          })}
+          {/* More tab — opens sidebar overlay */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className={`flex flex-col items-center justify-center flex-1 min-h-[56px] min-w-[44px] py-1.5 transition-smooth ${
+              mobileOpen ? 'text-accent' : 'text-gray-500'
+            }`}
+          >
+            <MoreHorizontal size={20} className={mobileOpen ? 'text-accent' : 'text-gray-600'} />
+            <span className={`text-[10px] mt-0.5 leading-tight ${mobileOpen ? 'font-semibold' : ''}`}>
+              More
+            </span>
+          </button>
+        </div>
+        {/* Safe area inset for iOS */}
+        <div className="h-[env(safe-area-inset-bottom)]" />
+      </div>
     </div>
   );
 }
