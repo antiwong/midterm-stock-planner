@@ -1025,6 +1025,13 @@ class PaperTradingEngine:
                         print(f"  WARNING: stop-loss sell failed for {ticker}: {e}")
                     self._record_cooldown(ticker, today, getattr(self.config.backtest, 'stop_loss_cooldown_days', 5))
 
+        # Paused watchlist — stop-losses above still run, but skip regime-exit,
+        # rebalance, and new buys. Matches run_daily_fast.py execute_portfolio flow.
+        paused = getattr(self.config.backtest, "paused_watchlists", None) or []
+        if self.watchlist in paused:
+            print(f"  {self.watchlist} — PAUSED (no new buys / no regime-exit, existing positions run normally)")
+            return
+
         # Market regime filter
         regime, spy_return, regime_scale = self._get_spy_regime()
         if regime == 'exit':
@@ -1226,6 +1233,14 @@ class PaperTradingEngine:
                 cash += value - cost
                 del current_tickers[ticker]
                 print(f"  STOP-LOSS SELL {ticker}: {pos['shares']:.1f} shares @ ${price:.2f} (PnL: ${realized_pnl:+.2f})")
+
+        # Paused watchlist — stop-losses above still run, but skip regime-exit,
+        # rebalance, and new buys. Matches run_daily_fast.py execute_portfolio flow.
+        paused = getattr(self.config.backtest, "paused_watchlists", None) or []
+        if self.watchlist in paused:
+            self.db.update_cash(cash)
+            print(f"  {self.watchlist} — PAUSED (no new buys / no regime-exit, existing positions run normally)")
+            return
 
         # Market regime filter
         regime, spy_return, regime_scale = self._get_spy_regime()
