@@ -112,6 +112,92 @@ def notify_slack(message: str, channel: str = "stock-planner"):
         pass
 
 
+def _ensure_snapshot_schema(conn: sqlite3.Connection) -> None:
+    """Add invested_pct / positions_count columns to daily_snapshots if missing."""
+    cols = {row[1] for row in conn.execute("PRAGMA table_info(daily_snapshots)").fetchall()}
+    if "invested_pct" not in cols:
+        conn.execute("ALTER TABLE daily_snapshots ADD COLUMN invested_pct REAL")
+    if "positions_count" not in cols:
+        conn.execute("ALTER TABLE daily_snapshots ADD COLUMN positions_count INTEGER")
+    conn.commit()
+
+
+def write_eod_snapshot(wl: str, latest_prices: Dict[str, float], today: str) -> Optional[Dict[str, float]]:
+    """Write one daily_snapshots row for watchlist `wl`, marking active positions
+    to market at `latest_prices`. Idempotent (INSERT OR REPLACE on date PK).
+
+    Returns {portfolio_value, cash, invested, invested_pct, positions_count, cumulative_return}
+    or None if the DB is missing.
+    """
+    db_path = DATA_DIR / "paper_trading_{}.db".format(wl)
+    if not db_path.exists():
+        return None
+
+    # Guard: skip weekends. Both NYSE and SGX are closed Sat/Sun — writing
+    # weekend snapshots corrupts the returns series. Trading-calendar holidays
+    # are rare and self-correct the next session.
+    try:
+        d = datetime.strptime(today, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+    if d.weekday() >= 5:
+        return None
+
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    try:
+        _ensure_snapshot_schema(conn)
+
+        state = conn.execute(
+            "SELECT cash, initial_value FROM portfolio_state WHERE id = 1"
+        ).fetchone()
+        if state is None:
+            return None
+        cash = float(state["cash"])
+        initial = float(state["initial_value"]) or 1.0
+
+        positions = conn.execute(
+            "SELECT ticker, shares, entry_price FROM positions WHERE is_active = 1"
+        ).fetchall()
+        invested = 0.0
+        for p in positions:
+            px = latest_prices.get(p["ticker"])
+            if px is None:
+                px = float(p["entry_price"])
+            invested += float(p["shares"]) * float(px)
+        portfolio_value = cash + invested
+        invested_pct = invested / portfolio_value if portfolio_value > 0 else 0.0
+        cumulative = (portfolio_value / initial) - 1.0
+
+        # daily_return relative to prior snapshot's portfolio_value (if any)
+        prev = conn.execute(
+            "SELECT portfolio_value FROM daily_snapshots WHERE date < ? ORDER BY date DESC LIMIT 1",
+            (today,),
+        ).fetchone()
+        daily_ret = (portfolio_value / float(prev["portfolio_value"])) - 1.0 if prev else 0.0
+
+        conn.execute(
+            "INSERT OR REPLACE INTO daily_snapshots "
+            "(date, portfolio_value, cash, invested, daily_return, cumulative_return, "
+            "invested_pct, positions_count) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (today, portfolio_value, cash, invested, daily_ret, cumulative,
+             invested_pct, len(positions)),
+        )
+        conn.commit()
+        return {
+            "portfolio_value": portfolio_value,
+            "cash": cash,
+            "invested": invested,
+            "invested_pct": invested_pct,
+            "positions_count": len(positions),
+            "cumulative_return": cumulative,
+            "daily_return": daily_ret,
+        }
+    finally:
+        conn.close()
+
+
 def load_sector_map() -> dict:
     """Load ticker → sector mapping from sectors.json."""
     for path in [DATA_DIR / "sectors.json", PROJECT_ROOT / "src" / "data" / "sectors.json"]:
@@ -833,22 +919,16 @@ def execute_portfolio(wl: str, config, latest_prices: dict, spy_return: float, r
     conn.execute("UPDATE portfolio_state SET cash = ?, last_updated = ? WHERE id = 1", (cash, today))
     conn.commit()
 
-    # Record snapshot
     positions = conn.execute(
         "SELECT ticker, shares, entry_price, weight FROM positions WHERE is_active = 1"
     ).fetchall()
     invested = sum(p["shares"] * latest_prices.get(p["ticker"], p["entry_price"]) for p in positions)
     pv = cash + invested
     daily_ret = (pv / initial) - 1
-
-    conn.execute(
-        "INSERT OR REPLACE INTO daily_snapshots (date, portfolio_value, cash, invested, daily_return, cumulative_return) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (today, pv, cash, invested, daily_ret, daily_ret)
-    )
-    conn.commit()
     conn.close()
 
+    # End-of-day snapshot write is centralized in step_portfolio_runs' EOD pass;
+    # this ensures snapshots still land on days with no rebalance.
     print("  {} done: ${:,.0f} ({:+.2%}) | {} positions".format(wl, pv, daily_ret, len(positions)))
 
 
@@ -1255,6 +1335,27 @@ def step_portfolio_runs() -> dict:
             print("  {} FAILED: {}".format(wl, e))
             notify_slack(":x: Portfolio {} failed: {}".format(wl, str(e)[:150]))
             results[wl] = "FAILED: {}".format(str(e)[:100])
+
+    # EOD snapshot pass — runs for EVERY portfolio regardless of trade outcome,
+    # so quantstats returns series stays continuous even on paused/no-signal days.
+    print("\n  --- end-of-day snapshots ---")
+    today_str = datetime.now().strftime("%Y-%m-%d")
+    snap_ok = 0
+    for p in PORTFOLIOS:
+        wl = p["watchlist"]
+        try:
+            snap = write_eod_snapshot(wl, latest_prices, today_str)
+            if snap is None:
+                print("    {} — no DB, skipped".format(wl))
+                continue
+            print("    {:22s} PV=${:>10,.0f}  cash={:>5.0%}  {} pos  cum={:+.2%}".format(
+                wl, snap["portfolio_value"], 1 - snap["invested_pct"],
+                snap["positions_count"], snap["cumulative_return"]))
+            snap_ok += 1
+        except Exception as e:
+            print("    {} snapshot FAILED: {}".format(wl, e))
+            notify_slack(":x: EOD snapshot {} failed: {}".format(wl, str(e)[:150]))
+    print("  snapshots written: {}/{}".format(snap_ok, len(PORTFOLIOS)))
 
     # Write summary
     write_daily_summary(config, latest_prices, spy_return, regime, regime_scale, [],
