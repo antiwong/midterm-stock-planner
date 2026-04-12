@@ -99,6 +99,10 @@ def backfill_portfolio(wl: str, benchmark: str, today: pd.Timestamp) -> dict:
         if state is None:
             return {"wl": wl, "error": "no portfolio_state"}
         initial = float(state["initial_value"]) or 1.0
+        actual_cash_row = conn.execute(
+            "SELECT cash FROM portfolio_state WHERE id = 1"
+        ).fetchone()
+        actual_cash = float(actual_cash_row["cash"]) if actual_cash_row else None
         earliest_snap = conn.execute(
             "SELECT MIN(date) FROM daily_snapshots"
         ).fetchone()[0]
@@ -119,7 +123,20 @@ def backfill_portfolio(wl: str, benchmark: str, today: pd.Timestamp) -> dict:
     broken_rows = (not trades.empty) and (
         ((trades["shares"].abs() < 1e-9) & (trades["value"].abs() > 1.0)).any()
     )
-    if broken_rows:
+
+    # Cross-check: reconstruct cash from trades and compare with portfolio_state.cash.
+    # Portfolios fed by BOTH run_daily_fast (local sim) AND paper_trading.py (Alpaca
+    # fills) can have mixed trade conventions, so trade-based reconstruction won't
+    # agree with the broker-authoritative cash. Skip those.
+    cash_diverged = False
+    if not broken_rows and not trades.empty and actual_cash is not None:
+        _, reconstructed = build_eod_state(trades, initial)
+        if not reconstructed.empty:
+            tolerance = max(0.05 * initial, 100.0)
+            if abs(float(reconstructed.iloc[-1]) - actual_cash) > tolerance:
+                cash_diverged = True
+
+    if broken_rows or cash_diverged:
         with sqlite3.connect(db) as conn:
             # Strip any non-trading-day rows (Sunday pollution from Step 1)
             closes_bench = fetch_closes([benchmark], earliest, today)
@@ -133,7 +150,8 @@ def backfill_portfolio(wl: str, benchmark: str, today: pd.Timestamp) -> dict:
             conn.commit()
             final_count = conn.execute("SELECT COUNT(*) FROM daily_snapshots").fetchone()[0]
         return {"wl": wl, "skipped_alpaca_synced": True, "rows_kept": final_count,
-                "stale_deleted": len(stale)}
+                "stale_deleted": len(stale),
+                "reason": "cash divergence" if cash_diverged else "zero-share trades"}
 
     tickers_needed = sorted(set(trades["ticker"]) | {benchmark}) if not trades.empty else [benchmark]
     closes = fetch_closes(tickers_needed, earliest, today)
@@ -208,7 +226,7 @@ def main() -> None:
         if "error" in r:
             print(f"    ERROR: {r['error']}")
         elif r.get("skipped_alpaca_synced"):
-            print(f"    SKIPPED (Alpaca-synced; shares not in local trades table) "
+            print(f"    SKIPPED ({r.get('reason','broker-authoritative')}) "
                   f"— {r['stale_deleted']} non-calendar rows deleted, {r['rows_kept']} kept")
         else:
             print(f"    {r['first']} → {r['last']}  rows={r['written']}  "
