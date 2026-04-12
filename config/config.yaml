@@ -56,8 +56,10 @@ backtest:
     threshold_exit: -0.08     # SPY 20d return < -8% → go to cash entirely
     reduce_scale: 0.30        # Position size multiplier when in reduce mode
   # Paused watchlists — skip new BUY entries; existing positions run normally
-  paused_watchlists: []
+  paused_watchlists:
+    - tech_giants
   # precious_metals unpaused 2026-04-08 -- DXY regime filter + cross-asset features added
+  # tech_giants paused 2026-04-12
 data:
   interval: 1h  # 1h for 4h rebalancing. Features computed from daily data.
   price_data_path: data/prices.csv  # Hourly data for execution/rebalancing (127 tickers, 752d, has NaN gaps)
