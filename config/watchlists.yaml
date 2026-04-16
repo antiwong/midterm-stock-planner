@@ -225,7 +225,7 @@ watchlists:
       - SCHW    # Charles Schwab
       - CB      # Chubb Limited
       - PGR     # Progressive Corp
-      - MMC     # Marsh & McLennan
+      - MRSH    # Marsh (was MMC, ticker changed Jan 2026)
       - AON     # Aon plc
       - ICE     # Intercontinental Exchange
       - CME     # CME Group
@@ -456,6 +456,7 @@ watchlists:
       - TER     # Teradyne (semiconductor equipment)
       - STX     # Seagate Technology (storage)
       - WDC     # Western Digital (storage)
+      - SNDK    # SanDisk (NAND pure-play, spun off from WDC Feb 2025)
 
   # Financials - Banks and financial services
   financials:
@@ -769,11 +770,9 @@ watchlists:
       - PAAS    # Pan American Silver Corp
       - HL      # Hecla Mining Company
       - CDE     # Coeur Mining Inc
-      - MAG     # MAG Silver Corp
       - AG      # First Majestic Silver Corp
       # Streaming & Royalty Companies
       - RGLD    # Royal Gold Inc
-      - SAND    # Sandstorm Gold Ltd
       - OR      # Osisko Gold Royalties
 
   # Clean Energy - Renewable and clean energy companies
@@ -1029,6 +1028,10 @@ watchlists:
       - CDE     # Coeur Mining (20 shares @ $23.68)
       - NLR     # VanEck Uranium+Nuclear Energy ETF (9 shares @ $133.30)
       - SLV     # iShares Silver Trust (29.52 shares @ $79.00)
+      # SaaS / Design / Productivity
+      - ADBE    # Adobe Inc
+      - ADSK    # Autodesk Inc
+      - MNDY    # Monday.com Ltd
       # SGX Holdings
       - C38U.SI # CapitaLand Integrated Commercial Trust (400 shares @ $2.406)
       - ME8U.SI # Mapletree Industrial Trust (1000 shares @ $2.125)
@@ -1039,6 +1042,17 @@ watchlists:
     description: "Stocks with upcoming earnings to monitor"
     category: "custom"
     symbols: []  # Add tickers here before earnings season
+
+  # Signal-only tickers — crawled by SentimentPulse for sentiment intelligence
+  # but NOT traded. Korea Exchange stocks not available via Alpaca.
+  # News about these moves US memory stocks (MU, SNDK, WDC).
+  signal_intelligence:
+    name: "Signal Intelligence"
+    description: "Non-tradeable tickers tracked for sentiment signals only"
+    category: "signal_only"
+    symbols:
+      - "005930.KS"  # Samsung Electronics — DRAM, NAND, HBM
+      - "000660.KS"  # SK Hynix — HBM leader
 
 # Reference ETFs for cross-asset feature computation
 # These tickers provide macro/inter-market signals merged by date
