@@ -78,6 +78,28 @@ except ImportError:
     ALPACA_TRADING_AVAILABLE = False
     AlpacaBroker = None  # type: ignore[assignment,misc]
 
+# Tiger broker (optional — alternative to Alpaca)
+try:
+    from src.trading.tiger_broker import TigerBroker, TIGER_TRADING_AVAILABLE
+except ImportError:
+    TIGER_TRADING_AVAILABLE = False
+    TigerBroker = None  # type: ignore[assignment,misc]
+
+
+def _broker_label(broker) -> str:
+    """Return 'Tiger' or 'Alpaca' based on broker type."""
+    if TIGER_TRADING_AVAILABLE and isinstance(broker, TigerBroker):
+        return "Tiger"
+    return "Alpaca"
+
+
+def _ticker_market(ticker: str) -> str:
+    """Return 'sg' for SGX tickers (.SI/.SG suffix), else 'us'."""
+    t = ticker.upper()
+    if t.endswith(".SI") or t.endswith(".SG"):
+        return "sg"
+    return "us"
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -605,14 +627,18 @@ class PaperTradingEngine:
                  watchlist: Optional[str] = None,
                  initial_capital: float = 100000.0,
                  force_local: bool = False,
-                 db_path: Optional[str] = None):
+                 db_path: Optional[str] = None,
+                 broker_name: str = "auto",
+                 market: str = "all"):
         self.config = load_config(config_path)
         self.watchlist = watchlist
         self.initial_capital = initial_capital
+        self.market = market  # "all" | "us" | "sg" — restricts execution scope
         db_path = db_path or f"data/paper_trading_{watchlist or 'default'}.db"
         self.db = PaperTradingDB(db_path=db_path)
         self.transaction_cost = self.config.backtest.transaction_cost
         self.force_local = force_local
+        self.broker_name = broker_name
         self.risk_manager = RiskManager(
             drawdown_pct=0.30,
             min_profit_pct=0.05,
@@ -621,16 +647,10 @@ class PaperTradingEngine:
         )
         self.ensemble = EnsembleSignalGenerator(ml_weight=0.7, trigger_weight=0.3)
 
-        # Try to connect to Alpaca paper trading
-        self.broker: Optional[AlpacaBroker] = None  # type: ignore[assignment]
-        if not force_local and ALPACA_TRADING_AVAILABLE:
-            try:
-                self.broker = AlpacaBroker(paper=True)
-                acct = self.broker.get_account()
-                print(f"Connected to Alpaca paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
-            except Exception as e:
-                print(f"Alpaca not available ({e}), using local simulation")
-                self.broker = None
+        # Connect to broker (Alpaca, Tiger, or local simulation)
+        self.broker = None  # type: ignore[assignment]
+        if not force_local:
+            self.broker = self._connect_broker(broker_name)
 
         if self.broker is None:
             print("Mode: local simulation (no real orders)")
@@ -644,6 +664,57 @@ class PaperTradingEngine:
                 (initial_capital,)
             )
             self.db.conn.commit()
+
+    def _connect_broker(self, broker_name: str):
+        """Connect to the requested broker. Returns broker instance or None."""
+        # Tiger explicitly requested
+        if broker_name == "tiger":
+            if not TIGER_TRADING_AVAILABLE:
+                print("Tiger SDK not installed. Run: pip install tigeropen")
+                return None
+            try:
+                broker = TigerBroker(paper=True)
+                acct = broker.get_account()
+                print(f"Connected to Tiger paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
+                return broker
+            except Exception as e:
+                print(f"Tiger not available ({e}), falling back to local simulation")
+                return None
+
+        # Alpaca explicitly requested
+        if broker_name == "alpaca":
+            if not ALPACA_TRADING_AVAILABLE:
+                print("Alpaca SDK not installed. Run: pip install alpaca-py")
+                return None
+            try:
+                broker = AlpacaBroker(paper=True)
+                acct = broker.get_account()
+                print(f"Connected to Alpaca paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
+                return broker
+            except Exception as e:
+                print(f"Alpaca not available ({e}), falling back to local simulation")
+                return None
+
+        # Auto: try Alpaca first, then Tiger
+        if ALPACA_TRADING_AVAILABLE:
+            try:
+                broker = AlpacaBroker(paper=True)
+                acct = broker.get_account()
+                print(f"Connected to Alpaca paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
+                return broker
+            except Exception as e:
+                print(f"Alpaca not available ({e})")
+
+        if TIGER_TRADING_AVAILABLE:
+            try:
+                broker = TigerBroker(paper=True)
+                acct = broker.get_account()
+                print(f"Connected to Tiger paper trading (equity: ${float(acct.get('equity', 0)):,.2f})")
+                return broker
+            except Exception as e:
+                print(f"Tiger not available ({e})")
+
+        return None
 
     # ------------------------------------------------------------------
     # Market regime filter
@@ -997,28 +1068,32 @@ class PaperTradingEngine:
         return target_weights
 
     def execute_signals(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
-        """Execute signals — via Alpaca paper trading or local simulation."""
+        """Execute signals — via broker (Alpaca/Tiger) or local simulation."""
         if self.broker is not None:
-            return self._execute_via_alpaca(signals, price_df)
+            return self._execute_via_broker(signals, price_df)
         return self._execute_local(signals, price_df)
 
-    def _execute_via_alpaca(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
-        """Execute signals by placing real orders on Alpaca paper account."""
+    def _execute_via_broker(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
+        """Execute signals by placing real orders on broker paper account (Alpaca or Tiger)."""
         today = datetime.now().strftime("%Y-%m-%d")
         state = self.db.get_state()
         initial_value = state["initial_value"]
 
-        # Check stop-losses on current Alpaca positions
-        alpaca_positions = self.broker.get_positions()
-        for p in alpaca_positions:
+        # Check stop-losses on current broker positions
+        broker_label = _broker_label(self.broker)
+        broker_positions = self.broker.get_positions()
+        for p in broker_positions:
             entry = float(p.get("avg_entry_price", 0))
             current = float(p.get("current_price", 0))
             ticker = p.get("symbol", "")
+            # Skip positions outside market scope — cannot place orders while that market is closed
+            if self.market != "all" and _ticker_market(ticker) != self.market:
+                continue
             if entry > 0 and current > 0:
                 pnl_pct = (current / entry) - 1
                 stop_pct = getattr(self.config.backtest, 'stop_loss_pct', -0.08)
                 if pnl_pct <= stop_pct:
-                    print(f"  STOP-LOSS {ticker}: {pnl_pct:+.1%} — closing via Alpaca")
+                    print(f"  STOP-LOSS {ticker}: {pnl_pct:+.1%} — closing via {broker_label}")
                     try:
                         self.broker.close_position(ticker)
                     except Exception as e:
@@ -1035,9 +1110,14 @@ class PaperTradingEngine:
         # Market regime filter
         regime, spy_return, regime_scale = self._get_spy_regime()
         if regime == 'exit':
-            print(f"\n  MARKET REGIME: EXIT (SPY 20d: {spy_return:+.1%}) — closing all Alpaca positions")
+            print(f"\n  MARKET REGIME: EXIT (SPY 20d: {spy_return:+.1%}) — closing {self.market.upper()} {broker_label} positions")
             try:
-                self.broker.close_all_positions()
+                if self.market == "all":
+                    self.broker.close_all_positions()
+                else:
+                    for p in self.broker.get_positions():
+                        if _ticker_market(p.get("symbol", "")) == self.market:
+                            self.broker.close_position(p["symbol"])
             except Exception as e:
                 print(f"  WARNING: regime exit failed: {e}")
             return
@@ -1064,10 +1144,20 @@ class PaperTradingEngine:
         if regime_scale < 1.0:
             target_weights = {t: w * regime_scale for t, w in target_weights.items()}
 
+        # Market filter — restrict execution to SG or US tickers (weights kept as-is, not rescaled)
+        managed_universe = None
+        if self.market != "all":
+            target_weights = {t: w for t, w in target_weights.items() if _ticker_market(t) == self.market}
+            managed_universe = [t for t in self._get_universe() if _ticker_market(t) == self.market]
+            print(f"  Market filter: {self.market.upper()} — managing {len(managed_universe)} tickers")
+            if not target_weights:
+                print(f"No {self.market.upper()} BUY signals in top_n. Holding current {self.market.upper()} positions.")
+                return
+
         print(f"\nTarget weights: {target_weights}")
 
-        # Execute via Alpaca rebalance
-        alpaca_trades = self.broker.rebalance_portfolio(target_weights)
+        # Execute via broker rebalance (managed_universe scopes liquidation to this market)
+        alpaca_trades = self.broker.rebalance_portfolio(target_weights, managed_universe=managed_universe)
 
         # Log trades to local DB for dashboard tracking
         trades = []
@@ -1098,24 +1188,25 @@ class PaperTradingEngine:
             print(f"  {trade_action} {symbol}: ${abs(value):,.2f} "
                   f"(weight: {target_weights.get(symbol, 0):.1%})")
 
-        # Sync Alpaca state to local DB
-        self._sync_alpaca_state(signals, trades, today, initial_value)
+        # Sync broker state to local DB
+        self._sync_broker_state(signals, trades, today, initial_value)
 
-    def _sync_alpaca_state(self, signals, trades, today, initial_value):
-        """Sync Alpaca account/positions to local DB for dashboard display."""
+    def _sync_broker_state(self, signals, trades, today, initial_value):
+        """Sync broker account/positions to local DB for dashboard display."""
+        broker_label = _broker_label(self.broker)
         acct = self.broker.get_account()
-        alpaca_positions = self.broker.get_positions()
+        broker_positions = self.broker.get_positions()
 
         cash = float(acct.get("cash", 0))
         equity = float(acct.get("equity", 0))
         invested = equity - cash
 
-        # Update local DB with Alpaca state
+        # Update local DB with broker state
         self.db.update_cash(cash)
 
-        # Close all local active positions and re-create from Alpaca
+        # Close all local active positions and re-create from broker
         self.db.conn.execute("DELETE FROM positions WHERE is_active = 1")
-        for pos in alpaca_positions:
+        for pos in broker_positions:
             symbol = pos.get("symbol", "")
             qty = float(pos.get("qty", 0))
             avg_entry = float(pos.get("avg_entry_price", 0))
@@ -1165,22 +1256,22 @@ class PaperTradingEngine:
                 "entry_price": float(p.get("avg_entry_price", p.get("entry_price", 0))),
                 "current_price": float(p.get("current_price", 0)),
                 "pnl": float(p.get("unrealized_pl", 0)),
-            } for p in alpaca_positions],
+            } for p in broker_positions],
             signals=signals.head(10).to_dict("records"),
             trades=[asdict(t) for t in trades],
             metrics={
                 "sharpe_ratio": None,
                 "total_trades": len(trades),
                 "total_cost": 0,
-                "broker": "alpaca",
+                "broker": broker_label.lower(),
                 "account_equity": equity,
             }
         )
         self.db.record_snapshot(snapshot)
 
-        print(f"\nAlpaca Portfolio: ${equity:,.2f} (return: {(equity / initial_value - 1):+.2%})")
+        print(f"\n{broker_label} Portfolio: ${equity:,.2f} (return: {(equity / initial_value - 1):+.2%})")
         print(f"Cash: ${cash:,.2f} | Invested: ${invested:,.2f}")
-        print(f"Positions: {len(alpaca_positions)} | Trades today: {len(trades)}")
+        print(f"Positions: {len(broker_positions)} | Trades today: {len(trades)}")
 
     def _execute_local(self, signals: pd.DataFrame, price_df: Optional[pd.DataFrame] = None):
         """Local simulation execution (no Alpaca — original behavior)."""
@@ -1576,16 +1667,17 @@ class PaperTradingEngine:
         print(f"\n{'='*60}")
 
         if self.broker is not None:
-            # Live Alpaca data
+            # Live broker data
+            broker_label = _broker_label(self.broker)
             acct = self.broker.get_account()
-            alpaca_positions = self.broker.get_positions()
+            broker_positions = self.broker.get_positions()
 
             equity = float(acct.get("equity", 0))
             cash = float(acct.get("cash", 0))
             invested = equity - cash
             buying_power = float(acct.get("buying_power", 0))
 
-            print(f"Alpaca Paper Trading Portfolio")
+            print(f"{broker_label} Paper Trading Portfolio")
             print(f"{'='*60}")
             print(f"Portfolio Value: ${equity:,.2f}")
             print(f"Cash:           ${cash:,.2f}")
@@ -1593,13 +1685,13 @@ class PaperTradingEngine:
             print(f"Buying Power:   ${buying_power:,.2f}")
             print(f"Total Return:   {(equity/initial - 1):+.2%}")
             print(f"Initial Value:  ${initial:,.2f}")
-            print(f"Account Status: {acct.get('status', 'unknown')}")
+            print(f"Account Status: {acct.get('status', acct.get('account', 'unknown'))}")
 
-            if alpaca_positions:
-                print(f"\nPositions ({len(alpaca_positions)}):")
+            if broker_positions:
+                print(f"\nPositions ({len(broker_positions)}):")
                 print(f"{'Ticker':8s} {'Shares':>8s} {'Entry':>8s} {'Current':>8s} {'PnL':>10s} {'Weight':>8s}")
                 print("-" * 60)
-                for p in sorted(alpaca_positions, key=lambda x: -abs(float(x.get("market_value", 0)))):
+                for p in sorted(broker_positions, key=lambda x: -abs(float(x.get("market_value", 0)))):
                     sym = p.get("symbol", "?")
                     qty = float(p.get("qty", 0))
                     avg_entry = float(p.get("avg_entry_price", 0))
@@ -1679,9 +1771,43 @@ class PaperTradingEngine:
 # CLI
 # ---------------------------------------------------------------------------
 
+def _make_broker(broker_name: str):
+    """Create a broker instance for standalone commands (account, liquidate)."""
+    if broker_name == "tiger":
+        if not TIGER_TRADING_AVAILABLE:
+            print("Tiger SDK not installed. Run: pip install tigeropen")
+            return None
+        return TigerBroker(paper=True)
+    elif broker_name == "alpaca":
+        if not ALPACA_TRADING_AVAILABLE:
+            print("Alpaca SDK not installed. Run: pip install alpaca-py")
+            return None
+        return AlpacaBroker(paper=True)
+    else:
+        # auto — try alpaca first, then tiger
+        if ALPACA_TRADING_AVAILABLE:
+            try:
+                return AlpacaBroker(paper=True)
+            except Exception:
+                pass
+        if TIGER_TRADING_AVAILABLE:
+            try:
+                return TigerBroker(paper=True)
+            except Exception:
+                pass
+        print("No broker SDK available. Install alpaca-py or tigeropen.")
+        return None
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Paper trading pipeline (Alpaca + local simulation)")
+    parser = argparse.ArgumentParser(description="Paper trading pipeline (Alpaca/Tiger + local simulation)")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
+
+    # Shared broker arg helper
+    def _add_broker_arg(p):
+        p.add_argument("--broker", type=str, default="auto",
+                        choices=["auto", "alpaca", "tiger"],
+                        help="Broker to use (default: auto)")
 
     # run
     run_parser = subparsers.add_parser("run", help="Run daily paper trading cycle")
@@ -1692,15 +1818,21 @@ def main():
     run_parser.add_argument("--capital", type=float, default=100000,
                             help="Initial capital (default: 100000)")
     run_parser.add_argument("--local", action="store_true",
-                            help="Force local simulation (no Alpaca orders)")
+                            help="Force local simulation (no broker orders)")
+    run_parser.add_argument("--market", type=str, default="all",
+                            choices=["all", "us", "sg"],
+                            help="Restrict execution to tickers in this market (default: all)")
+    _add_broker_arg(run_parser)
 
     # status
     status_parser = subparsers.add_parser("status", help="Show portfolio status")
     status_parser.add_argument("--watchlist", type=str, default="tech_giants")
     status_parser.add_argument("--local", action="store_true")
+    _add_broker_arg(status_parser)
 
-    # account — Alpaca-only
-    account_parser = subparsers.add_parser("account", help="Show Alpaca account details")
+    # account
+    account_parser = subparsers.add_parser("account", help="Show broker account details")
+    _add_broker_arg(account_parser)
 
     # history
     hist_parser = subparsers.add_parser("history", help="Show trade history")
@@ -1711,8 +1843,9 @@ def main():
     refresh_parser = subparsers.add_parser("refresh", help="Refresh price data only")
     refresh_parser.add_argument("--watchlist", type=str, default="tech_giants")
 
-    # liquidate — Alpaca-only
-    liquidate_parser = subparsers.add_parser("liquidate", help="Close all Alpaca positions")
+    # liquidate
+    liquidate_parser = subparsers.add_parser("liquidate", help="Close all broker positions")
+    _add_broker_arg(liquidate_parser)
 
     # setup-cron
     subparsers.add_parser("setup-cron", help="Setup daily cron job")
@@ -1728,6 +1861,8 @@ def main():
             watchlist=args.watchlist,
             initial_capital=args.capital,
             force_local=args.local,
+            broker_name=args.broker,
+            market=args.market,
         )
         engine.run_daily(skip_refresh=args.skip_refresh)
 
@@ -1735,22 +1870,22 @@ def main():
         engine = PaperTradingEngine(
             watchlist=args.watchlist,
             force_local=getattr(args, "local", False),
+            broker_name=getattr(args, "broker", "auto"),
         )
         engine.show_status()
 
     elif args.command == "account":
-        if not ALPACA_TRADING_AVAILABLE:
-            print("Alpaca SDK not installed. Run: pip install alpaca-py")
-            return
         try:
-            broker = AlpacaBroker(paper=True)
+            broker = _make_broker(args.broker)
+            if broker is None:
+                return
+            broker_label = _broker_label(broker)
             acct = broker.get_account()
             print(f"\n{'='*60}")
-            print("Alpaca Paper Trading Account")
+            print(f"{broker_label} Paper Trading Account")
             print(f"{'='*60}")
             for key in ["equity", "cash", "buying_power", "portfolio_value",
-                        "long_market_value", "short_market_value",
-                        "status", "account_number", "currency"]:
+                        "unrealized_pnl", "realized_pnl", "currency"]:
                 val = acct.get(key, "N/A")
                 if isinstance(val, (int, float)):
                     print(f"  {key:25s}: ${val:,.2f}")
@@ -1770,9 +1905,9 @@ def main():
             market_status = "OPEN" if clock.get("is_open") else "CLOSED"
             print(f"\nMarket: {market_status}")
             if not clock.get("is_open"):
-                print(f"  Next open: {clock.get('next_open', 'N/A')}")
+                print(f"  Next open: {clock.get('next_open', clock.get('open_time', 'N/A'))}")
         except Exception as e:
-            print(f"Error connecting to Alpaca: {e}")
+            print(f"Error connecting to broker: {e}")
 
     elif args.command == "history":
         engine = PaperTradingEngine(watchlist=args.watchlist)
@@ -1783,16 +1918,16 @@ def main():
         engine.refresh_data()
 
     elif args.command == "liquidate":
-        if not ALPACA_TRADING_AVAILABLE:
-            print("Alpaca SDK not installed. Run: pip install alpaca-py")
-            return
         try:
-            broker = AlpacaBroker(paper=True)
+            broker = _make_broker(args.broker)
+            if broker is None:
+                return
+            broker_label = _broker_label(broker)
             positions = broker.get_positions()
             if not positions:
                 print("No open positions to close.")
                 return
-            print(f"Closing {len(positions)} positions...")
+            print(f"Closing {len(positions)} {broker_label} positions...")
             results = broker.close_all_positions()
             for r in results:
                 sym = r.get("symbol", "?")

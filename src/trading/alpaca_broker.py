@@ -406,6 +406,7 @@ class AlpacaBroker:
         self,
         target_weights: Dict[str, float],
         portfolio_value: Optional[float] = None,
+        managed_universe: Optional[List[str]] = None,
     ) -> List[dict]:
         """Rebalance the portfolio to match *target_weights*.
 
@@ -416,6 +417,9 @@ class AlpacaBroker:
             portfolio_value: Override the portfolio value used for
                              calculations.  If None, the current account
                              equity is used.
+            managed_universe: If provided, Phase 1 only liquidates positions
+                              within this set — positions outside are left
+                              untouched (used for market-scoped rebalances).
 
         Returns:
             List of trade dicts (one per executed order).
@@ -437,6 +441,7 @@ class AlpacaBroker:
         target_weights = {
             sym.upper(): w for sym, w in target_weights.items()
         }
+        managed_set = {s.upper() for s in managed_universe} if managed_universe else None
 
         # Current state
         if portfolio_value is None:
@@ -455,6 +460,8 @@ class AlpacaBroker:
 
         # --- Phase 1: sell everything not in target -----------------------
         symbols_to_sell_fully = set(current_positions) - set(target_weights)
+        if managed_set is not None:
+            symbols_to_sell_fully &= managed_set
         sell_order_ids: List[str] = []
 
         for sym in symbols_to_sell_fully:
